@@ -52,9 +52,12 @@ function mountStatic(app: Hono<any>): void {
     try { file = resolve(root, `.${decodeURIComponent(path)}`); } catch { return c.json({ error: "not_found" }, 404); }
     if (file !== root && !file.startsWith(root + sep)) return c.json({ error: "not_found" }, 404);
     const f = Bun.file(file);
-    if (file !== root && (await f.exists())) return new Response(f);
+    // hashed chunks never change, so they cache forever; anything else (index.html) must revalidate after a deploy
+    if (file !== root && (await f.exists())) return new Response(f, { headers: { "cache-control": /\/chunk-[^/]+$/.test(path) ? "public, max-age=31536000, immutable" : "no-cache" } });
+    // a missing file with an extension is a stale asset reference: 404 it, don't hand the SPA shell to a script/css loader
+    if (/\.[a-z0-9]{1,8}$/i.test(path)) return c.json({ error: "not_found" }, 404);
     const index = Bun.file(`${root}/index.html`);
-    if (await index.exists()) return new Response(index, { headers: { "content-type": "text/html; charset=utf-8" } });
+    if (await index.exists()) return new Response(index, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" } });
     return c.json({ error: "web_not_built" }, 404);
   });
 }

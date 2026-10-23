@@ -1,7 +1,7 @@
 /** Prompt-injection helpers shared by every area that puts third-party text in front of a model. */
 
 // zero-width, bidi controls, word joiner, BOM, tag characters: invisible text is a classic smuggling channel
-const INVISIBLE = /[​-‏‪-‮⁠-⁤⁦-⁩﻿\u{E0000}-\u{E007F}]/gu;
+const INVISIBLE = /[\u034F\u061C\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFE00-\uFE0F\uFEFF\u{E0000}-\u{E007F}]/gu;
 
 export const stripInvisible = (s: string) => s.replace(INVISIBLE, "");
 

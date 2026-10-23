@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { requireAuth, type AppEnv } from "../auth/session";
+import { hasRole, requireAuth, type AppEnv } from "../auth/session";
 import { db } from "../db";
 import { memories } from "../db/schema";
 import { log } from "../log";
@@ -33,7 +33,7 @@ memory.get("/memories", requireAuth(), async (c) => {
     offset: z.coerce.number().int().min(0).default(0),
     status: z.enum(["active", "superseded", "all"]).default("active"),
   }));
-  return c.json(await listMemories({ tags: TAGS, ...q }));
+  return c.json(await listMemories({ tags: TAGS, ...q, includeHeld: hasRole(c.get("user").role, "admin") }));
 });
 
 memory.delete("/memories/:id", requireAuth("admin"), async (c) => {

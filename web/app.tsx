@@ -15,7 +15,18 @@ import { LinkButton } from "@/ui/button"
 import { SignIn } from "@/pages/signin"
 import { Setup } from "@/pages/setup"
 
-const page = <T extends ComponentType>(f: () => Promise<{ default: T }>) => lazy(f)
+// After a deploy an open tab still points at old chunk hashes: reload once to pick up the new build, then give up (no loop).
+const RELOADED = "chunk-reloaded"
+const page = <T extends ComponentType>(f: () => Promise<{ default: T }>) =>
+  lazy(() => f().then(
+    (m) => { sessionStorage.removeItem(RELOADED); return m },
+    (e) => {
+      if (sessionStorage.getItem(RELOADED)) throw e
+      sessionStorage.setItem(RELOADED, "1")
+      location.reload()
+      return new Promise<never>(() => {})
+    },
+  ))
 const Home = page(() => import("@/pages/home"))
 const Graph = page(() => import("@/pages/graph"))
 const Memories = page(() => import("@/pages/memories"))

@@ -8,7 +8,6 @@ import { log } from "../log";
 import type { AgentContext } from "../memory/core-blocks";
 import { breakdown } from "../memory/budget";
 import { scheduleCapture } from "../memory/writeback";
-import { recordEpisode } from "../memory/episodes";
 import { botUserId, getWorkspace } from "../slack/client";
 import { prepareReply, createReplySink } from "../slack/stream";
 import { buildContext } from "./context";
@@ -166,7 +165,6 @@ async function execute(input: TurnInput): Promise<void> {
     if (canLearn) {
       const transcript = `${input.text}\n\nAssistant: ${reply}`;
       void scheduleCapture({ scope, channelId: input.channelId, threadTs: threadKey, transcript, userText: input.text })
-        .then((r) => (!r.deferred && !r.skipped ? recordEpisode({ scope, channelId: input.channelId, threadTs: threadKey, transcript: `${history.map((m) => (typeof m.content === "string" ? m.content : "")).join("\n")}\n${transcript}`.slice(-12_000) }) : undefined))
         .catch((e) => log.warn("capture failed", { turnId, error: String(e) }));
     }
     if (depth !== "direct" && bc.compactHistory.length > 6) {

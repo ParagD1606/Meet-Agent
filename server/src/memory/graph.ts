@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import { memories, memoryEdges } from "../db/schema";
+import { clearRecallCache } from "./recall";
 
 export type GraphNode = { id: number; label: string; scope: string; kind: string; source: string };
 export type GraphEdge = { source: number; target: number; weight: number };
@@ -60,12 +61,13 @@ export async function getGraph(a: { tags: string[]; limit: number; kind?: "fact"
 }
 
 /** Paged memories in `tags` (status default "active"), optionally filtered by a case-insensitive substring. */
-export async function listMemories(a: { tags: string[]; q?: string; limit: number; offset: number; status?: "active" | "superseded" | "all" }): Promise<{ items: MemoryRow[]; total: number }> {
+export async function listMemories(a: { tags: string[]; q?: string; limit: number; offset: number; status?: "active" | "superseded" | "all"; includeHeld?: boolean }): Promise<{ items: MemoryRow[]; total: number }> {
   if (!a.tags.length) return { items: [], total: 0 };
   const q = a.q?.trim();
   const status = a.status ?? "active";
   const where = and(
     inArray(memories.scopeTag, a.tags),
+    a.includeHeld ? undefined : eq(memories.reviewState, "ok"),
     status === "all" ? undefined : eq(memories.status, status),
     q ? like(q) : undefined,
   );
@@ -77,13 +79,16 @@ export async function listMemories(a: { tags: string[]; q?: string; limit: numbe
   return { items, total: count?.n ?? 0 };
 }
 
-/** Hard-deletes a memory and its edges; rows it superseded are left superseded but un-pointed. Returns whether it existed. */
+/** Hard-deletes a memory and its edges; rows it superseded are restored (if reviewed ok) or at least un-pointed. Returns whether it existed. */
 export async function deleteMemory(id: number): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  const existed = await db.transaction(async (tx) => {
     const del = await tx.delete(memories).where(eq(memories.id, id)).returning({ id: memories.id });
     if (!del.length) return false;
     await tx.delete(memoryEdges).where(sql`${memoryEdges.fromId} = ${id} or ${memoryEdges.toId} = ${id}`);
+    await tx.update(memories).set({ status: "active", invalidAt: null, supersededBy: null }).where(and(eq(memories.supersededBy, id), eq(memories.reviewState, "ok")));
     await tx.update(memories).set({ supersededBy: null }).where(eq(memories.supersededBy, id));
     return true;
   });
+  if (existed) clearRecallCache(); // a cached recall may still contain the deleted or the restored fact
+  return existed;
 }

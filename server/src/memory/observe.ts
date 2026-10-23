@@ -11,7 +11,8 @@ import { captureTurn, flushIdleCaptures } from "./writeback";
 
 const FIRST_RUN_LOOKBACK_S = 24 * 3600;
 const BATCH_CHARS = 12_000;
-const PAGE = 200;
+const PAGE = 999; // Slack max per conversations.history page
+const MAX_PAGES = 10;
 
 type Msg = { user?: string; bot_id?: string; text?: string; ts?: string; subtype?: string; reply_users?: string[]; app_id?: string };
 
@@ -43,8 +44,19 @@ export async function observeChannel(channelId: string): Promise<{ messages: num
   const slack = await slackClient();
   const self = await botUserId().catch(() => null);
   const oldest = ch.observedUpTo ?? ((Date.now() / 1000) - FIRST_RUN_LOOKBACK_S).toFixed(6);
-  const res = await slack.conversations.history({ channel: channelId, oldest, limit: PAGE, inclusive: false });
-  const msgs = ((res.messages ?? []) as Msg[]).filter((m) => m.ts).sort((a, b) => Number(a.ts) - Number(b.ts));
+  const raw: Msg[] = [];
+  let cursor: string | undefined;
+  let truncated = false;
+  for (let page = 0; ; page++) {
+    const res = await slack.conversations.history({ channel: channelId, oldest, limit: PAGE, inclusive: false, cursor });
+    raw.push(...((res.messages ?? []) as Msg[]));
+    cursor = res.has_more ? res.response_metadata?.next_cursor || undefined : undefined;
+    if (!cursor) break;
+    if (page + 1 >= MAX_PAGES) { truncated = true; break; }
+  }
+  // Slack pages newest-first, so a capped fetch is missing the OLDEST messages and no watermark can resume there without extra state.
+  if (truncated) log.warn("observe backlog truncated; oldest messages beyond the page cap are skipped", { channelId, fetched: raw.length });
+  const msgs = [...new Map(raw.map((m) => [m.ts, m])).values()].filter((m) => m.ts).sort((a, b) => Number(a.ts) - Number(b.ts));
   if (!msgs.length) return none;
   const newest = msgs[msgs.length - 1]!.ts!;
 

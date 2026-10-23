@@ -14,11 +14,16 @@ export const DEPTH_CONFIG: Record<Depth, { maxSteps: number; maxOutputTokens: nu
   deep: { maxSteps: 60, maxOutputTokens: 2000, role: "main", recall: true, tools: true },
 };
 
+const CONTINUE = /^(continue|keep going|go on|carry on|resume)\b/i;
 const URL_RE = /https?:\/\/\S+/i;
 const SMALL_TALK = /^(hi|hey|hello|yo|sup|thanks?|thank you|thx|ty|cheers|ok(ay)?|k|cool|nice|great|awesome|perfect|got it|gotcha|sounds good|lgtm|sgtm|will do|noted|appreciate it|good (morning|night|evening)|gm|gn|bye|cya|np|no worries|you rock|lol|haha|yes|yep|yeah|no|nope|nvm|never ?mind|[+👍🙏🙌✅❤️👌 ]+)([\s!.,)]*(thanks?|thx|ty|all|there|team|brain|again|so much|much))*[\s!.,:;)]*$/i;
 const ACTION_RE = /\b(create|open|file|close|assign|reassign|schedule|remind|send|post|update|merge|deploy|rerun|re-run|review|comment|list|show me|pull up|find|check|look up|look at|what'?s (the )?(status|latest)|status of|how many|count|issues?|tickets?|prs?|pull requests?|repos?|sprint|deploys?|incidents?|alerts?|errors?|dashboard|linear|github|notion|jira|sentry|posthog|gmail|calendar|drive|doc|every (day|week|monday|tuesday|wednesday|thursday|friday)|cron|automation|search the web|google|news|slack|channel|thread)\b/i;
 const DEEP_RE = /\b(research|investigate|investigation|analy[sz]e|analysis|deep[- ]dive|compare|comparison|audit|root cause|post-?mortem|write (a |the )?(report|summary|brief|spec|plan)|everything (we|you) (know|have)|comprehensive|end[- ]to[- ]end|step[- ]by[- ]step plan|across (all|every))\b/i;
 const MEMORY_RE = /\b(who|what|when|where|why|how|which|did we|do we|have we|are we|is there|was there|remember|recall|decid|agreed|owner|owns|deadline|due|policy|last time|previously|history|background|context)\b/i;
+
+const SAVE_MEMORY_RE = /\b(please )?(remember|save|store) (this|that|it)\b/i;
+const COMPANY_PROFILE_RE = /\b(our company|our startup|our product|company profile|this is what (our|the) company is all about)\b/i;
+const CORRECTION_RE = /^(actually|correction)\b|\bthat'?s (wrong|incorrect|not (right|correct))\b/i;
 
 export type DepthInput = {
   trigger: Trigger;
@@ -37,9 +42,12 @@ export function heuristicDepth(i: DepthInput): Depth | null {
   if (i.trigger === "automation") return DEEP_RE.test(i.text) ? "deep" : "tools";
   if (i.trigger === "chime") return ACTION_RE.test(i.text) && URL_RE.test(i.text) ? "tools" : "memory";
   const t = strip(i.text);
+  if (i.hasHistory && CONTINUE.test(t)) return "deep";
   if (!i.hasFiles && t.length <= 60 && SMALL_TALK.test(t)) return "direct";
   if (!t && !i.hasFiles) return "direct";
   const questions = (t.match(/\?/g) ?? []).length;
+  // saving/correcting needs memory_remember / core_memory, which only exist at depth tools
+  if ((SAVE_MEMORY_RE.test(t) || COMPANY_PROFILE_RE.test(t) || (i.hasHistory && !t.includes("?") && CORRECTION_RE.test(t))) && !DEEP_RE.test(t) && !ACTION_RE.test(t) && !URL_RE.test(t)) return "tools";
   if (t.length > 700 || questions >= 3 || DEEP_RE.test(t)) return "deep";
   if (URL_RE.test(t) || ACTION_RE.test(t) || i.hasFiles) return "tools";
   if (t.includes("?") || MEMORY_RE.test(t)) return "memory";

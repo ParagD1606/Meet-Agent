@@ -3,6 +3,7 @@ import { db } from "../db";
 import { memories, memoryReviews } from "../db/schema";
 import { log } from "../log";
 import { applyCoreBlockReview } from "./core-blocks";
+import { clearRecallCache } from "./recall";
 
 export type Review = typeof memoryReviews.$inferSelect;
 
@@ -58,6 +59,7 @@ export async function decideReview(id: string, userId: string, approve: boolean)
       .set({ status: approve ? "approved" : "rejected", decidedBy: userId, decidedAt: new Date() })
       .where(eq(memoryReviews.id, id));
     log.info("memory review decided", { id, kind: rv.kind, approve, by: userId });
+    clearRecallCache();
     return { ok: true, status: approve ? "approved" : "rejected" };
   });
 }

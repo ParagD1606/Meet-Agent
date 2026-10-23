@@ -95,7 +95,8 @@ export function mountMemoryExtRoutes(api: Hono<AppEnv>): void {
     if (!Number.isInteger(id)) throw httpError(400, "invalid_id");
     const [row] = await db.select({ tag: memories.scopeTag }).from(memories).where(eq(memories.id, id));
     if (!row || row.tag !== SHARED_TAG) throw httpError(404, "not_found");
-    return c.json((await getMemoryHistory(id)).filter((m) => m.scopeTag === SHARED_TAG));
+    const admin = hasRole(c.get("user").role, "admin");
+    return c.json((await getMemoryHistory(id)).filter((m) => m.scopeTag === SHARED_TAG && (admin || m.reviewState === "ok")));
   });
 
   api.get("/episodes", requireAuth(), async (c) => {

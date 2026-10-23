@@ -3,6 +3,7 @@ import { db } from "../db";
 import { memories } from "../db/schema";
 import { deleteMemory, type MemoryRow } from "./graph";
 import { scanMemoryText } from "./core-blocks";
+import { clearRecallCache } from "./recall";
 import { searchMemory } from "./search";
 import { addFact, type AddFactInput, type AddFactResult } from "./supersede";
 
@@ -50,6 +51,9 @@ export async function forgetMemories(a: { tags: string[]; query: string; dryRun?
   if (!a.tags.length) return [];
   const hits = await searchMemory({ tags: a.tags, query: a.query, limit: a.max ?? 5 });
   const matched = hits.filter((h) => h.kind === "fact" && h.score >= 0.45).slice(0, a.max ?? 5);
-  if (!(a.dryRun ?? true)) for (const h of matched) await deleteMemory(h.id);
+  if (!(a.dryRun ?? true)) {
+    for (const h of matched) await deleteMemory(h.id);
+    clearRecallCache();
+  }
   return matched.map((h) => ({ id: h.id, text: h.text, scopeTag: h.scopeTag }));
 }

@@ -91,7 +91,11 @@ async function flush(key: string): Promise<number> {
   await db.insert(threadState).values({ channelId: p.channelId, threadTs: p.threadTs, turnsSinceReflect: 0 })
     .onConflictDoUpdate({ target: [threadState.channelId, threadState.threadTs], set: { turnsSinceReflect: 0, updatedAt: new Date() } })
     .catch(() => {});
-  return captureTurn({ scope: p.scope, transcript: p.chunks.join("\n\n"), sourceRef: p.channelId, permalink: p.permalink });
+  const transcript = p.chunks.join("\n\n");
+  const stored = await captureTurn({ scope: p.scope, transcript, sourceRef: p.channelId, permalink: p.permalink });
+  await recordEpisode({ scope: p.scope, channelId: p.channelId, threadTs: p.threadTs, transcript: transcript.slice(-12_000), permalink: p.permalink })
+    .catch((e) => log.warn("recordEpisode failed", { err: String(e) }));
+  return stored;
 }
 
 /**

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import type { Hono } from "hono";
 import { z } from "zod";
 import { sha256 } from "../crypto";
@@ -43,7 +43,7 @@ export function buildMcpServer(): McpServer {
       const rows = await db
         .select({ id: memories.id, text: memories.text, source: memories.source, createdAt: memories.createdAt })
         .from(memories)
-        .where(and(eq(memories.scopeTag, "shared"), eq(memories.status, "active")))
+        .where(and(eq(memories.scopeTag, "shared"), eq(memories.status, "active"), eq(memories.reviewState, "ok"), isNull(memories.invalidAt)))
         .orderBy(desc(memories.createdAt), desc(memories.id))
         .limit(limit ?? 20);
       if (!rows.length) return text("No memories yet.");

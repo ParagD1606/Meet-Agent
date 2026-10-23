@@ -6,6 +6,7 @@ import { memories, memoryEdges, memoryReviews } from "../db/schema";
 import { log } from "../log";
 import type { AgentContext } from "./core-blocks";
 import { embed } from "./embed";
+import { clearRecallCache } from "./recall";
 import { completeJson } from "./llm";
 import { SHARED_TAG } from "./scope";
 import { vectorLiteral } from "./search";
@@ -47,13 +48,22 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 export async function addFact(a: AddFactInput): Promise<AddFactResult> {
   const text = a.text.trim();
   if (!text) throw new Error("addFact: empty text");
+  const confidence = clamp01(a.confidence ?? 1);
+  const shared = a.tag === SHARED_TAG;
+  const ctx = a.agentContext ?? "primary";
+  const writerHeld = shared && ctx !== "primary" && ctx !== "consolidation";
+  const held = shared && (confidence < LOW_CONFIDENCE || writerHeld);
+  const validAt = a.validAt ?? new Date();
+
+  // Rejected rows never count; pending rows only dedupe other held writes (so a primary write is not swallowed by a held one).
+  const states: ("ok" | "pending")[] = held ? ["ok", "pending"] : ["ok"];
   const qv = a.embedding ?? (await embed([text]))[0]!;
   const vec = vectorLiteral(qv);
   const dist = sql`${memories.embedding} <=> ${vec}::vector`;
   const nearQuery = (n: number) => db
     .select({ id: memories.id, text: memories.text, sim: sql<number>`1 - (${dist})` })
     .from(memories)
-    .where(and(eq(memories.scopeTag, a.tag), eq(memories.status, "active"), eq(memories.kind, "fact"), isNull(memories.invalidAt)))
+    .where(and(eq(memories.scopeTag, a.tag), eq(memories.status, "active"), eq(memories.kind, "fact"), isNull(memories.invalidAt), inArray(memories.reviewState, states)))
     .orderBy(dist)
     .limit(n);
   const isDup = (n: { text: string; sim: number }) => Number(n.sim) >= DUPLICATE_SIMILARITY || norm(n.text) === norm(text);
@@ -75,20 +85,13 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
     }
   }
 
-  const confidence = clamp01(a.confidence ?? 1);
-  const shared = a.tag === SHARED_TAG;
-  const ctx = a.agentContext ?? "primary";
-  const writerHeld = shared && ctx !== "primary" && ctx !== "consolidation";
-  const held = shared && (confidence < LOW_CONFIDENCE || writerHeld);
-  const validAt = a.validAt ?? new Date();
-
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`memory:${a.tag}`}))`);
     // A concurrent writer may have stored the same fact while we were embedding / asking the LLM.
     const racers = await tx
       .select({ id: memories.id, text: memories.text, sim: sql<number>`1 - (${dist})` })
       .from(memories)
-      .where(and(eq(memories.scopeTag, a.tag), eq(memories.status, "active"), eq(memories.kind, "fact"), isNull(memories.invalidAt)))
+      .where(and(eq(memories.scopeTag, a.tag), eq(memories.status, "active"), eq(memories.kind, "fact"), isNull(memories.invalidAt), inArray(memories.reviewState, states)))
       .orderBy(dist)
       .limit(2);
     const racer = racers.find(isDup);
@@ -130,6 +133,7 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
         payload: { text, supersededIds: superseded }, requestedBy: a.createdBy ?? null,
       });
     }
+    clearRecallCache();
     return { id, superseded, deduped: false, ...(held ? { heldForReview: true } : {}), ...(reviewId ? { reviewId } : {}) };
   });
 }

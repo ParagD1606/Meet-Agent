@@ -19,18 +19,18 @@ export const CORE_MEMORY_GUIDANCE =
   "Never store task progress, one-off results, secrets or credentials; use memory_remember for individual facts.";
 
 const THREATS: [RegExp, string][] = [
-  [/ignore\s+(previous|all|above|prior)\s+instructions/i, "prompt_injection"],
+  [/ignore\s+(?:(?:all|any|the|your|previous|prior|above|earlier|preceding)\s+)+(?:instructions|rules|prompts?)/i, "prompt_injection"],
   [/you\s+are\s+now\s+/i, "role_hijack"],
   [/do\s+not\s+tell\s+the\s+user/i, "deception_hide"],
   [/system\s+prompt\s+override/i, "sys_prompt_override"],
-  [/disregard\s+(your|all|any)\s+(instructions|rules|guidelines)/i, "disregard_rules"],
+  [/disregard\s+(?:(?:your|all|any|the|previous|prior|above|earlier|preceding)\s+)+(?:instructions|rules|guidelines|prompts?)/i, "disregard_rules"],
   [/act\s+as\s+(if|though)\s+you\s+(have\s+no|don'?t\s+have)\s+(restrictions|limits|rules)/i, "bypass_restrictions"],
   [/(reveal|print|show|repeat|leak)\s+(your\s+|the\s+)?(system\s+prompt|instructions|api\s*key|secrets?)/i, "exfil_prompt"],
   [/(curl|wget)\s+[^\n]*(\$\{?\w*(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)|https?:\/\/)/i, "exfil_http"],
   [/<\/?\s*(memory-context|system|instructions?|assistant|tool_result)\b/i, "fence_spoof"],
   [/authorized_keys|~\/\.ssh|\$HOME\/\.ssh/i, "ssh_access"],
 ];
-const INVISIBLE = /[​-‏‪-‮⁠-⁤⁦-⁩﻿­]/;
+const INVISIBLE = /[\u034F\u061C\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFE00-\uFE0F\uFEFF\u{E0000}-\u{E007F}]/u;
 
 /** Returns a human-readable rejection reason, or null when the text is safe to inject into a prompt. */
 export function scanMemoryText(text: string): string | null {
