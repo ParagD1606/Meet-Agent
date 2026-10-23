@@ -73,12 +73,14 @@ export async function buildContext(
     ...history.map((m) => ({ role: m.role, content: m.text })),
   ];
 
+  // Most-shared first so the byte-identical prefix is as long as possible across users (cache-stable):
+  // workspace-wide blocks, then channel, then the asker's own block last.
   const frozenPrefixBlocks = [
+    block("Workspace instructions", workspacePrompt),
+    block("Available skills", skillsSection),
     block("Company memory", core.company?.text ?? ""),
     block("Channel memory", core.channel?.text ?? ""),
     block("User memory", core.user?.text ?? ""),
-    block("Workspace instructions", workspacePrompt),
-    block("Available skills", skillsSection),
   ].filter(Boolean);
   const tokens = estimateTokens(frozenPrefixBlocks.join("\n\n") + messages.map((m) => typeof m.content === "string" ? m.content : JSON.stringify(m.content)).join("\n") + recall.text);
   return { frozenPrefixBlocks, recallText: recall.text, history: messages, compactHistory: history, tokens };

@@ -36,9 +36,22 @@ beforeEach(async () => {
 });
 
 describe("runTurn", () => {
+  test("direct depth (greeting): no placeholder, one in-thread post, one model call", async () => {
+    const model = new MockLanguageModelV4({ doStream: async () => reply("Hi there") });
+    setLoopModel(model as any);
+    await runTurn(input({ text: "hello" }));
+    expect(slack.of("postMessage")).toHaveLength(1);
+    expect(slack.of("postMessage")[0]!.args).toMatchObject({ channel: "C1", thread_ts: "10.1", text: "Hi there" });
+    expect(slack.of("update")).toHaveLength(0);
+    expect(model.doStreamCalls).toHaveLength(1);
+    expect((model.doStreamCalls[0]!.tools ?? []).length).toBe(0);
+    const [t] = await db.select().from(turns);
+    expect(t).toMatchObject({ status: "done", depth: "direct" });
+  });
+
   test("posts a placeholder in-thread, replaces it with the answer, records the turn", async () => {
     setLoopModel(new MockLanguageModelV4({ doStream: async () => reply("The answer is 42") }) as any);
-    await runTurn(input());
+    await runTurn(input({ text: "what did we decide about the pricing change last week?" }));
     expect(slack.of("postMessage")[0]!.args).toMatchObject({ channel: "C1", thread_ts: "10.1" });
     expect(slack.of("update").at(-1)!.args.text).toBe("The answer is 42");
     const [t] = await db.select().from(turns);
@@ -92,10 +105,18 @@ describe("runTurn", () => {
 
   test("model failure marks the turn errored and tells the user", async () => {
     setLoopModel(new MockLanguageModelV4({ doStream: async () => { throw new Error("provider down"); } }) as any);
-    await runTurn(input());
+    await runTurn(input({ text: "what did we decide about the pricing change last week?" }));
     const [t] = await db.select().from(turns).where(eq(turns.channelId, "C1"));
     expect(t!.status).toBe("error");
     expect(t!.error).toContain("provider down");
     expect(slack.of("update").at(-1)!.args.text).toContain("went wrong");
+  });
+
+  test("model failure on a direct turn (no placeholder) posts the apology as a new message", async () => {
+    setLoopModel(new MockLanguageModelV4({ doStream: async () => { throw new Error("provider down"); } }) as any);
+    await runTurn(input({ text: "hello" }));
+    const [t] = await db.select().from(turns);
+    expect(t!.status).toBe("error");
+    expect(slack.of("postMessage").at(-1)!.args.text).toContain("went wrong");
   });
 });

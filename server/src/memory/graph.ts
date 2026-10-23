@@ -48,7 +48,7 @@ export async function getGraph(a: { tags: string[]; limit: number; kind?: "fact"
   if (!rows.length) return { nodes: [], edges: [], total, truncated: false };
   const ids = rows.map((r) => r.id);
   const edges = await db.select().from(memoryEdges)
-    .where(and(sql`${memoryEdges.fromId} = any(${ids}::bigint[])`, sql`${memoryEdges.toId} = any(${ids}::bigint[])`));
+    .where(and(inArray(memoryEdges.fromId, ids), inArray(memoryEdges.toId, ids)));
   return {
     nodes: rows.map((r) => ({
       id: r.id, label: r.text.length > 80 ? `${r.text.slice(0, 77)}...` : r.text, scope: r.scopeTag, kind: r.kind, source: r.source,
