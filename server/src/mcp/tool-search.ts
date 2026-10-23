@@ -91,13 +91,18 @@ function parseArgs(raw: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
 }
 
+const NAME_LIST_CHARS = 1800;
+
 /** `search_tools` + `call_tool` over the lazy (unlisted) tools of this turn. Empty set when nothing is lazy. */
 export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
   if (!entries.length) return {};
   const byName = new Map(entries.map((e) => [e.name, e]));
+  // Names alone are cheap (about 5 tokens each) and let the model call the right tool without a search round trip.
+  let names = "";
+  for (const e of entries) { if (names.length + e.name.length > NAME_LIST_CHARS) { names += ", ..."; break; } names += (names ? ", " : "") + e.name; }
   return {
     search_tools: tool({
-      description: `Find tools in large connected apps (${apps.join(", ")}) by keyword. Returns name(params*) lines; run one with call_tool.`,
+      description: `Find tools in large connected apps (${apps.join(", ")}) by keyword. Returns name(params*) lines; run one with call_tool. Tool names: ${names}.`,
       inputSchema: z.object({ query: z.string().min(1).max(200), limit: z.number().int().min(1).max(15).optional() }),
       execute: async ({ query, limit }) => {
         const hits = rankTools(query, entries, limit ?? 8);
@@ -115,7 +120,7 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
         const a = parseArgs(args);
         if (!a) return toolError(name, "args must be a JSON object string", "invalid_input");
         const miss = missingRequired(e.info, a);
-        if (miss.length) return toolError(name, `missing required: ${miss.join(", ")}`, "invalid_input");
+        if (miss.length) return toolError(name, `missing required: ${miss.join(", ")}. Signature: ${signature(e.info, e.name)}`, "invalid_input");
         return e.run(a, fields);
       },
     }),
