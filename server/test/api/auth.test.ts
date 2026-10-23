@@ -5,6 +5,7 @@ import { sessions, users, workspace } from "../../src/db/schema";
 import { app, call, db, login, mkUser, resetDb } from "./helpers";
 
 const realFetch = globalThis.fetch;
+const SETUP = "test-setup-token";
 let identity: Record<string, unknown>;
 
 function mockSlack() {
@@ -21,14 +22,14 @@ const ident = (uid: string, team = "T1") => ({
 });
 
 /** Runs the full redirect dance and returns the callback response. */
-async function signIn(uid: string, team = "T1", cookieJar = "") {
+async function signIn(uid: string, team = "T1", cookieJar = "", setupToken: string | null = SETUP) {
   identity = ident(uid, team);
-  const start = await app.request("/auth/slack");
+  const start = await app.request(setupToken ? `/auth/slack?setup_token=${setupToken}` : "/auth/slack");
   expect(start.status).toBe(302);
   const loc = new URL(start.headers.get("location")!);
   expect(loc.hostname).toBe("slack.com");
   const state = loc.searchParams.get("state")!;
-  const stateCookie = start.headers.get("set-cookie")!.split(";")[0]!;
+  const stateCookie = start.headers.getSetCookie().map((c) => c.split(";")[0]!).join("; ");
   return app.request(`/auth/slack/callback?code=abc&state=${state}`, { headers: { cookie: `${stateCookie}; ${cookieJar}` } });
 }
 
@@ -37,11 +38,29 @@ beforeEach(async () => {
   config.SLACK_CLIENT_ID = "cid";
   config.SLACK_CLIENT_SECRET = "csecret";
   config.PUBLIC_URL = "http://localhost:3000";
+  config.SETUP_TOKEN = SETUP;
+  config.SLACK_TEAM_ID = undefined;
   mockSlack();
 });
 afterEach(() => { globalThis.fetch = realFetch; });
 
 describe("slack sign-in", () => {
+  test("owner lock: no owner yet needs the setup token; a wrong token is refused", async () => {
+    expect((await signIn("U1", "T1", "", null)).status).toBe(403);
+    expect((await db.select().from(users)).length).toBe(0);
+    const start = await app.request("/auth/slack?setup_token=wrong");
+    expect(start.status).toBe(403);
+    expect((await signIn("U1")).status).toBe(302);
+    // once an owner exists nobody needs the token
+    expect((await signIn("U2", "T1", "", null)).status).toBe(302);
+  });
+
+  test("SLACK_TEAM_ID pin refuses other teams even with the token", async () => {
+    config.SLACK_TEAM_ID = "T1";
+    expect((await signIn("U1", "T-other")).status).toBe(403);
+    expect((await signIn("U1", "T1")).status).toBe(302);
+  });
+
   test("first sign-in becomes owner, later ones are members", async () => {
     const r1 = await signIn("U1");
     expect(r1.status).toBe(302);

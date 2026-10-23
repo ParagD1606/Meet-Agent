@@ -6,6 +6,11 @@ import { csrf, type AppEnv } from "../auth/session";
 import { mountMcpServer } from "../mcp-server";
 import { mountSyncOAuth } from "../sync";
 import { log } from "../log";
+import { limitsRoutes } from "../limits/routes";
+import { mountExportRoutes } from "./export";
+import { mountMarketplaceRoutes } from "./marketplace";
+import { mountMemoryExtRoutes } from "./memory-ext";
+import { mountSkillsUploadRoutes } from "./skills-upload";
 import { behavior } from "./behavior";
 import { core } from "./core";
 import { memory } from "./memory";
@@ -15,11 +20,17 @@ import { syncRoutes } from "./sync";
 export function buildApi(): Hono<AppEnv> {
   const api = new Hono<AppEnv>();
   api.use("*", csrf);
+  // pass-2 routes first: mountSkillsUploadRoutes supersedes the skills handlers in `behavior` (scoped, versioned)
+  mountMarketplaceRoutes(api);
+  mountSkillsUploadRoutes(api);
+  mountExportRoutes(api);
+  mountMemoryExtRoutes(api);
   api.route("/", core);
   api.route("/", memory);
   api.route("/", settingsRoutes);
   api.route("/", behavior);
   api.route("/", syncRoutes);
+  api.route("/", limitsRoutes);
   api.notFound((c) => c.json({ error: "not_found" }, 404));
   api.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();

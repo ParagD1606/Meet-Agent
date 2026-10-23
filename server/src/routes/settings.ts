@@ -5,7 +5,7 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { config } from "../config";
 import { db } from "../db";
 import { channels, settings } from "../db/schema";
-import { detectProvider } from "../llm";
+import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
 import { httpError, readBody, codedError } from "./util";
 
@@ -81,8 +81,16 @@ async function models() {
   const p = provider();
   const profile = (await getSetting("model_profile")) === "fast" ? "fast" : "thorough";
   const override = await getSetting("model_override");
+  const roles: Record<string, string | null> = {};
+  for (const r of MODEL_ROLES) {
+    const v = await getSetting(`model_role_${r}`);
+    roles[r] = typeof v === "string" && v ? v : null;
+  }
+  const fb = await getSetting("model_fallback");
   return {
     provider: p,
+    roles,
+    fallback: typeof fb === "string" && fb ? fb : null,
     profile,
     model: typeof override === "string" ? override : null,
     models: p ? MODELS[p]! : [],
@@ -92,6 +100,21 @@ async function models() {
 
 settingsRoutes.get("/settings/models", requireAuth(), async (c) => c.json(await models()));
 settingsRoutes.put("/settings/models", requireAuth("admin"), async (c) => {
+  const raw = await c.req.raw.clone().json().catch(() => null) as Record<string, unknown> | null;
+  if (raw && ("role" in raw || "fallback" in raw)) {
+    const b = await readBody(c, z.object({
+      role: z.enum(MODEL_ROLES as [ModelRole, ...ModelRole[]]).optional(),
+      model: z.string().trim().max(120).nullish(),
+      fallback: z.string().trim().max(160).nullish(),
+    }));
+    if (b.role) await putSetting(`model_role_${b.role}`, b.model || null);
+    if ("fallback" in raw) {
+      if (b.fallback && !/^(anthropic|openai|google|xai|compat):.+/.test(b.fallback)) throw httpError(400, "bad_fallback");
+      await putSetting("model_fallback", b.fallback || null);
+    }
+    await refreshModelSettings();
+    return c.json(await models());
+  }
   const body = await readBody(c, z.object({
     profile: z.enum(["fast", "thorough"]),
     provider: z.string().max(40).optional(),
@@ -103,5 +126,6 @@ settingsRoutes.put("/settings/models", requireAuth("admin"), async (c) => {
   if (body.model && p !== "compat" && !MODELS[p]!.some((m) => m.id === body.model)) throw httpError(400, "unknown_model");
   await putSetting("model_profile", body.profile);
   await putSetting("model_override", body.model ?? null);
+  await refreshModelSettings();
   return c.json(await models());
 });

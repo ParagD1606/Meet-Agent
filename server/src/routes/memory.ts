@@ -5,7 +5,7 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { db } from "../db";
 import { memories } from "../db/schema";
 import { log } from "../log";
-import { deleteMemory, getGraph, listMemories } from "../memory/graph";
+import { deleteMemory, getGraph, listMemories, MAX_GRAPH_NODES } from "../memory/graph";
 import { ingestDocument } from "../memory/ingest";
 import { httpError, readQuery } from "./util";
 
@@ -17,8 +17,13 @@ const TAGS = ["shared"];
 const MAX_UPLOAD = 20 * 1024 * 1024;
 
 memory.get("/graph", requireAuth(), async (c) => {
-  const { limit } = readQuery(c, z.object({ limit: z.coerce.number().int().min(1).max(2000).default(300) }));
-  return c.json(await getGraph({ tags: TAGS, limit }));
+  const q = readQuery(c, z.object({
+    limit: z.coerce.number().int().min(1).max(MAX_GRAPH_NODES).default(300),
+    kind: z.enum(["fact", "chunk"]).optional(),
+    source: z.string().max(40).optional(),
+    q: z.string().max(200).optional(),
+  }));
+  return c.json(await getGraph({ tags: TAGS, ...q }));
 });
 
 memory.get("/memories", requireAuth(), async (c) => {
@@ -26,6 +31,7 @@ memory.get("/memories", requireAuth(), async (c) => {
     q: z.string().max(500).optional(),
     limit: z.coerce.number().int().min(1).max(200).default(50),
     offset: z.coerce.number().int().min(0).default(0),
+    status: z.enum(["active", "superseded", "all"]).default("active"),
   }));
   return c.json(await listMemories({ tags: TAGS, ...q }));
 });

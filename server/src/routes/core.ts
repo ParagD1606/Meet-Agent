@@ -1,11 +1,16 @@
-import { count, desc, eq, and } from "drizzle-orm";
+import { count, desc, eq, and, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
+import { HTTPException } from "hono/http-exception";
 import { requireAuth, userFromRequest, hasRole, type AppEnv } from "../auth/session";
 import { config } from "../config";
 import { id, sha256 } from "../crypto";
 import { db } from "../db";
 import { apiTokens, automations, mcpConnections, memories, turns, users, workspace } from "../db/schema";
+import { ownerExists } from "../auth/setup-token";
+import { jobsStarted } from "../jobs";
+import { probeModel } from "../llm";
+import { postDm } from "../slack/client";
 import { slackManifestYaml } from "./manifest";
 import { SYNC_PROVIDER_IDS } from "../sync/types";
 import { PROVIDERS } from "../sync";
@@ -50,15 +55,35 @@ const setupGate = async (c: Parameters<ReturnType<typeof requireAuth>>[0], next:
 
 core.get("/setup/status", setupGate, async (c) => {
   const [ws] = await db.select({ id: workspace.id, name: workspace.name }).from(workspace).limit(1);
+  const model = Boolean(config.MODEL_API_KEY || config.MODEL_BASE_URL);
+  const embedding = Boolean(config.EMBEDDING_API_KEY || config.MODEL_API_KEY || config.MODEL_BASE_URL);
+  const slack = Boolean(config.SLACK_CLIENT_ID && config.SLACK_CLIENT_SECRET && (config.SLACK_MODE === "socket" ? config.SLACK_APP_TOKEN : config.SLACK_SIGNING_SECRET));
+  const dbOk = await db.execute(sql`select 1`).then(() => true, () => false);
   return c.json({
-    model: Boolean(config.MODEL_API_KEY || config.MODEL_BASE_URL),
-    embedding: Boolean(config.EMBEDDING_API_KEY || config.MODEL_API_KEY || config.MODEL_BASE_URL),
-    slack: Boolean(config.SLACK_CLIENT_ID && config.SLACK_CLIENT_SECRET && (config.SLACK_MODE === "socket" ? config.SLACK_APP_TOKEN : config.SLACK_SIGNING_SECRET)),
+    model, embedding, slack,
+    ownerLocked: await ownerExists(),
+    teamPinned: Boolean(config.SLACK_TEAM_ID),
+    // configured-ness only; use POST /setup/test-message or /readyz for live probes
+    checks: { db: dbOk, boss: jobsStarted(), model, embedding, slack: slack && Boolean(ws) },
     workspace: ws ? { id: ws.id, name: ws.name } : null,
     publicUrl: config.PUBLIC_URL,
     slackMode: config.SLACK_MODE,
     sync: Object.fromEntries(SYNC_PROVIDER_IDS.map((p) => [p, PROVIDERS[p].configured()])),
   });
+});
+
+/** Sends a real DM to the signed-in admin through the installed bot, proving token + scopes work end to end. */
+core.post("/setup/test-message", requireAuth("admin"), async (c) => {
+  const [ws] = await db.select({ id: workspace.id }).from(workspace).limit(1);
+  if (!ws) throw httpError(409, "no_workspace", { message: "Install the Slack app first." });
+  try {
+    const ts = await postDm(c.get("user").id, "Test message from Brain: Slack is connected and I can DM you.");
+    if (!ts) throw httpError(502, "dm_failed", { message: "Slack did not accept the message." });
+    return c.json({ ok: true, ts });
+  } catch (e) {
+    if (e instanceof HTTPException) throw e;
+    throw httpError(502, "dm_failed", { message: e instanceof Error ? e.message : String(e) });
+  }
 });
 
 core.get("/setup/manifest", setupGate, (c) =>
@@ -83,12 +108,48 @@ core.get("/overview", requireAuth(), async (c) => {
   return c.json({ memoryCount: mem!.n, connections: conn!.n, automations: auto!.n, recentTurns });
 });
 
+const TURN_STATUS = ["running", "done", "error", "waiting_approval"] as const;
+const permalink = (wsId: string | undefined, channelId: string, threadTs: string | null) =>
+  wsId && threadTs ? `https://app.slack.com/client/${wsId}/${channelId}/thread/${channelId}-${threadTs}` : null;
+
+/** Filters + keyset cursor (`startedAt|id` of the last row; pass back as `cursor`). Returns a bare array, newest first. */
 core.get("/turns", requireAuth("admin"), async (c) => {
-  const { limit } = readQuery(c, z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }));
+  const q = readQuery(c, z.object({
+    limit: z.coerce.number().int().min(1).max(200).default(50),
+    status: z.enum(TURN_STATUS).optional(),
+    trigger: z.string().max(30).optional(),
+    channel: z.string().max(40).optional(),
+    user: z.string().max(40).optional(),
+    cursor: z.string().max(80).optional(),
+  }));
+  let cur: { at: Date; id: string } | null = null;
+  if (q.cursor) {
+    const [at, ...rest] = q.cursor.split("|");
+    const d = new Date(at ?? "");
+    if (Number.isNaN(d.getTime()) || !rest.length) throw httpError(400, "invalid_cursor");
+    cur = { at: d, id: rest.join("|") };
+  }
   const rows = await db
-    .select({ ...turnCols, threadTs: turns.threadTs, toolCalls: turns.toolCalls, error: turns.error })
-    .from(turns).orderBy(desc(turns.startedAt)).limit(limit);
+    .select({ ...turnCols, threadTs: turns.threadTs, toolCalls: turns.toolCalls, error: turns.error, depth: turns.depth, model: turns.model, costMicros: turns.costMicros, steps: turns.steps })
+    .from(turns)
+    .where(and(
+      q.status ? eq(turns.status, q.status) : undefined,
+      q.trigger ? eq(turns.trigger, q.trigger) : undefined,
+      q.channel ? eq(turns.channelId, q.channel) : undefined,
+      q.user ? eq(turns.userId, q.user) : undefined,
+      cur ? sql`(${turns.startedAt}, ${turns.id}) < (${cur.at.toISOString()}::timestamptz, ${cur.id})` : undefined,
+    ))
+    .orderBy(desc(turns.startedAt), desc(turns.id)).limit(q.limit);
+  const last = rows.at(-1);
+  if (last && rows.length === q.limit) c.header("x-next-cursor", `${last.startedAt.toISOString()}|${last.id}`);
   return c.json(rows);
+});
+
+core.get("/turns/:id", requireAuth("admin"), async (c) => {
+  const [row] = await db.select().from(turns).where(eq(turns.id, c.req.param("id")));
+  if (!row) throw httpError(404, "not_found");
+  const [ws] = await db.select({ id: workspace.id }).from(workspace).limit(1);
+  return c.json({ ...row, permalink: permalink(ws?.id, row.channelId, row.threadTs) });
 });
 
 // ---------- API tokens (outward MCP server) ----------

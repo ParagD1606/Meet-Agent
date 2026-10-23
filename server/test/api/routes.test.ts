@@ -72,15 +72,32 @@ describe("settings", () => {
 });
 
 describe("skills", () => {
-  test("admin CRUD, member read-only, errors mapped", async () => {
-    const created = await call("POST", "/api/skills", { cookie: admin, body: { name: "Standup", description: "daily", body: "do the thing" } });
+  test("org skills: admin-managed, versioned; personal skills: yours only; errors mapped", async () => {
+    const created = await call("POST", "/api/skills", { cookie: admin, body: { name: "Standup", description: "daily", body: "do the thing", scope: "org" } });
     expect(created.status).toBe(201);
-    const { id } = await json(created);
-    expect((await call("POST", "/api/skills", { cookie: admin, body: { name: "standup", description: "d", body: "b" } })).status).toBe(409);
-    expect((await call("PUT", `/api/skills/${id}`, { cookie: admin, body: { enabled: false } })).status).toBe(200);
+    const { id, version } = await json(created);
+    expect((await call("POST", "/api/skills", { cookie: admin, body: { name: "standup", description: "d", body: "b", scope: "org" } })).status).toBe(409);
+    // members cannot create or change org skills
+    expect((await call("POST", "/api/skills", { cookie: member, body: { name: "Other", description: "d", body: "b", scope: "org" } })).status).toBe(403);
+    expect((await call("PUT", `/api/skills/${id}`, { cookie: member, body: { enabled: true, expectedVersion: version } })).status).toBe(403);
+    expect((await call("DELETE", `/api/skills/${id}`, { cookie: member })).status).toBe(403);
+    // optimistic lock
+    expect((await call("PUT", `/api/skills/${id}`, { cookie: admin, body: { enabled: false } })).status).toBe(400);
+    expect((await call("PUT", `/api/skills/${id}`, { cookie: admin, body: { enabled: false, expectedVersion: version } })).status).toBe(200);
+    const stale = await call("PUT", `/api/skills/${id}`, { cookie: admin, body: { enabled: true, expectedVersion: version } });
+    expect(stale.status).toBe(409);
     expect((await json(await call("GET", "/api/skills", { cookie: member }))).map((s: any) => s.enabled)).toEqual([false]);
-    expect((await call("PUT", "/api/skills/missing", { cookie: admin, body: { enabled: true } })).status).toBe(404);
+    expect((await call("PUT", "/api/skills/missing", { cookie: admin, body: { enabled: true, expectedVersion: 1 } })).status).toBe(404);
     expect((await call("DELETE", `/api/skills/${id}`, { cookie: admin })).status).toBe(200);
+    expect((await call("DELETE", `/api/skills/${id}`, { cookie: admin })).status).toBe(404);
+  });
+
+  test("personal skills are invisible and untouchable to other members", async () => {
+    const mine = await call("POST", "/api/skills", { cookie: member, body: { name: "Mine", description: "d", body: "b" } });
+    expect(mine.status).toBe(201);
+    const { id } = await json(mine);
+    expect((await json(await call("GET", "/api/skills", { cookie: member }))).map((s: any) => s.id)).toEqual([id]);
+    expect((await json(await call("GET", "/api/skills", { cookie: admin }))).map((s: any) => s.id)).toEqual([]);
     expect((await call("DELETE", `/api/skills/${id}`, { cookie: admin })).status).toBe(404);
   });
 });

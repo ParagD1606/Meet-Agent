@@ -63,16 +63,18 @@ describe("proactivity policy", () => {
     await addChannel("CNOTMEMBER", { botIsMember: false });
     await addChannel("CHOME", { name: "company-brain" });
     await addChannel("COPT", { proactivity: "proactive" });
-    expect(await channelIsProactive("CGEN")).toBe(true); // default "all" when unset
-    expect(await channelIsProactive("CQUIET")).toBe(false);
-    expect(await channelIsProactive("CNOTMEMBER")).toBe(false);
-    expect(await channelIsProactive("CUNKNOWN")).toBe(false);
-    await db.insert(settings).values({ key: "proactivity_default", value: "own" });
+    // pass-2 default is "own": only #company-brain speaks unprompted, every other channel is opt-in
     expect(await channelIsProactive("CGEN")).toBe(false);
     expect(await channelIsProactive("CHOME")).toBe(true);
     expect(await channelIsProactive("COPT")).toBe(true);
+    expect(await channelIsProactive("CQUIET")).toBe(false);
+    expect(await channelIsProactive("CNOTMEMBER")).toBe(false);
+    expect(await channelIsProactive("CUNKNOWN")).toBe(false);
+    await db.insert(settings).values({ key: "proactivity_default", value: "all" });
+    expect(await channelIsProactive("CGEN")).toBe(true); // org-wide opt-in
+    expect(await channelIsProactive("CQUIET")).toBe(false);
     await db.update(settings).set({ value: "garbage" });
-    expect(await channelIsProactive("CGEN")).toBe(true); // junk falls back to "all"
+    expect(await channelIsProactive("CGEN")).toBe(false); // junk falls back to "own"
   });
 });
 

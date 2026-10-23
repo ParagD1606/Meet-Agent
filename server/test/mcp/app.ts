@@ -9,7 +9,7 @@ export const api = new Hono<AppEnv>();
 api.use("*", csrf);
 api.onError((err, c) => (err instanceof HTTPException ? err.getResponse() : c.json({ error: "internal_error", detail: String(err) }, 500)));
 export const app = new Hono();
-app.route("/api", api);
+app.mount("/api", api.fetch); // lazy: test files add routes to `api` after import
 
 export async function login(id: string, role: "owner" | "admin" | "member" = "member") {
   await db.insert(users).values({ id, name: `User ${id}`, role }).onConflictDoNothing();

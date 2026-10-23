@@ -6,12 +6,13 @@ import { channelMembers, channels, chimeLog, events, journeyState, messageFeedba
 import { handleEventCallback } from "../../src/slack/events";
 import { setTriageGenerator } from "../../src/slack/triage";
 import { routeMessage } from "../../src/slack/routing";
+import { flushReactions, resetAckBreaker, setReactionGap } from "../../src/slack/reactions";
 
 let ctx: Awaited<ReturnType<typeof setup>>;
-beforeEach(async () => { ctx = await setup(); setTriageGenerator(); });
+beforeEach(async () => { ctx = await setup(); setTriageGenerator(); setReactionGap(0); resetAckBreaker(); });
 
-const msg = (o: Record<string, any> = {}) => ({ type: "message", user: "U1", text: "hello", ts: nextTs(), channel: "C1", channel_type: "channel", ...o });
-const reactions = (m: string) => ctx.fake.calls.filter((c) => c.method === m).map((c) => c.args.name);
+const msg = (o: Record<string, any> = {}) => ({ type: "message", user: "U1", text: "does anyone know the refund policy?", ts: nextTs(), channel: "C1", channel_type: "channel", ...o });
+const reactions = async (m: string) => { await flushReactions(); return ctx.fake.calls.filter((c) => c.method === m).map((c) => c.args.name); };
 
 describe("routeMessage (pure)", () => {
   const r = (o: Record<string, any>, botInThread = false) => routeMessage(msg(o) as any, BOT, { botInThread });
@@ -64,7 +65,7 @@ describe("ingress: dedupe, filters, tenancy", () => {
     const { deps } = await import("../../src/slack/deps");
     deps.runTurn = async () => { throw new Error("turn down"); };
     await handleEventCallback(evt(msg({ text: `<@${BOT}> x` })));
-    expect(reactions("reactions.add")).toContain("warning");
+    expect(await reactions("reactions.add")).toContain("warning");
   });
 });
 
@@ -73,8 +74,8 @@ describe("turn routing", () => {
     const m = msg({ text: `<@${BOT}>   what did we decide?` });
     await handleEventCallback(evt(m));
     expect(ctx.turns[0]).toMatchObject({ trigger: "mention", channelId: "C1", threadTs: m.ts, ts: m.ts, userId: "U1", text: "what did we decide?", isIm: false, isPrivate: false });
-    expect(reactions("reactions.add")).toEqual(["eyes", "white_check_mark"]);
-    expect(reactions("reactions.remove")).toEqual(["eyes"]);
+    expect(await reactions("reactions.add")).toEqual(["eyes", "white_check_mark"]);
+    expect(await reactions("reactions.remove")).toEqual(["eyes"]);
     expect((await db.select().from(users).where(eq(users.id, "U1"))).length).toBe(1);
   });
   test("mention inside an existing thread keeps that thread", async () => {
@@ -95,17 +96,17 @@ describe("proactive path: gate -> triage -> budget -> chime turn", () => {
   const triageSays = (out: string) => setTriageGenerator(async () => out);
 
   test("ANSWER in a proactive channel runs a read-only chime turn", async () => {
-    await addChannel("C1");
+    await addChannel("C1", { proactivity: "proactive" });
     triageSays("ANSWER\nPriority: normal");
     const m = msg({ text: "does anyone know the refund policy?" });
     await handleEventCallback(evt(m));
     expect(ctx.turns).toHaveLength(1);
     expect(ctx.turns[0]).toMatchObject({ trigger: "chime", channelId: "C1", threadTs: m.ts, readOnly: true, orgConnectionsOnly: true, userId: "U1" });
     expect(await db.select().from(chimeLog)).toHaveLength(1);
-    expect(reactions("reactions.add")).toEqual([]); // chimes don't 👀
+    expect(await reactions("reactions.add")).toEqual([]); // chimes don't 👀
   });
   test("PASS, ACK, and triage failure never run a turn; ACK reacts", async () => {
-    await addChannel("C1");
+    await addChannel("C1", { proactivity: "proactive" });
     triageSays("PASS\nReason: humans talking");
     await handleEventCallback(evt(msg()));
     setTriageGenerator(async () => { throw new Error("llm down"); });
@@ -115,9 +116,10 @@ describe("proactive path: gate -> triage -> budget -> chime turn", () => {
     expect(ctx.turns).toHaveLength(0);
     expect(await db.select().from(chimeLog)).toHaveLength(0);
     triageSays("ACK\nEmoji: tada\nReason: shipped");
-    const m = msg({ text: "we shipped!" });
+    const m = msg({ text: "we just shipped the new billing flow!" });
     await handleEventCallback(evt(m));
     expect(ctx.turns).toHaveLength(0);
+    await flushReactions();
     expect(ctx.fake.calls.find((c) => c.method === "reactions.add")?.args).toMatchObject({ channel: "C1", timestamp: m.ts, name: "tada" });
   });
   test("quiet channels: triage is not even called", async () => {
@@ -129,13 +131,13 @@ describe("proactive path: gate -> triage -> budget -> chime turn", () => {
     expect(ctx.turns).toHaveLength(0);
   });
   test("budget: a burst of ANSWERs yields a single chime (5 min gap)", async () => {
-    await addChannel("C1");
+    await addChannel("C1", { proactivity: "proactive" });
     triageSays("ANSWER\nPriority: urgent");
     for (let i = 0; i < 5; i++) await handleEventCallback(evt(msg()));
     expect(ctx.turns).toHaveLength(1);
   });
   test("thread replies: ignored unless the bot has a turn in that thread, then triaged", async () => {
-    await addChannel("C1");
+    await addChannel("C1", { proactivity: "proactive" });
     triageSays("ANSWER\nPriority: normal");
     await handleEventCallback(evt(msg({ thread_ts: "100.1", ts: "100.2" })));
     expect(ctx.turns).toHaveLength(0);
@@ -161,7 +163,7 @@ describe("membership + users + reactions + onboarding", () => {
     expect(ctx.fake.count("chat.postMessage")).toBe(1);
   });
   test("human joins/leaves tracked; bot leaving clears membership", async () => {
-    await addChannel("C1");
+    await addChannel("C1", { proactivity: "proactive" });
     await handleEventCallback(evt({ type: "member_joined_channel", user: "U5", channel: "C1" }));
     expect(await db.select().from(channelMembers)).toHaveLength(1);
     await handleEventCallback(evt({ type: "member_left_channel", user: "U5", channel: "C1" }));
@@ -203,4 +205,17 @@ describe("membership + users + reactions + onboarding", () => {
     expect(ctx.blockActions).toHaveLength(1);
   });
   void TEAM;
+});
+
+describe("triage pre-filter + rate limit (zero-token path)", () => {
+  test("small talk never reaches the triage model; a rate-limited channel stops calling it", async () => {
+    await addChannel("C1", { proactivity: "proactive" });
+    let calls = 0;
+    setTriageGenerator(async () => { calls++; return "PASS\nReason: x"; });
+    await handleEventCallback(evt(msg({ text: "ok thanks" })));
+    await handleEventCallback(evt(msg({ text: "lol that was a great lunch yesterday folks" })));
+    expect(calls).toBe(0);
+    await handleEventCallback(evt(msg({ text: "does anyone know the refund policy?" })));
+    expect(calls).toBe(1);
+  });
 });

@@ -23,9 +23,9 @@ const ROUTES: [string, string, R][] = [
   ["GET", "/api/settings/models", "member"],
   ["PUT", "/api/settings/models", "admin"],
   ["GET", "/api/skills", "member"],
-  ["POST", "/api/skills", "admin"],
-  ["PUT", "/api/skills/x", "admin"],
-  ["DELETE", "/api/skills/x", "admin"],
+  ["POST", "/api/skills", "member"], // personal skills; org scope is admin-checked in the handler
+  ["PUT", "/api/skills/x", "member"], // 404 for others' personal skills, 403 for org skills (see skills test)
+  ["DELETE", "/api/skills/x", "member"],
   ["GET", "/api/automations", "member"],
   ["POST", "/api/automations", "member"],
   ["PATCH", "/api/automations/x", "member"],
@@ -41,6 +41,17 @@ const ROUTES: [string, string, R][] = [
   ["POST", "/api/sync/sources/x/run", "admin"],
   ["DELETE", "/api/sync/sources/x", "admin"],
   ["GET", "/sync/oauth/gdrive/callback", "admin"],
+  ["GET", "/api/core-blocks", "member"],
+  ["PUT", "/api/core-blocks", "admin"], // company block (default scope) is admin-write
+  ["GET", "/api/reviews", "admin"],
+  ["POST", "/api/reviews/x/decide", "admin"],
+  ["GET", "/api/memories/1/history", "member"],
+  ["GET", "/api/episodes", "member"],
+  ["GET", "/api/turns/x", "admin"],
+  ["POST", "/api/setup/test-message", "admin"],
+  ["GET", "/api/usage", "admin"],
+  ["GET", "/api/marketplace", "member"],
+  ["GET", "/api/export/memories", "admin"],
 ];
 
 const cookies = {} as Record<R, string>;

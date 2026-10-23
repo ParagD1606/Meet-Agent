@@ -14,28 +14,6 @@ export const behavior = new Hono<AppEnv>();
 const actorOf = (u: AppEnv["Variables"]["user"]): Actor => ({ userId: u.id, role: u.role, source: "api" });
 const isAdmin = (r: string) => r === "admin" || r === "owner";
 
-// ---------- skills ----------
-const skillBody = z.object({
-  name: z.string().trim().min(1).max(64),
-  description: z.string().trim().min(1).max(200),
-  body: z.string().trim().min(1).max(32_000),
-  enabled: z.boolean().optional(),
-});
-
-behavior.get("/skills", requireAuth(), async (c) => c.json(await listSkills()));
-behavior.post("/skills", requireAuth("admin"), async (c) => {
-  const input = await readBody(c, skillBody);
-  try { return c.json(await createSkill({ ...input, createdBy: c.get("user").id }), 201); } catch (e) { throw codedError(e); }
-});
-behavior.put("/skills/:id", requireAuth("admin"), async (c) => {
-  const patch = await readBody(c, skillBody.partial());
-  try { return c.json(await updateSkill(c.req.param("id"), patch)); } catch (e) { throw codedError(e); }
-});
-behavior.delete("/skills/:id", requireAuth("admin"), async (c) => {
-  if (!(await deleteSkill(c.req.param("id")))) throw httpError(404, "not_found");
-  return c.json({ ok: true });
-});
-
 // ---------- automations (members manage their own, admins manage all) ----------
 const autoBase = z.object({
   prompt: z.string().trim().min(1).max(4000),
