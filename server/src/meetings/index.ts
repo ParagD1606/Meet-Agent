@@ -34,8 +34,8 @@ const analysisSchema = z.object({
   tasks: z.array(taskSchema).max(50),
 });
 
-const SUMMARY_SYSTEM = `You turn a completed Slack Huddle transcript into useful meeting notes.
-Use only the supplied transcript. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
+const SUMMARY_SYSTEM = `You turn completed Slack Huddle source material into useful meeting notes.
+Use only the supplied transcript or Slack AI Huddle notes. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
 Extract only explicit commitments as tasks. Never invent an owner or due date. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
@@ -83,6 +83,23 @@ const lineText = (v: unknown): string => {
 
 const transcription = (file: HuddleFile) => file.huddle_transcription ?? file.transcription?.huddle_transcription ?? null;
 
+const unixDate = (n: unknown) => typeof n === "number" ? new Date(n * 1000) : undefined;
+
+/** Slack AI notes are a Canvas. `files.info` only exposes its metadata; Canvas content needs canvases:read. */
+async function huddleCanvasText(client: Awaited<ReturnType<typeof slackClient>>, file: HuddleFile) {
+  if (!file.is_huddle_canvas || typeof file.id !== "string") return null;
+  const response = await client.apiCall("canvases.getContent", { canvas_id: file.id, content_type: "markdown" }) as { content?: unknown };
+  if (typeof response.content !== "string" || !response.content.trim()) return null;
+  const channelId = Array.isArray(file.channels) && typeof file.channels[0] === "string" ? file.channels[0] : undefined;
+  return {
+    text: response.content.trim(),
+    participantIds: asStrings(file.huddle_participant_ids),
+    channelId,
+    startedAt: unixDate(file.huddle_date_start),
+    endedAt: unixDate(file.huddle_date_end),
+  };
+}
+
 function transcriptText(file: HuddleFile): { text: string; participantIds: string[]; channelId?: string; startedAt?: Date; endedAt?: Date } | null {
   const t = transcription(file);
   const lines = Array.isArray(t?.lines) ? t.lines : [];
@@ -95,13 +112,12 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
     return speaker ? `${speaker}: ${words}` : words;
   }).filter(Boolean).join("\n").trim();
   if (!text) return null;
-  const date = (n: unknown) => typeof n === "number" ? new Date(n * 1000) : undefined;
   return {
     text,
     participantIds: asStrings(t?.participant_ids ?? file.huddle_participant_ids),
     channelId: typeof t?.channel_id === "string" ? t.channel_id : undefined,
-    startedAt: date(t?.date_start ?? file.huddle_date_start),
-    endedAt: date(t?.date_end ?? file.huddle_date_end),
+    startedAt: unixDate(t?.date_start ?? file.huddle_date_start),
+    endedAt: unixDate(t?.date_end ?? file.huddle_date_end),
   };
 }
 
@@ -111,6 +127,7 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
   let file = (await client.files.info({ file: fileId })).file as HuddleFile | undefined;
   if (!file) return false;
   let parsed = transcriptText(file);
+  if (!parsed) parsed = await huddleCanvasText(client, file);
   // A Huddle notes canvas may point to a distinct transcript file.
   if (!parsed && typeof file.huddle_transcript_file_id === "string") {
     file = (await client.files.info({ file: file.huddle_transcript_file_id })).file as HuddleFile | undefined;
