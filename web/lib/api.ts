@@ -123,6 +123,16 @@ export interface Automation {
   id: string; ownerUserId: string; kind: "digest" | "reminder"; prompt: string; cron?: string | null
   runAt?: string | null; destChannelId?: string | null; enabled: boolean; lastRunAt?: string | null; lastStatus?: string | null
 }
+export type MeetingStatus = "processing" | "ready" | "failed"
+export interface MeetingTask {
+  title: string; description: string; assigneeName: string | null; assigneeId: string | null; dueDate: string | null
+  jiraKey?: string | null; jiraUrl?: string | null
+}
+export interface Meeting {
+  id: string; sourceFileId: string; channelId: string; threadTs?: string | null; title: string
+  transcript?: string; summary?: string | null; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
+  startedAt?: string | null; endedAt?: string | null; createdAt: string; updatedAt: string
+}
 export type ProactivityMode = "default" | "proactive" | "quiet"
 export interface ProactivityChannel { id: string; name: string; mode: ProactivityMode; observe?: boolean }
 export interface Proactivity { default: "all" | "own"; channels: ProactivityChannel[] }
@@ -194,6 +204,8 @@ export const api = {
   patchAutomation: (id: string, a: Partial<Automation>) => send("PATCH", `/api/automations/${id}`, a),
   deleteAutomation: (id: string) => send("DELETE", `/api/automations/${id}`),
   runAutomation: (id: string) => send("POST", `/api/automations/${id}/run`),
+  meetings: () => get<unknown>("/api/meetings").then((d) => list<Meeting>(d, "meetings")),
+  meeting: (id: string) => get<Meeting>(`/api/meetings/${id}`),
   presets: () => get<unknown>("/api/mcp/presets").then((d) => list<Preset>(d, "presets")),
   marketplace: (q: string, limit = 60) => get<unknown>(`/api/marketplace${qs({ q, limit })}`).then((d): MarketPage => { const items = list<MarketItem>(d, "items"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
   installMarketplace: (key: string, body: { scope: "org" | "user"; token?: string; label?: string; url?: string }) => send<{ connection?: Connection; authUrl?: string }>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, body),

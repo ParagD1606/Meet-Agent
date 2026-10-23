@@ -14,6 +14,7 @@ import { mountSkillsUploadRoutes } from "./skills-upload";
 import { behavior } from "./behavior";
 import { core } from "./core";
 import { memory } from "./memory";
+import { meetingRoutes } from "./meetings";
 import { settingsRoutes } from "./settings";
 import { syncRoutes } from "./sync";
 
@@ -27,6 +28,7 @@ export function buildApi(): Hono<AppEnv> {
   mountMemoryExtRoutes(api);
   api.route("/", core);
   api.route("/", memory);
+  api.route("/", meetingRoutes);
   api.route("/", settingsRoutes);
   api.route("/", behavior);
   api.route("/", syncRoutes);

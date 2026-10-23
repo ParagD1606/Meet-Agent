@@ -7,6 +7,7 @@ export const NAV: NavItem[] = [
   { to: "/memories", label: "Memories", icon: "memory", group: "Knowledge", keys: "m", kw: "facts documents search upload" },
   { to: "/core-memory", label: "Core memory", icon: "core", group: "Knowledge", keys: "c", kw: "blocks company channel user" },
   { to: "/review", label: "Review queue", icon: "review", group: "Knowledge", admin: true, keys: "r", kw: "approve reject pending" },
+  { to: "/meetings", label: "Meeting notes", icon: "book", group: "Knowledge", keys: "n", kw: "huddle transcript summary tasks action items jira" },
   { to: "/skills", label: "Skills", icon: "skills", group: "Agent", keys: "s", kw: "skill.md" },
   { to: "/automations", label: "Automations", icon: "clock", group: "Agent", keys: "a", kw: "cron schedule digest reminder" },
   { to: "/models", label: "Models", icon: "models", group: "Agent", kw: "llm provider fallback" },

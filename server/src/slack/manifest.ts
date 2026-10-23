@@ -10,5 +10,5 @@ export const SLACK_USER_SCOPES_SIGNIN = ["openid", "profile", "email"] as const;
 export const SLACK_BOT_EVENTS = [
   "app_mention", "app_home_opened", "message.channels", "message.groups", "message.im", "message.mpim",
   "member_joined_channel", "member_left_channel", "channel_left", "group_left", "channel_rename", "channel_archive",
-  "channel_unarchive", "channel_deleted", "team_join", "user_change", "reaction_added",
+  "channel_unarchive", "channel_deleted", "team_join", "user_change", "reaction_added", "file_created", "file_shared",
 ] as const;
