@@ -65,7 +65,7 @@ React 19 + Tailwind 4 + wouter + @tanstack/react-query + d3-force (own graph can
 
 ---
 # Pass 2 addendum (hardening + memory/context + ports + redesign)
-Source of truth for the plan: `/home/manas/.claude/plans/make-a-plana-to-mutable-crab.md` (read it). Audit finding ids [n] below refer to the server audit summarised in that plan.
+Audit finding ids [n] below refer to the server audit from the hardening pass.
 **Schema is already extended** (see `src/db/schema/index.ts`: memories bi-temporal/provenance/ranking columns, skills scope/version, turns cost/cache/model/steps, channels.observe/observedUpTo, sync_sources.selection, and new tables `core_blocks, episodes, thread_state, memory_reviews, tool_results, rate_limits, usage_daily`). Do NOT edit schema or run drizzle-kit; if you truly need a schema change, create the table with raw SQL inside your test setup and list it in your final report so the integrator adds it. Each agent has a private migrated DB: `DATABASE_URL=postgres://brain@localhost:5433/brain_<letter>` (A=a, B=b, C=c, D=d). Run tests with that env; areas run serially (`bun test test/<area>`).
 Commit nothing; the integrator commits. Never edit files you don't own; if you need a change there, state it in your final report (<=20 lines) or expose a function the owner can call.
 
