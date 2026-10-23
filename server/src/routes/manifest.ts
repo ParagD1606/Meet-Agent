@@ -1,5 +1,5 @@
 import { config } from "../config";
-import { SLACK_BOT_EVENTS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../slack/manifest";
+import { SLACK_BOT_EVENTS, SLACK_SLASH_COMMANDS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../slack/manifest";
 
 export const SLACK_APP_NAME = "Company Brain";
 
@@ -16,6 +16,7 @@ export function slackAppManifest(origin: string, mode: "socket" | "http" = confi
     features: {
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
       bot_user: { display_name: appName, always_online: true },
+      slash_commands: SLACK_SLASH_COMMANDS.map((c) => ({ ...c, ...(socket ? {} : { url: `${base}/slack/commands` }), should_escape: true })),
     },
     oauth_config: {
       redirect_urls: [`${base}/slack/oauth/callback`, `${base}/auth/slack/callback`],

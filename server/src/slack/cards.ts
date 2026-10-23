@@ -4,9 +4,9 @@ import type { JourneyRung } from "./journey/rungs";
 
 export type Card = { text: string; blocks: unknown[] };
 
-const section = (text: string) => ({ type: "section", text: { type: "mrkdwn", text } });
+export const section = (text: string) => ({ type: "section", text: { type: "mrkdwn", text } });
 const link = (path: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}${path}`;
-const button = (text: string, actionId: string, extra: Record<string, unknown> = {}) =>
+export const button = (text: string, actionId: string, extra: Record<string, unknown> = {}) =>
   ({ type: "button", text: { type: "plain_text", text }, action_id: actionId, ...extra });
 
 export function welcomeCard(name?: string | null): Card {
@@ -59,7 +59,9 @@ export function nudgeCard(rung: JourneyRung): Card {
   };
 }
 
-export function homeView(o: { name?: string | null; connections: number }): unknown {
+export function homeView(o: { name?: string | null; connections: number; facts?: { id: number; text: string }[]; admin?: boolean }): unknown {
+  const facts = o.facts ?? [];
+  const confirm = { title: { type: "plain_text", text: "Delete this memory?" }, text: { type: "plain_text", text: "I will forget it for good." }, confirm: { type: "plain_text", text: "Delete" }, deny: { type: "plain_text", text: "Keep" } };
   return {
     type: "home",
     blocks: [
@@ -69,7 +71,15 @@ export function homeView(o: { name?: string | null; connections: number }): unkn
       { type: "actions", elements: [
         button("Dashboard", "brain_open_dashboard", { url: link("/") }),
         button("Connect tools", "brain_open_dashboard", { url: link("/configure/integrations") }),
+        ...(o.admin ? [button("Review queue", "brain_review_open")] : []),
       ] },
+      { type: "header", text: { type: "plain_text", text: "What I remember about you" } },
+      ...(facts.length
+        ? facts.map((f) => ({
+            ...section(escapeSlackText(f.text.length > 300 ? `${f.text.slice(0, 297)}...` : f.text)),
+            accessory: button("Delete", "brain_home_forget", { value: String(f.id), style: "danger", confirm }),
+          }))
+        : [section("_Nothing yet. Try `/remember <something>`._")]),
     ],
   };
 }

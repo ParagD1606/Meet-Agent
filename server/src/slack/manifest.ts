@@ -1,7 +1,7 @@
 /** Single source of truth for what the Slack app needs (used by OAuth install and any manifest generator). */
 export const SLACK_BOT_SCOPES = [
   "app_mentions:read", "assistant:write", "channels:history", "channels:join", "channels:manage", "channels:read",
-  "chat:write", "chat:write.public", "files:read", "groups:history", "groups:read", "im:history", "im:read", "im:write",
+  "chat:write", "chat:write.public", "commands", "files:read", "groups:history", "groups:read", "im:history", "im:read", "im:write",
   "mpim:history", "mpim:read", "reactions:read", "reactions:write", "users:read", "users:read.email", "team:read",
 ] as const;
 
@@ -13,4 +13,12 @@ export const SLACK_BOT_EVENTS = [
   "channel_unarchive", "channel_deleted", "team_join", "user_change", "reaction_added",
   "file_created", "file_shared", "file_change",
   "assistant_thread_started", "assistant_thread_context_changed", "tokens_revoked", "app_uninstalled",
+] as const;
+
+/** Slash commands (the `commands` scope). In HTTP mode each also needs a request URL; routes/manifest.ts adds it. */
+export const SLACK_SLASH_COMMANDS = [
+  { command: "/remember", description: "Save a fact to memory", usage_hint: "[something worth remembering]" },
+  { command: "/forget", description: "Find and delete memories", usage_hint: "[what to forget]" },
+  { command: "/whatdoyouknow", description: "See what I remember", usage_hint: "[@person or topic]" },
+  { command: "/brain-review", description: "Review pending memory changes (admins)" },
 ] as const;

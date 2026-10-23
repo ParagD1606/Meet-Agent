@@ -15,6 +15,13 @@
       "when": 1792867200000,
       "tag": "0001_meeting_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792953600000,
+      "tag": "0002_recall_log",
+      "breakpoints": true
     }
   ]
 }

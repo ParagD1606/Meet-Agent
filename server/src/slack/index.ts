@@ -5,6 +5,7 @@ import { config } from "../config";
 import { log } from "../log";
 import { slackConfigured } from "./client";
 import { handleEventCallback, type EventCallback } from "./events";
+import { handleSlashCommand, type SlashPayload } from "./commands";
 import { handleInteraction } from "./interactions";
 import { authorizeUrl, checkState, completeInstall, makeState, STATE_COOKIE } from "./install";
 import { isSlackRetry, verifySlackSignature } from "./verify";
@@ -18,7 +19,7 @@ export { SLACK_BOT_SCOPES, SLACK_BOT_EVENTS } from "./manifest";
 const page = (title: string, body: string) =>
   `<!doctype html><meta charset="utf-8"><title>${title}</title><body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem"><h1>${title}</h1><p>${body}</p>`;
 
-/** Routes: GET /slack/install, GET /slack/oauth/callback, POST /slack/events, POST /slack/interactions. */
+/** Routes: POST /slack/commands, GET /slack/install, GET /slack/oauth/callback, POST /slack/events, POST /slack/interactions. */
 export function mountSlack(app: Hono): void {
   app.get("/slack/install", (c) => {
     if (!slackConfigured().oauth) return c.html(page("Slack not configured", "Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET."), 503);
@@ -50,6 +51,15 @@ export function mountSlack(app: Hono): void {
     return c.body(null, 200); // ack inside Slack's 3s window; work continues in the background
   });
 
+  app.post("/slack/commands", async (c) => {
+    const secret = config.SLACK_SIGNING_SECRET;
+    if (!secret) return c.json({ error: "SLACK_SIGNING_SECRET not configured" }, 503);
+    const raw = new Uint8Array(await c.req.arrayBuffer());
+    if (!verifySlackSignature(raw, c.req.raw.headers, secret)) return c.json({ error: "invalid signature" }, 401);
+    void handleSlashCommand(Object.fromEntries(new URLSearchParams(new TextDecoder().decode(raw))) as SlashPayload);
+    return c.body(null, 200); // empty ack inside 3s; the reply arrives via response_url
+  });
+
   app.post("/slack/interactions", async (c) => {
     const secret = config.SLACK_SIGNING_SECRET;
     if (!secret) return c.json({ error: "SLACK_SIGNING_SECRET not configured" }, 503);
@@ -79,6 +89,10 @@ export async function startSlack(): Promise<void> {
       if (type !== "events_api") return;
       await ack();
       void handleEventCallback(body);
+    });
+    client.on("slash_commands", async ({ ack, body }: { ack: () => Promise<void>; body: SlashPayload }) => {
+      await ack();
+      void handleSlashCommand(body);
     });
     client.on("interactive", async ({ ack, body }: { ack: () => Promise<void>; body: Parameters<typeof handleInteraction>[0] }) => {
       await ack();

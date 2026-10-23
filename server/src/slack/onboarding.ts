@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { mcpConnections, users } from "../db/schema";
 import { log } from "../log";
+import { homeFacts } from "./commands";
 import { channelIntroCard, homeView, teamInviteCard, welcomeCard } from "./cards";
 import { postDm, postMessage, slackClient } from "./client";
 import { pruneEvents } from "./dedupe";
@@ -26,7 +27,7 @@ export async function onAppHome(userId: string): Promise<void> {
     const [u] = await db.select().from(users).where(eq(users.id, userId));
     const [c] = await db.select({ n: sql<number>`count(*)::int` }).from(mcpConnections)
       .where(and(eq(mcpConnections.status, "connected"), sql`(${mcpConnections.scope} = 'org' or ${mcpConnections.ownerUserId} = ${userId})`));
-    await (await slackClient()).views.publish({ user_id: userId, view: homeView({ name: u?.name, connections: c?.n ?? 0 }) as never });
+    await (await slackClient()).views.publish({ user_id: userId, view: homeView({ name: u?.name, connections: c?.n ?? 0, facts: await homeFacts(userId), admin: u?.role === "admin" || u?.role === "owner" }) as never });
   } catch (err) { log.warn("app home publish failed", { userId, error: (err as Error).message }); }
 }
 

@@ -1,7 +1,7 @@
 import type { ModelMessage } from "ai";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { threadState, users } from "../db/schema";
+import { recallLog, threadState, users } from "../db/schema";
 import { log } from "../log";
 import { breakdown, estimateTokens, type Breakdown } from "../memory/budget";
 import { getCoreBlocks } from "../memory/core-blocks";
@@ -130,6 +130,15 @@ function userBlock(p: UserPart | undefined): string {
   return [p.skills ? `Your personal skills:\n${p.skills}` : "", block("User memory", p.mem)].filter(Boolean).join("\n\n");
 }
 
+/** Best-effort: records which memory ids a turn recalled. Never throws; a failed insert is only logged. */
+export async function logRecall(i: TurnInput, threadKey: string, hitIds: number[]): Promise<void> {
+  try {
+    await db.insert(recallLog).values({ channelId: i.channelId, threadKey, messageTs: i.ts, query: i.text.slice(0, 500), hitIds });
+  } catch (e) {
+    log.warn("recall log failed", { error: String(e) });
+  }
+}
+
 export type BuiltContext = {
   /** Frozen prefix blocks, most-shared first: workspace, skills, company, channel, then the asker's own block last. No timestamps. */
   frozenPrefixBlocks: string[];
@@ -150,7 +159,10 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
   const [rawHistory, prefix, recall] = await Promise.all([
     threadHistory(i, selfId),
     frozenBlocks(i, ctx),
-    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : buildRecall({ scope: ctx.scope, query: i.text.slice(0, 500), threadKey }).catch((e) => {
+    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : buildRecall({ scope: ctx.scope, query: i.text.slice(0, 500), threadKey }).then(async (r) => {
+      if (r.hits.length) await logRecall(i, threadKey, r.hits.map((h) => h.id));
+      return r;
+    }).catch((e) => {
       log.warn("memory unavailable for turn", { error: String(e) });
       return { text: "", tokens: 0 };
     }),

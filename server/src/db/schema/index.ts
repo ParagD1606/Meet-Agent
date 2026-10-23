@@ -89,6 +89,21 @@ export const memories = pgTable("memories", {
   index("memories_emb_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
 ]);
 
+/** What recall returned for a turn, so feedback (message_feedback) and evals can be joined to the retrieved memory ids. */
+export const recallLog = pgTable("recall_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  channelId: text("channel_id").notNull(),
+  threadKey: text("thread_key").notNull(),
+  /** Slack ts of the user message that triggered the turn. */
+  messageTs: text("message_ts").notNull(),
+  query: text("query").notNull(),
+  hitIds: jsonb("hit_ids").$type<number[]>().notNull().default([]),
+  createdAt: ts("created_at"),
+}, (t) => [
+  index("recall_log_thread_idx").on(t.channelId, t.threadKey),
+  index("recall_log_created_idx").on(t.createdAt),
+]);
+
 export const memoryEdges = pgTable("memory_edges", {
   fromId: bigint("from_id", { mode: "number" }).notNull(),
   toId: bigint("to_id", { mode: "number" }).notNull(),

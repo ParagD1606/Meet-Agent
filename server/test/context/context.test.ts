@@ -1,11 +1,11 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 import { db, resetDb } from "../db";
-import { skills } from "../../src/db/schema";
+import { recallLog, skills } from "../../src/db/schema";
 import { estimateTokens } from "../../src/memory/budget";
 import { type Actor, coreMemoryEdit } from "../../src/memory/core-blocks";
 import { setMemoryLlm } from "../../src/memory/llm";
 import { clearRecallCache } from "../../src/memory/recall";
-import { buildContext, cleanSlackText, windowByTokens } from "../../src/turn/context";
+import { buildContext, cleanSlackText, logRecall, windowByTokens } from "../../src/turn/context";
 import { setSlackClient } from "../../src/turn/slack";
 import { installFakes, removeFakes, seedMemory } from "../memory/helpers";
 
@@ -115,5 +115,23 @@ describe("helpers", () => {
   test("cleanSlackText caps long blobs and keeps quote-only messages", () => {
     expect(cleanSlackText("x".repeat(5000)).length).toBeLessThan(1300);
     expect(cleanSlackText("> only a quote")).toBe("> only a quote");
+  });
+});
+
+describe("recall_log", () => {
+  test("a turn that recalls memory logs query + hit ids; no hits, no row", async () => {
+    const id = await seedMemory("shared", "The launch plan is to ship on Friday");
+    await buildContext(input("U1"), ctxOf("U1"));
+    const rows = await db.select().from(recallLog);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ channelId: "C1", threadKey: "100.0", messageTs: "200.0", query: "what is the launch plan?", hitIds: [id] });
+    await resetDb();
+    await buildContext(input("U1", "zzz qqq unrelated"), ctxOf("U1"));
+    expect(await db.select().from(recallLog)).toHaveLength(0);
+  });
+
+  test("a failing insert never throws", async () => {
+    await logRecall({ ...input("U1"), channelId: null as never }, "100.0", [1]);
+    expect(await db.select().from(recallLog)).toHaveLength(0);
   });
 });
