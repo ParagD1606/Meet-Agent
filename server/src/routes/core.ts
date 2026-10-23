@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { HTTPException } from "hono/http-exception";
 import { requireAuth, userFromRequest, hasRole, type AppEnv } from "../auth/session";
-import { config } from "../config";
+import { config, modelConfigured } from "../config";
 import { id, sha256 } from "../crypto";
 import { db } from "../db";
 import { apiTokens, automations, mcpConnections, memories, turns, users, workspace } from "../db/schema";
@@ -55,8 +55,8 @@ const setupGate = async (c: Parameters<ReturnType<typeof requireAuth>>[0], next:
 
 core.get("/setup/status", setupGate, async (c) => {
   const [ws] = await db.select({ id: workspace.id, name: workspace.name }).from(workspace).limit(1);
-  const model = Boolean(config.MODEL_API_KEY || config.MODEL_BASE_URL);
-  const embedding = Boolean(config.EMBEDDING_API_KEY || config.MODEL_API_KEY || config.MODEL_BASE_URL);
+  const model = modelConfigured();
+  const embedding = Boolean(config.EMBEDDING_API_KEY || config.MODEL_API_KEY || config.MODEL_BASE_URL || config.MODEL_PROVIDER === "vertex");
   const slack = Boolean(config.SLACK_CLIENT_ID && config.SLACK_CLIENT_SECRET && (config.SLACK_MODE === "socket" ? config.SLACK_APP_TOKEN : config.SLACK_SIGNING_SECRET));
   const dbOk = await db.execute(sql`select 1`).then(() => true, () => false);
   return c.json({

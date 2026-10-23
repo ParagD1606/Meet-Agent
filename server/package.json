@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.87",
     "@ai-sdk/google": "^4.0.104",
+    "@ai-sdk/google-vertex": "^5.0.121",
     "@ai-sdk/openai": "^4.0.101",
     "@ai-sdk/xai": "^5.0.29",
     "@modelcontextprotocol/sdk": "^1.32.1",
@@ -19,6 +20,7 @@
     "ai": "^7.0.150",
     "cron-parser": "^5.10.2",
     "drizzle-orm": "^0.44.3",
+    "google-auth-library": "^11.3.1",
     "hono": "^4.10.8",
     "jsonrepair": "^3.15.0",
     "pg": "^8.13.0",

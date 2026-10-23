@@ -1,5 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createVertex } from "@ai-sdk/google-vertex";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
 import { generateText, type LanguageModel, type SystemModelMessage } from "ai";
@@ -9,17 +10,19 @@ import { config } from "./config";
 export type ModelProfile = "fast" | "thorough";
 export type ModelRole = "main" | "triage" | "extract" | "summarize" | "research";
 export const MODEL_ROLES: ModelRole[] = ["main", "triage", "extract", "summarize", "research"];
-type ProviderName = "anthropic" | "openai" | "google" | "xai";
+type ProviderName = "anthropic" | "openai" | "google" | "xai" | "vertex";
 
 const DEFAULTS = {
   anthropic: { fast: "claude-haiku-4-5", thorough: "claude-sonnet-4-5" },
   openai: { fast: "gpt-4.1-mini", thorough: "gpt-4.1" },
   google: { fast: "gemini-2.5-flash", thorough: "gemini-2.5-pro" },
   xai: { fast: "grok-3-mini", thorough: "grok-4" },
+  vertex: { fast: "gemini-2.5-flash", thorough: "gemini-2.5-pro" },
 } as const;
 
 /** Provider is inferred from the key prefix; MODEL_BASE_URL forces OpenAI-compatible (OpenRouter, Ollama). */
 export function detectProvider(key: string | undefined, baseUrl?: string): keyof typeof DEFAULTS | "compat" {
+  if (config.MODEL_PROVIDER === "vertex" && !baseUrl) return "vertex";
   if (baseUrl) return "compat";
   if (!key) throw new Error("MODEL_API_KEY is not set");
   if (key.startsWith("sk-ant-")) return "anthropic";
@@ -70,6 +73,7 @@ function build(provider: ProviderName | "compat", name: string, key: string | un
     case "openai": return createOpenAI({ apiKey: key })(name);
     case "google": return createGoogleGenerativeAI({ apiKey: key })(name);
     case "xai": return createXai({ apiKey: key })(name);
+    case "vertex": return createVertex({ project: config.GOOGLE_VERTEX_PROJECT, location: config.GOOGLE_VERTEX_LOCATION })(name);
   }
 }
 
@@ -112,7 +116,7 @@ export function getFallbackModel(role: ModelRole | ModelProfile = "main"): Langu
   const provider = (i > 0 ? spec.slice(0, i) : "") as ProviderName | "compat";
   const model = i > 0 ? spec.slice(i + 1) : spec;
   if (!["anthropic", "openai", "google", "xai", "compat"].includes(provider) || !model) return null;
-  const envKey = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_GENERATIVE_AI_API_KEY", xai: "XAI_API_KEY", compat: "" }[provider];
+  const envKey = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_GENERATIVE_AI_API_KEY", xai: "XAI_API_KEY", compat: "", vertex: "" }[provider];
   const key = (envKey && process.env[envKey]) || process.env.FALLBACK_MODEL_API_KEY;
   if (!key && provider !== "compat") return null;
   return build(provider, model, key, process.env.FALLBACK_MODEL_BASE_URL);

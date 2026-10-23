@@ -39,7 +39,53 @@ function endpoint(): { url: string; key: string } {
   return { url: `${base}/embeddings`, key: key ?? "none" };
 }
 
+let vertexAuth: { getAccessToken(): Promise<string | null | undefined> } | null = null;
+
+/** Gemini embeddings on Vertex (predict API), authenticated with Application Default Credentials. */
+async function embedBatchVertex(texts: string[]): Promise<number[][]> {
+  const project = config.GOOGLE_VERTEX_PROJECT;
+  if (!project) throw new Error("GOOGLE_VERTEX_PROJECT is required for Vertex embeddings");
+  const { GoogleAuth } = await import("google-auth-library");
+  const auth = (vertexAuth ??= new GoogleAuth({ scopes: ["https://www.googleapis.com/auth/cloud-platform"] }));
+  const loc = config.GOOGLE_VERTEX_EMBED_LOCATION;
+  const url = `https://${loc}-aiplatform.googleapis.com/v1/projects/${project}/locations/${loc}/publishers/google/models/${config.GOOGLE_VERTEX_EMBED_MODEL}:predict`;
+  const out: number[][] = [];
+  // gemini-embedding-001 accepts one input per request.
+  for (const content of texts) {
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < RETRIES; attempt++) {
+      try {
+        const token = await auth.getAccessToken();
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${token}`, "x-goog-user-project": project },
+          body: JSON.stringify({ instances: [{ content }], parameters: { outputDimensionality: config.EMBEDDING_DIM } }),
+          signal: AbortSignal.timeout(30_000),
+        });
+        if (res.status === 429 || res.status >= 500) throw new Error(`vertex embeddings HTTP ${res.status}`);
+        if (!res.ok) throw Object.assign(new Error(`vertex embeddings HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`), { fatal: true });
+        const json = (await res.json()) as { predictions?: { embeddings?: { values: number[] } }[] };
+        const v = json.predictions?.[0]?.embeddings?.values;
+        if (!v) throw new Error("vertex embeddings response malformed");
+        out.push(v);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        if ((e as { fatal?: boolean }).fatal) break;
+        if (attempt < RETRIES - 1) await Bun.sleep(300 * 2 ** attempt);
+      }
+    }
+    if (lastErr) {
+      log.error("embed failed", { err: String(lastErr) });
+      throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+    }
+  }
+  return out;
+}
+
 async function embedBatch(texts: string[]): Promise<number[][]> {
+  if (config.MODEL_PROVIDER === "vertex" && !config.EMBEDDING_BASE_URL && !config.EMBEDDING_API_KEY) return embedBatchVertex(texts);
   const { url, key } = endpoint();
   let lastErr: unknown;
   for (let attempt = 0; attempt < RETRIES; attempt++) {

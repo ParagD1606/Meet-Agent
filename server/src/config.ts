@@ -8,6 +8,12 @@ const schema = z.object({
   ENCRYPTION_KEY: z.string().optional(),
   SLACK_MODE: z.enum(["socket", "http"]).default("socket"),
   MODEL_API_KEY: z.string().optional(),
+  /** "vertex" runs chat and embeddings on Google Vertex AI with Application Default Credentials (no API key). */
+  MODEL_PROVIDER: z.enum(["vertex"]).optional(),
+  GOOGLE_VERTEX_PROJECT: z.string().optional(),
+  GOOGLE_VERTEX_LOCATION: z.string().default("global"),
+  GOOGLE_VERTEX_EMBED_LOCATION: z.string().default("us-central1"),
+  GOOGLE_VERTEX_EMBED_MODEL: z.string().default("gemini-embedding-001"),
   MODEL_BASE_URL: z.string().optional(),
   EMBEDDING_API_KEY: z.string().optional(),
   /** OpenAI-compatible embeddings endpoint base (e.g. Ollama http://localhost:11434/v1). When set, EMBEDDING_API_KEY is optional. */
@@ -63,6 +69,9 @@ export function assertConfig(c: Config, production?: boolean): void {
 }
 
 export const config = schema.parse(process.env);
+
+/** True when a chat model is reachable by configuration: an API key, an OpenAI-compatible URL, or Vertex ADC. */
+export const modelConfigured = (c: Config = config) => Boolean(c.MODEL_API_KEY || c.MODEL_BASE_URL || c.MODEL_PROVIDER === "vertex");
 assertConfig(config);
 
 /** Pass to Bun.serve({ ...serverOptions }) in index.ts. idleTimeout is seconds (max 255); body cap is bytes. */

@@ -5,7 +5,7 @@ import { mountSlack } from "./slack";
 import { mountMcp } from "./mcp";
 import { log } from "./log";
 import { sql } from "drizzle-orm";
-import { config } from "./config";
+import { config, modelConfigured } from "./config";
 import { db } from "./db";
 import { jobsStarted } from "./jobs";
 import { probeModel } from "./llm";
@@ -30,7 +30,7 @@ app.get("/healthz", (c) => c.json({ ok: true }));
 let modelProbe: { at: number; value: Awaited<ReturnType<typeof probeModel>> } | null = null;
 /** Model liveness, cached 30s so orchestrator probes don't spend tokens. */
 async function cachedProbe() {
-  if (!(config.MODEL_API_KEY || config.MODEL_BASE_URL)) return { ok: false, model: "unconfigured", ms: 0, error: "no model configured" };
+  if (!modelConfigured()) return { ok: false, model: "unconfigured", ms: 0, error: "no model configured" };
   if (!modelProbe || Date.now() - modelProbe.at > 30_000) modelProbe = { at: Date.now(), value: await probeModel("main", 8_000) };
   return modelProbe.value;
 }
