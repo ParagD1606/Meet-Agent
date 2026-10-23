@@ -1,4 +1,4 @@
-# Replace YOUR-DOMAIN with your PUBLIC_URL host. Socket mode (default): no request URLs needed, create an app-level token with connections:write.
+# OAuth callbacks use https://slack.derpx06.live and must reach the app on localhost:3000 via your HTTPS proxy/tunnel. Socket mode (default): no Events Request URL needed; create an app-level token with connections:write.
 # For HTTP mode use GET /api/setup/manifest on your running server instead (it fills the request URLs).
 # Generated from server/src/slack/manifest.ts; test/mcp/manifest-yaml.test.ts keeps the two in sync.
 # Slack app manifest for Company Brain. Slack -> Create New App -> From a manifest -> paste this.
@@ -16,8 +16,8 @@ features:
     always_online: true
 oauth_config:
   redirect_urls:
-    - "https://YOUR-DOMAIN/slack/oauth/callback"
-    - "https://YOUR-DOMAIN/auth/slack/callback"
+    - "https://slack.derpx06.live/slack/oauth/callback"
+    - "https://slack.derpx06.live/auth/slack/callback"
   scopes:
     user:
       - "openid"

@@ -10,7 +10,7 @@ Open `PUBLIC_URL`. The Setup page checks model, embeddings and Slack and offers 
 Key env vars (full list in `.env.example`): `DATABASE_URL`, `PUBLIC_URL`, `ENCRYPTION_KEY` (encrypts every stored token; losing it invalidates them), `MODEL_API_KEY` (provider inferred; use `MODEL_BASE_URL` + `MODEL_NAME` for OpenRouter/Ollama), `EMBEDDING_*` (dimension is fixed per database), `SLACK_MODE` (`socket` or `http`), `SEARCH_PROVIDER` + `SEARCH_API_KEY` (optional web search).
 
 ## 2. Create the Slack app
-Slack > Create New App > From a manifest, paste `docs/slack-app-manifest.yaml` (replace `YOUR-DOMAIN`). For HTTP mode, use `GET /api/setup/manifest` on your running server: it fills the request URLs for you. The manifest is generated from `server/src/slack/manifest.ts`, which also drives the OAuth install, so scopes and events never drift.
+Slack > Create New App > From a manifest, paste `docs/slack-app-manifest.yaml`. Its OAuth callbacks use `https://slack.derpx06.live`; configure that host to forward HTTPS traffic to the app at `localhost:3000` (for example, through your HTTPS tunnel or reverse proxy). For HTTP mode, use `GET /api/setup/manifest` on your running server: it fills the request URLs for you. The manifest is generated from `server/src/slack/manifest.ts`, which also drives the OAuth install, so scopes and events never drift.
 
 - **Socket mode** (default): create an app-level token with `connections:write` and set `SLACK_APP_TOKEN`; no public request URL is needed.
 - **HTTP mode**: set `SLACK_SIGNING_SECRET`; `PUBLIC_URL` must be reachable by Slack.
