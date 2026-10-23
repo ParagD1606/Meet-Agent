@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { requireAuth, type AppEnv } from "../auth/session";
-import { getMeeting, listMeetings } from "../meetings";
+import { getMeeting, listMeetings, syncRecentHuddles } from "../meetings";
 import { httpError } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
@@ -13,3 +13,7 @@ meetingRoutes.get("/meetings/:id", requireAuth(), async (c) => {
   if (!meeting) throw httpError(404, "not_found");
   return c.json(meeting);
 });
+
+// A workspace-wide import can discover transcripts in channels other than the caller's;
+// keep the trigger with workspace admins while the resulting rows retain normal visibility rules.
+meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles()));

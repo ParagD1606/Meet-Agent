@@ -206,6 +206,7 @@ export const api = {
   runAutomation: (id: string) => send("POST", `/api/automations/${id}/run`),
   meetings: () => get<unknown>("/api/meetings").then((d) => list<Meeting>(d, "meetings")),
   meeting: (id: string) => get<Meeting>(`/api/meetings/${id}`),
+  syncMeetings: () => send<{ found: number; imported: number; failed: number }>("POST", "/api/meetings/sync"),
   presets: () => get<unknown>("/api/mcp/presets").then((d) => list<Preset>(d, "presets")),
   marketplace: (q: string, limit = 60) => get<unknown>(`/api/marketplace${qs({ q, limit })}`).then((d): MarketPage => { const items = list<MarketItem>(d, "items"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
   installMarketplace: (key: string, body: { scope: "org" | "user"; token?: string; label?: string; url?: string }) => send<{ connection?: Connection; authUrl?: string }>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, body),
