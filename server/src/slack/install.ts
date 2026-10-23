@@ -4,7 +4,9 @@ import { config } from "../config";
 import { encrypt } from "../crypto";
 import { db } from "../db";
 import { workspace } from "../db/schema";
+import { hasSetupProof, grantSetupProof, teamAllowed, verifySetupToken } from "../auth/setup-token";
 import { log } from "../log";
+import type { MiddlewareHandler } from "hono";
 import { getWorkspace, invalidateSlackClient, newWebClient, slackErrorCode } from "./client";
 import { SLACK_BOT_SCOPES } from "./manifest";
 import { sendInstallOnboarding } from "./onboarding";
@@ -78,6 +80,10 @@ export async function completeInstall(code: string): Promise<InstallResult> {
   const token = res.access_token, teamId = res.team?.id, botUser = res.bot_user_id;
   if (!token || !teamId || !botUser) return { ok: false, status: 502, error: "Slack returned an incomplete install response" };
 
+  if (!teamAllowed(teamId)) {
+    log.warn("slack install refused: team not allowed by SLACK_TEAM_ID", { teamId });
+    return { ok: false, status: 403, error: "This server is locked to a different Slack workspace" };
+  }
   const existing = await getWorkspace();
   if (existing && existing.id !== teamId) return { ok: false, status: 409, error: "This server is already linked to a different Slack workspace" };
 
@@ -95,3 +101,20 @@ export async function completeInstall(code: string): Promise<InstallResult> {
   log.info("slack workspace installed", { teamId });
   return { ok: true, teamId };
 }
+
+/**
+ * First-install lock for /slack/install and /slack/oauth/callback (mounted in app.ts). While no workspace is linked,
+ * installing requires the setup token (?setup_token= on /slack/install, remembered in an httpOnly cookie) unless the
+ * deployment is pinned to one team with SLACK_TEAM_ID. Re-installs of the linked workspace are unaffected.
+ */
+export const installGate: MiddlewareHandler = async (c, next) => {
+  if (c.req.path !== "/slack/install" && c.req.path !== "/slack/oauth/callback") return next();
+  if (await getWorkspace() || config.SLACK_TEAM_ID) return next();
+  const token = c.req.query("setup_token");
+  if (c.req.path === "/slack/install" && token && verifySetupToken(token)) { grantSetupProof(c); return next(); }
+  if (hasSetupProof(c)) return next();
+  return c.html(
+    `<!doctype html><meta charset="utf-8"><title>Setup token required</title><body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem"><h1>Setup token required</h1><p>This server has no workspace yet. Open <code>/slack/install?setup_token=&lt;token&gt;</code> with the setup token from the server log.</p>`,
+    403,
+  );
+};

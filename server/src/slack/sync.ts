@@ -129,3 +129,40 @@ export async function dropChannel(channelId: string): Promise<void> {
   await db.delete(channelMembers).where(eq(channelMembers.channelId, channelId));
   await db.update(channels).set({ botIsMember: false }).where(inArray(channels.id, [channelId]));
 }
+
+/**
+ * Periodic safety net for missed member_joined/left events: re-reads membership of every channel the bot is in,
+ * private channels first (they gate what DMs may recall). One channel failing never stops the rest.
+ */
+export async function resyncChannelMembers(client?: WebClient): Promise<{ channels: number; failed: number }> {
+  const c = client ?? (await slackClient());
+  const rows = await db.select({ id: channels.id }).from(channels)
+    .where(and(eq(channels.botIsMember, true), eq(channels.isIm, false))).orderBy(sql`${channels.isPrivate} desc`);
+  let failed = 0;
+  for (const r of rows) {
+    try { await syncChannelMembers(c, r.id); } catch (err) { failed++; log.warn("member resync failed", { channel: r.id, error: (err as Error).message }); }
+  }
+  return { channels: rows.length, failed };
+}
+
+/**
+ * Live membership check (Slack is the source of truth, our table is a cache). Use before a DM turn reads a private
+ * channel's memory. Fails closed: any Slack error answers "not a member". Corrects channel_members as a side effect.
+ */
+export async function userIsChannelMember(channelId: string, userId: string, client?: WebClient): Promise<boolean> {
+  try {
+    const c = client ?? (await slackClient());
+    let cursor: string | undefined;
+    for (let page = 0; page < 50; page++) {
+      const r = await c.conversations.members({ channel: channelId, limit: 1000, cursor });
+      if ((r.members ?? []).includes(userId)) { await setMembership(channelId, userId, true); return true; }
+      cursor = r.response_metadata?.next_cursor || undefined;
+      if (!cursor) break;
+    }
+    await setMembership(channelId, userId, false);
+    return false;
+  } catch (err) {
+    log.warn("membership recheck failed (denying)", { channel: channelId, error: (err as Error).message });
+    return false;
+  }
+}

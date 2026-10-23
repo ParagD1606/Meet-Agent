@@ -51,10 +51,11 @@ export function mountMemoryExtRoutes(api: Hono<AppEnv>): void {
 
   api.put("/core-blocks", requireAuth(), async (c) => {
     const user = c.get("user");
-    const { scope: raw } = readQuery(c, scopeQ);
+    // web sends {scope,text} in the body; ?scope= is also accepted
+    const { scope: bodyScope, text } = await readBody(c, z.object({ scope: z.string().max(80).optional(), text: z.string().max(5000) }));
+    const raw = bodyScope ?? readQuery(c, scopeQ).scope;
     const { label, scope } = await resolveBlockScope(raw, user);
     if (label === "company" && !hasRole(user.role, "admin")) throw httpError(403, "forbidden");
-    const { text } = await readBody(c, z.object({ text: z.string().max(5000) }));
     const r = await setCoreBlockText({ scope, label, text, actor: { userId: user.id, role: user.role, agentContext: "primary" } });
     if (!r.ok) throw httpError(400, "rejected", { message: r.error, usage: r.usage });
     const b = (await getCoreBlocks(scope))[label];

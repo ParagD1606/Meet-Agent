@@ -4,6 +4,7 @@ import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import { automations, channels, users } from "../db/schema";
 import { log } from "../log";
+import { sanitizeForSlack } from "../slack/sanitize";
 import { type Actor, type Automation, AutomationError, RESEARCH_PREFIX, isAdmin } from "./automations";
 
 /** Seams for the Slack/turn/research modules (lazy-loaded so this file never fails at import time). Tests override. */
@@ -45,7 +46,7 @@ async function perform(a: Automation): Promise<void> {
   const slack = await deps.slack();
 
   if (a.kind === "reminder") {
-    const r = await slack.chat.postMessage({ channel: a.destChannelId ?? a.ownerUserId, text: `:alarm_clock: Reminder: ${a.prompt}` });
+    const r = await slack.chat.postMessage({ channel: a.destChannelId ?? a.ownerUserId, text: `:alarm_clock: Reminder: ${sanitizeForSlack(a.prompt)}` });
     if (!r.ok) throw new Error(r.error ?? "post failed");
     return;
   }
@@ -79,7 +80,8 @@ export async function executeAutomation(id: string, opts: { fireAt?: Date; manua
     .set({ lastRunAt: new Date(), lastStatus: "running" })
     .where(
       opts.manual
-        ? eq(automations.id, id)
+        // a manual run is still a claim: refused while the same automation is mid-run (double click, API retry)
+        ? and(eq(automations.id, id), or(sql`${automations.lastStatus} is distinct from 'running'`, lt(automations.lastRunAt, new Date(Date.now() - 15 * 60_000))))
         : and(eq(automations.id, id), eq(automations.enabled, true), or(isNull(automations.lastRunAt), lt(automations.lastRunAt, fireAt))),
     )
     .returning();

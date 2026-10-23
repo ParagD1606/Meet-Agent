@@ -7,10 +7,13 @@ import { db } from "../db";
 import { channels, researchRuns } from "../db/schema";
 import { getModel } from "../llm";
 import { log } from "../log";
+import { sanitizeForSlack } from "../slack/sanitize";
 import type { ToolContext } from "../turn/tools";
 
 export const MAX_SUBQUESTIONS = 5;
 export const MAX_ACTIVE_PER_USER = 3;
+const LLM_TIMEOUT_MS = 90_000;
+const INVESTIGATE_TIMEOUT_MS = 180_000;
 const WRITE_TOOLS = new Set(["memory_remember", "request_connection", "schedule_automation", "cancel_automation", "start_research"]);
 
 export type Finding = { question: string; answer: string };
@@ -30,6 +33,8 @@ const defaultLlm: ResearchLlm = {
   async plan(question) {
     const { text } = await generateText({
       model: getModel("fast"),
+      abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      maxOutputTokens: 400,
       system: `Split the research question into at most ${MAX_SUBQUESTIONS} focused, non-overlapping sub-questions that together answer it. Output one sub-question per line, no numbering, no commentary. If the question is already focused, output it unchanged.`,
       prompt: question,
     });
@@ -40,6 +45,8 @@ const defaultLlm: ResearchLlm = {
       model: getModel("thorough"),
       tools,
       stopWhen: stepCountIs(10),
+      abortSignal: AbortSignal.timeout(INVESTIGATE_TIMEOUT_MS),
+      maxOutputTokens: 1_200,
       system:
         "You are a research analyst. Answer the sub-question using team memory first, then the web and connected read-only tools. Be specific, cite sources (URL or memory) inline, and say plainly what you could not find. Never invent facts. Max ~200 words.",
       prompt: `Overall question: ${parent}\n\nSub-question: ${sub}`,
@@ -49,6 +56,8 @@ const defaultLlm: ResearchLlm = {
   async synthesize(question, findings) {
     const { text } = await generateText({
       model: getModel("thorough"),
+      abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      maxOutputTokens: 1_800,
       system:
         "Write the final research brief for Slack (mrkdwn): the direct answer first, then key evidence, then open questions or confidence caveats. Stay under 3000 characters. Only use the findings given; flag conflicts and gaps honestly.",
       prompt: `Question: ${question}\n\n${findings.map((f, i) => `Finding ${i + 1} — ${f.question}\n${f.answer}`).join("\n\n")}`,
@@ -65,7 +74,7 @@ export const deps: ResearchDeps = {
   },
   post: async (channel, thread_ts, text) => {
     const slack: WebClient = await (await import("../slack/client")).slackClient();
-    const r = await slack.chat.postMessage({ channel, thread_ts, text: text.slice(0, 3900), unfurl_links: false });
+    const r = await slack.chat.postMessage({ channel, thread_ts, text: sanitizeForSlack(text).slice(0, 3900), unfurl_links: false });
     if (!r.ok) throw new Error(r.error ?? "post failed");
   },
 };

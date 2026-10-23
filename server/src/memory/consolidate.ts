@@ -95,7 +95,7 @@ export async function consolidate(): Promise<ConsolidateResult> {
       if (first == null) continue; // nothing was actually written: keep the originals
       const done = rows(await db.execute(sql`
         update memories set status = 'superseded', superseded_by = ${first}, invalid_at = now()
-        where id = any(${ids}::bigint[]) and status = 'active' returning id`));
+        where id in (${sql.join(ids.map((i) => sql`${i}`), sql`, `)}) and status = 'active' returning id`));
       out.summarised += done.length;
     } catch (e) {
       log.warn("consolidation summary failed", { tag, err: String(e) });

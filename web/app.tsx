@@ -67,7 +67,7 @@ function Routed({ admin }: { admin: boolean }) {
     <main id="main" className={bleed ? "page" : "page mx-auto w-full max-w-[1120px] px-4 py-6 md:px-8 md:py-8"}>
       <ErrorBoundary resetKey={loc}>
         <Suspense fallback={<Spinner />}>
-          {!C || (item?.admin && !admin) ? <NotFound /> : <C />}
+          {item?.admin && !admin ? <EmptyState icon="lock" title="Admins only">Ask a workspace admin if you need this page.</EmptyState> : !C ? <NotFound /> : <C />}
         </Suspense>
       </ErrorBoundary>
     </main>

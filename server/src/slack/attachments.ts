@@ -13,9 +13,42 @@ const TEXTY = /^(text\/|application\/(json|xml|x-yaml|yaml|csv|x-ndjson))/;
 const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|ya?ml|xml|html?|log|ts|tsx|js|jsx|py|go|rs|java|sql|sh)$/i;
 
 export type Fetcher = (url: string, token: string) => Promise<{ ok: boolean; status: number; contentType: string; body: ArrayBuffer }>;
-const defaultFetch: Fetcher = async (url, token) => {
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000) });
-  return { ok: r.ok, status: r.status, contentType: r.headers.get("content-type") ?? "", body: await r.arrayBuffer() };
+
+/** The bot token is only ever sent to Slack's own file hosts (event payload URLs are attacker-influenced). */
+export function isSlackFileHost(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" || u.username || u.password) return false;
+    const h = u.hostname.toLowerCase();
+    return h === "files.slack.com" || h.endsWith(".slack.com") || h.endsWith(".slack-files.com") || h.endsWith(".slack-edge.com");
+  } catch { return false; }
+}
+
+/** Reads at most maxBytes (+1 to detect overflow); never buffers an unbounded body. */
+async function readCapped(res: Response, maxBytes: number): Promise<ArrayBuffer> {
+  const reader = res.body?.getReader();
+  if (!reader) return new ArrayBuffer(0);
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    chunks.push(value);
+    if (size > maxBytes) { await reader.cancel(); break; }
+  }
+  const out = new Uint8Array(Math.min(size, maxBytes + 1));
+  let off = 0;
+  for (const c of chunks) { const room = out.length - off; if (room <= 0) break; out.set(c.subarray(0, room), off); off += Math.min(c.length, room); }
+  return out.buffer as ArrayBuffer;
+}
+
+export const defaultFetch: Fetcher = async (url, token) => {
+  if (!isSlackFileHost(url)) throw new Error("refusing to send credentials to a non-Slack host");
+  // redirect: manual so the Authorization header can never follow a redirect off Slack
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000), redirect: "manual" });
+  if (r.status >= 300 && r.status < 400) return { ok: false, status: r.status, contentType: "", body: new ArrayBuffer(0) };
+  return { ok: r.ok, status: r.status, contentType: r.headers.get("content-type") ?? "", body: await readCapped(r, MAX_BYTES) };
 };
 
 const note = (name: string, mimeType: string, text: string): TurnFile => ({ name, mimeType, text });

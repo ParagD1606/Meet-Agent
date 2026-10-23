@@ -9,8 +9,8 @@ import { log } from "../log";
 
 /**
  * Owner lock. Until an owner exists the first Slack sign-in would otherwise become owner, so whoever reaches the
- * server first could take it over. Claiming ownership requires the setup token (printed in the boot log or fixed
- * with SETUP_TOKEN) and, when SLACK_TEAM_ID is set, a sign-in from that team. Once an owner exists none of this applies.
+ * server first could take it over. Claiming ownership requires the setup token (fixed with SETUP_TOKEN in production,
+ * or printed in development) and, when SLACK_TEAM_ID is set, a sign-in from that team. Once an owner exists none applies.
  */
 export const SETUP_COOKIE = "brain_setup";
 
@@ -21,13 +21,14 @@ export const ownerExists = async (): Promise<boolean> => {
   return Boolean(o);
 };
 
-/** The setup token for this process (env SETUP_TOKEN, else random per boot). Logged when no owner exists yet. */
+/** The setup token for this process (env SETUP_TOKEN, else random per boot). */
 export async function ensureSetupToken(): Promise<string> {
   const token = config.SETUP_TOKEN || (generated ??= randomBytes(18).toString("base64url"));
   if (!(await ownerExists())) {
-    log.warn("no owner yet: claim this server by opening /auth/slack?setup_token=<token>", {
-      setupToken: token, teamPinned: Boolean(config.SLACK_TEAM_ID),
-    });
+    const details = config.NODE_ENV === "production"
+      ? { setupTokenConfigured: Boolean(config.SETUP_TOKEN), teamPinned: Boolean(config.SLACK_TEAM_ID) }
+      : { setupToken: token, teamPinned: Boolean(config.SLACK_TEAM_ID) };
+    log.warn("no owner yet: claim this server using its setup token", details);
   }
   return token;
 }

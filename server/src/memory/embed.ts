@@ -85,7 +85,7 @@ async function embedBatchVertex(texts: string[]): Promise<number[][]> {
 }
 
 async function embedBatch(texts: string[]): Promise<number[][]> {
-  if (config.MODEL_PROVIDER === "vertex" && !config.EMBEDDING_BASE_URL && !config.EMBEDDING_API_KEY) return embedBatchVertex(texts);
+  if (config.MODEL_PROVIDER === "vertex" && !config.EMBEDDING_BASE_URL) return embedBatchVertex(texts); // ADC JSON only: a leftover EMBEDDING_API_KEY is ignored
   const { url, key } = endpoint();
   let lastErr: unknown;
   for (let attempt = 0; attempt < RETRIES; attempt++) {
@@ -111,7 +111,10 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
-const cacheKey = (text: string) => sha256(`${config.EMBEDDING_MODEL}:${config.EMBEDDING_DIM}\n${text}`);
+const cacheKey = (text: string) => {
+  const model = config.MODEL_PROVIDER === "vertex" ? config.GOOGLE_VERTEX_EMBED_MODEL : config.EMBEDDING_MODEL;
+  return sha256(`${model}:${config.EMBEDDING_DIM}\n${text}`);
+};
 
 async function readCache(hashes: string[]): Promise<Map<string, number[]>> {
   const out = new Map<string, number[]>();
@@ -119,7 +122,7 @@ async function readCache(hashes: string[]): Promise<Map<string, number[]>> {
     const rows = await db.select().from(embeddingCache).where(inArray(embeddingCache.hash, hashes));
     for (const r of rows) out.set(r.hash, r.embedding);
   } catch (e) {
-    log.warn("embedding cache read failed", { err: String(e) });
+    log.warn("embedding cache read failed", { err: e instanceof Error ? e.name : "unknown" });
   }
   return out;
 }
@@ -129,7 +132,7 @@ async function writeCache(entries: { hash: string; embedding: number[] }[]): Pro
   try {
     await db.insert(embeddingCache).values(entries).onConflictDoNothing();
   } catch (e) {
-    log.warn("embedding cache write failed", { err: String(e) });
+    log.warn("embedding cache write failed", { err: e instanceof Error ? e.name : "unknown" });
   }
 }
 

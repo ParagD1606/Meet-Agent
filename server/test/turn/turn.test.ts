@@ -7,6 +7,7 @@ import { resetDb } from "../db";
 import { db } from "../../src/db";
 import { turns } from "../../src/db/schema";
 import { createConnection } from "../../src/mcp/connections";
+import { setModelResolverForTest } from "../../src/llm";
 import { setLoopModel } from "../../src/turn/loop";
 import { runTurn, type TurnInput } from "../../src/turn";
 import { fakeMcp, fakeSlack, seedUsers } from "./helpers";
@@ -29,6 +30,8 @@ const input = (over: Partial<TurnInput> = {}): TurnInput => ({
 
 let slack: ReturnType<typeof fakeSlack>;
 beforeEach(async () => {
+  setLoopModel(undefined);
+  setModelResolverForTest(undefined);
   await resetDb();
   await seedUsers();
   slack = fakeSlack();
@@ -36,6 +39,22 @@ beforeEach(async () => {
 });
 
 describe("runTurn", () => {
+  test("recovers once when a memory answer stream contains no visible text", async () => {
+    const primary = new MockLanguageModelV4({ doStream: async () => reply("") });
+    const recovery = new MockLanguageModelV4({ doStream: async () => reply("VHSMO makes a screen-free pocket camera for authentic retro photos, transferred wirelessly to your phone.") });
+    setLoopModel(primary as any);
+    setModelResolverForTest((role) => role === "triage" ? recovery as any : undefined);
+
+    await runTurn(input({ text: "what our company does" }));
+
+    expect(primary.doStreamCalls).toHaveLength(1);
+    expect(recovery.doStreamCalls).toHaveLength(1);
+    expect(slack.of("update").at(-1)!.args.text).toContain("VHSMO makes a screen-free pocket camera");
+    expect(slack.of("update").at(-1)!.args.text).not.toContain("Try rephrasing");
+    const [turn] = await db.select().from(turns);
+    expect(turn).toMatchObject({ status: "done", depth: "memory", inputTokens: 20, outputTokens: 10 });
+  });
+
   test("direct depth (greeting): no placeholder, one in-thread post, one model call", async () => {
     const model = new MockLanguageModelV4({ doStream: async () => reply("Hi there") });
     setLoopModel(model as any);

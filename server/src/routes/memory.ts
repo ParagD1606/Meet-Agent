@@ -4,10 +4,10 @@ import { z } from "zod";
 import { hasRole, requireAuth, type AppEnv } from "../auth/session";
 import { db } from "../db";
 import { memories } from "../db/schema";
-import { log } from "../log";
+import { log, redactError } from "../log";
 import { deleteMemory, getGraph, listMemories, MAX_GRAPH_NODES } from "../memory/graph";
 import { ingestDocument } from "../memory/ingest";
-import { httpError, readQuery } from "./util";
+import { httpError, readQuery, sniffUpload } from "./util";
 
 export const memory = new Hono<AppEnv>();
 
@@ -15,6 +15,7 @@ export const memory = new Hono<AppEnv>();
 // and DM memories are reachable through Slack scopes only.
 const TAGS = ["shared"];
 const MAX_UPLOAD = 20 * 1024 * 1024;
+const UPLOAD_SYNC_MS = 8_000;
 
 memory.get("/graph", requireAuth(), async (c) => {
   const q = readQuery(c, z.object({
@@ -51,14 +52,21 @@ memory.post("/memories/upload", requireAuth("admin"), async (c) => {
   const file = form?.file;
   if (!(file instanceof File)) throw httpError(400, "invalid_body", { issues: [{ path: "file", message: "multipart field 'file' required" }] });
   if (file.size > MAX_UPLOAD) throw httpError(413, "file_too_large");
+  const data = Buffer.from(await file.arrayBuffer());
+  const mimeType = sniffUpload(data, file.type, file.name);
+  if (!mimeType) throw httpError(415, "unsupported_file", { message: "Only text, Markdown, CSV, HTML and PDF files can be added." });
+  // Embedding a big file can take a while: past UPLOAD_SYNC_MS the request is answered 202 and ingest finishes in the background.
+  const work = ingestDocument({ tag: "shared", name: file.name, mimeType, data, source: "upload", sourceRef: file.name });
+  const pending = Symbol("pending");
   try {
-    const chunks = await ingestDocument({
-      tag: "shared", name: file.name, mimeType: file.type || "application/octet-stream",
-      data: Buffer.from(await file.arrayBuffer()), source: "upload", sourceRef: file.name,
-    });
-    return c.json({ name: file.name, chunks }, 201);
+    const r = await Promise.race([work, new Promise<typeof pending>((res) => setTimeout(() => res(pending), UPLOAD_SYNC_MS))]);
+    if (r === pending) {
+      work.then((n) => log.info("upload ingested", { name: file.name, chunks: n }), (e) => log.warn("upload ingest failed", { name: file.name, err: redactError(e) }));
+      return c.json({ name: file.name, status: "processing" }, 202);
+    }
+    return c.json({ name: file.name, chunks: r }, 201);
   } catch (e) {
-    log.warn("upload ingest failed", { name: file.name, err: String(e) });
+    log.warn("upload ingest failed", { name: file.name, err: redactError(e) });
     throw httpError(400, "ingest_failed", { message: e instanceof Error ? e.message : String(e) });
   }
 });

@@ -116,7 +116,8 @@ function checkPrompt(p: unknown): string {
   return prompt;
 }
 
-export async function createAutomation(input: CreateInput, actor: Actor): Promise<Automation> {
+/** Every check createAutomation makes, without writing. Throws AutomationError. */
+export async function validateCreate(input: CreateInput, actor: Actor): Promise<{ ownerUserId: string; prompt: string; dest: string | null; t: ReturnType<typeof timing> }> {
   const ownerUserId = input.ownerUserId ?? actor.userId;
   if (ownerUserId !== actor.userId && !isAdmin(actor)) throw new AutomationError("forbidden: cannot create for someone else", "forbidden");
   if (input.kind !== "digest" && input.kind !== "reminder") throw new AutomationError("kind must be digest or reminder", "invalid");
@@ -128,6 +129,11 @@ export async function createAutomation(input: CreateInput, actor: Actor): Promis
     const [{ n }] = await db.select({ n: count() }).from(automations).where(eq(automations.ownerUserId, ownerUserId));
     if (n >= OWNER_CAP) throw new AutomationError(`automation limit reached (${OWNER_CAP} per person)`, "limit");
   }
+  return { ownerUserId, prompt, dest, t };
+}
+
+export async function createAutomation(input: CreateInput, actor: Actor): Promise<Automation> {
+  const { ownerUserId, prompt, dest, t } = await validateCreate(input, actor);
   const [row] = await db
     .insert(automations)
     .values({ id: newId("au_"), ownerUserId, kind: input.kind, prompt, ...t, destChannelId: dest, enabled: input.enabled ?? true })

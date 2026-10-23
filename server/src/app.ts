@@ -2,13 +2,14 @@ import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { mountRoutes } from "./routes";
 import { mountSlack } from "./slack";
-import { mountMcp } from "./mcp";
+import { mountMcp, mountMcpConnect } from "./mcp";
 import { log } from "./log";
 import { sql } from "drizzle-orm";
 import { config, modelConfigured } from "./config";
 import { db } from "./db";
 import { jobsStarted } from "./jobs";
 import { probeModel } from "./llm";
+import { installGate } from "./slack/install";
 
 export const app = new Hono();
 
@@ -26,6 +27,7 @@ app.onError((err, c) => {
   return c.json({ error: "internal" }, 500);
 });
 
+app.use("/slack/*", installGate); // first-install lock (setup token / SLACK_TEAM_ID)
 app.get("/healthz", (c) => c.json({ ok: true }));
 let modelProbe: { at: number; value: Awaited<ReturnType<typeof probeModel>> } | null = null;
 /** Model liveness, cached 30s so orchestrator probes don't spend tokens. */
@@ -42,4 +44,5 @@ app.get("/readyz", async (c) => {
 });
 mountSlack(app);
 mountMcp(app);
+mountMcpConnect(app);
 mountRoutes(app); // must be last: mounts /auth, /mcp, /api and the SPA fallback

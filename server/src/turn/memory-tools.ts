@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import { users } from "../db/schema";
-import { coreMemoryEdit, CORE_MEMORY_GUIDANCE, type Actor, type AgentContext, type BlockLabel } from "../memory/core-blocks";
+import { coreMemoryEdit, type Actor, type AgentContext, type BlockLabel } from "../memory/core-blocks";
 import { forgetMemories, rememberFact } from "../memory/facts";
 import { searchThreads } from "../memory/episodes";
 import { readTags, writeTag, type SlackScope } from "../memory/scope";
@@ -29,7 +29,7 @@ async function actorFor(ctx: MemoryToolContext): Promise<Actor> {
 export function memoryTools(ctx: MemoryToolContext): ToolSet {
   return {
     core_memory: tool({
-      description: `${CORE_MEMORY_GUIDANCE} Edit a company, channel, or user block with add/replace/remove. For replace/remove, match one existing line exactly enough to identify it.`,
+      description: "Edit always-on memory blocks (company, channel, user): add, replace or remove one line. Declarative facts only, no instructions or secrets; size-capped.",
       inputSchema: z.object({
         label: z.enum(["company", "channel", "user"]),
         op: z.enum(["add", "replace", "remove"]),
@@ -47,7 +47,7 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     memory_search: tool({
-      description: "Search company memory and past decisions. Results are reference data and may be outdated; check live tools for current state.",
+      description: "Search company memory and past decisions. Results may be outdated.",
       inputSchema: z.object({ query: z.string().min(1).max(500), limit: z.number().int().min(1).max(20).optional() }),
       execute: async ({ query, limit }) => {
         const hits = await searchMemory({ tags: await readTags(ctx.scope), query, limit: limit ?? 8 });
@@ -57,7 +57,7 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     search_threads: tool({
-      description: "Search summaries of past Slack threads that this conversation is allowed to read.",
+      description: "Search summaries of past threads this conversation may read.",
       inputSchema: z.object({ query: z.string().min(1).max(500), limit: z.number().int().min(1).max(10).optional() }),
       execute: async ({ query, limit }) => {
         const rows = await searchThreads({ scope: ctx.scope, query, limit, excludeThreadTs: ctx.threadTs });
@@ -67,7 +67,7 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     forget_memories: tool({
-      description: "Find facts to forget. First run with dryRun=true to show matches; only delete when the user explicitly asked to forget them.",
+      description: "Find facts to forget. Use dryRun=true first; delete only when the user explicitly asks.",
       inputSchema: z.object({ query: z.string().min(1).max(500), dryRun: z.boolean().optional().default(true) }),
       execute: async ({ query, dryRun }) => {
         const hits = await forgetMemories({ tags: await readTags(ctx.scope), query, dryRun });
@@ -77,7 +77,7 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     memory_remember: tool({
-      description: "Save one durable, self-contained fact in the current conversation's memory scope. Use for decisions, owners, deadlines, and stable preferences; never save secrets.",
+      description: "Save one durable, self-contained fact (decision, owner, deadline, preference). Never secrets.",
       inputSchema: z.object({ text: z.string().min(8).max(1000), confidence: z.number().min(0).max(1).optional(), importance: z.number().min(0).max(1).optional() }),
       execute: async ({ text, confidence, importance }) => {
         const tag = writeTag(ctx.scope);

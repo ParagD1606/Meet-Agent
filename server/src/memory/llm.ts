@@ -25,22 +25,49 @@ export async function completeText(a: { system: string; prompt: string; role?: M
   return text;
 }
 
+/** First balanced `{...}` in `raw` (string-aware), or null when the object never closes. */
+function firstBalanced(raw: string, start: number): string | null {
+  let depth = 0;
+  let inStr = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i]!;
+    if (inStr) { if (c === "\\") i++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return raw.slice(start, i + 1);
+  }
+  return null;
+}
+
+/**
+ * Parses the first JSON object in a model reply against `schema`. Small/local models drop closing braces, add prose or
+ * code fences, so: balanced object -> as-is -> jsonrepair of everything from the first `{`. Throws only when none validate.
+ */
+export function parseModelJson<S extends z.ZodType>(raw: string, schema: S): z.infer<S> {
+  const start = raw.indexOf("{");
+  if (start < 0) throw new Error("LLM reply contained no JSON object");
+  const attempts: (() => unknown)[] = [];
+  const balanced = firstBalanced(raw, start);
+  if (balanced) attempts.push(() => JSON.parse(balanced));
+  attempts.push(() => JSON.parse(jsonrepair(raw.slice(start))));
+  attempts.push(() => JSON.parse(jsonrepair(balanced ?? raw.slice(start, raw.lastIndexOf("}") + 1 || undefined))));
+  let last: unknown;
+  for (const a of attempts) {
+    try { return schema.parse(a()); } catch (e) { last = e; }
+  }
+  throw last instanceof Error ? last : new Error(String(last));
+}
+
 /** Runs the LLM and parses the first JSON object in its reply against `schema`. Throws on any failure. */
 export async function completeJson<S extends z.ZodType>(
   a: { system: string; prompt: string; role?: ModelRole; maxOutputTokens?: number },
   schema: S,
 ): Promise<z.infer<S>> {
   const raw = await completeText(a);
-  const start = raw.indexOf("{");
-  if (start < 0) {
-    log.warn("memory llm reply had no JSON object", { reply: raw.slice(0, 300) });
-    throw new Error("LLM reply contained no JSON object");
-  }
-  // Small/local models often drop a closing brace or wrap the JSON in prose; repair rather than lose the write.
-  const body = raw.slice(start, raw.lastIndexOf("}") + 1 || undefined);
   try {
-    return schema.parse(JSON.parse(body));
-  } catch {
-    return schema.parse(JSON.parse(jsonrepair(raw.slice(start))));
+    return parseModelJson(raw, schema);
+  } catch (e) {
+    log.warn("memory llm reply not parseable", { reply: raw.slice(0, 300), err: String(e).slice(0, 120) });
+    throw e;
   }
 }

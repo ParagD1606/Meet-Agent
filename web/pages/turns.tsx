@@ -108,7 +108,7 @@ export default function Turns() {
       <div className={cn("grid items-start gap-4", wide && sel && "grid-cols-[minmax(0,1fr)_440px]")}>
         <div className="min-w-0">
           <Async q={q} rows={8}>{() => rows.length === 0 ? <Panel><EmptyState icon="turns" title="No turns match">{Object.values(f).some(Boolean) ? "Try clearing a filter." : "Turns appear here after someone talks to the bot in Slack."}</EmptyState></Panel> : (
-            <Panel>
+            <Panel className="!overflow-x-auto">
               <Table caption="Turns" rows={rows} rowKey={(t) => t.id} selectedKey={sel} onRowClick={(t) => setSel(t.id)} columns={[
                 { key: "when", header: "Started", primary: true, sort: (t) => t.startedAt, cell: (t) => <span title={t.startedAt}>{ago(t.startedAt)}</span> },
                 { key: "user", header: "User", hideSm: true, sort: (t) => names.name(t.userId), cell: (t) => <span className="truncate">{names.name(t.userId)}</span> },

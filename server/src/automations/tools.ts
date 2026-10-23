@@ -1,7 +1,9 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
+import { sanitizeForSlack } from "../slack/sanitize";
+import { requestAutomationApproval } from "../turn/approval";
 import type { ToolContext } from "../turn/tools";
-import { type Actor, type Automation, RESEARCH_PREFIX, createAutomation, deleteAutomation, getRole, listAutomations } from "./automations";
+import { type Actor, type Automation, RESEARCH_PREFIX, getRole, listAutomations, validateCreate } from "./automations";
 
 const fmt = (a: Automation) =>
   `${a.id} [${a.kind}${a.prompt.startsWith(RESEARCH_PREFIX) ? "/research" : ""}] ${a.cron ? `cron "${a.cron}" UTC` : `at ${a.runAt?.toISOString()}`}` +
@@ -36,17 +38,20 @@ export function automationTools(ctx: ToolContext): ToolSet {
       execute: async (i) =>
         guard(async (a) => {
           const dest = !i.destination || i.destination === "dm" ? null : i.destination === "here" ? ctx.channelId : i.destination;
-          const row = await createAutomation(
-            {
-              kind: i.kind,
-              prompt: i.research && i.kind === "digest" ? RESEARCH_PREFIX + i.prompt : i.prompt,
-              cron: i.cron,
-              runAt: i.runAt,
-              destChannelId: dest,
-            },
-            a,
-          );
-          return `Scheduled: ${fmt(row)}`;
+          // broadcast mentions / hidden link markup in a stored prompt would fire on every run: neutralise now
+          const input = {
+            kind: i.kind,
+            prompt: sanitizeForSlack(i.research && i.kind === "digest" ? RESEARCH_PREFIX + i.prompt : i.prompt),
+            cron: i.cron,
+            runAt: i.runAt,
+            destChannelId: dest,
+          };
+          await validateCreate(input, a); // fail early with a useful error instead of asking a human to approve something invalid
+          const { approvalId } = await requestAutomationApproval({
+            turnId: ctx.turnId, requesterId: a.userId, channelId: ctx.channelId, threadTs: ctx.threadTs,
+            op: "schedule", input: { ...input, cron: input.cron ?? null, runAt: input.runAt ?? null }, actorRole: a.role,
+          });
+          return { status: "awaiting_approval", approvalId, instruction: "An approval card was posted. Tell the user briefly that nothing is scheduled until they approve, then stop. Do not retry." };
         }),
     }),
     list_automations: tool({
@@ -63,8 +68,13 @@ export function automationTools(ctx: ToolContext): ToolSet {
       inputSchema: z.object({ id: z.string() }),
       execute: async ({ id }) =>
         guard(async (a) => {
-          await deleteAutomation(id, a);
-          return `Cancelled ${id}.`;
+          const own = (await listAutomations(a)).find((x) => x.id === id);
+          if (!own) throw new Error("automation not found");
+          const { approvalId } = await requestAutomationApproval({
+            turnId: ctx.turnId, requesterId: a.userId, channelId: ctx.channelId, threadTs: ctx.threadTs,
+            op: "cancel", input: { id, summary: fmt(own).slice(0, 400) }, actorRole: a.role,
+          });
+          return { status: "awaiting_approval", approvalId, instruction: "An approval card was posted. Tell the user briefly that nothing is cancelled until they approve, then stop. Do not retry." };
         }),
     }),
   };

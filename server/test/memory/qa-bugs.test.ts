@@ -1,7 +1,5 @@
-// QA bug repros. EVERY test here asserts the CORRECT behaviour and currently FAILS (each failure proves a defect;
-// see the comment on each for file:line). Not part of the green suite: run explicitly with
-//   QA_BUGS=1 DATABASE_URL=<throwaway db> bun test test/memory/qa-bugs.test.ts
-// Without QA_BUGS=1 the whole file is skipped so `bun test test/memory/` (the CI command) stays green.
+// Regression tests for the nine memory bugs found in QA (injection scanner, list_recent leak, dedupe vs review state,
+// recall cache, observe paging, episodes, remember routing, delete restore, member visibility).
 import "../turn/env";
 import { afterAll, beforeAll, beforeEach, describe as bunDescribe, expect, test } from "bun:test";
 import { simulateReadableStream } from "ai";
@@ -20,6 +18,7 @@ import { deleteMemory } from "../../src/memory/graph";
 import { searchMemory } from "../../src/memory/search";
 import { EXTRACT_SYSTEM, flushIdleCaptures, scheduleCapture } from "../../src/memory/writeback";
 import { setLoopModel } from "../../src/turn/loop";
+import { setSlackClient } from "../../src/turn/slack";
 import { runTurn } from "../../src/turn";
 import { app, call, db, login, resetDb } from "../api/helpers";
 import { BOT, setup as slackSetup } from "../slack/helpers";
@@ -28,11 +27,18 @@ import { fakeVector, installFakes, removeFakes, seedMemory } from "./helpers";
 
 config.ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const describe = process.env.QA_BUGS ? bunDescribe : bunDescribe.skip;
+const describe = bunDescribe;
 const pub = { channelId: "CPUB", isPrivate: false, isIm: false, userId: "U1" };
 
 beforeAll(installFakes);
-afterAll(() => { removeFakes(); setLoopModel(undefined); });
+afterAll(async () => {
+  // bun runs all files in one process: leave no buffered captures, cached recalls or fake models behind for the next file
+  await flushIdleCaptures(0).catch(() => {});
+  clearRecallCache();
+  removeFakes();
+  setLoopModel(undefined);
+  setSlackClient(undefined);
+});
 
 describe("BUG-1 injection scanner (src/memory/core-blocks.ts:21-33)", () => {
   test("the canonical 'ignore all previous instructions' is blocked", () => {

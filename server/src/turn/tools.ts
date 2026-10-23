@@ -11,13 +11,15 @@ import type { AgentContext } from "../memory/core-blocks";
 import type { SlackScope } from "../memory/scope";
 import { automationTools } from "../automations";
 import { researchTools } from "../research";
-import { loadSkill } from "../skills/skills";
+import { skillTools } from "../skills/skills";
+import { directoryTools } from "../mcp/directory-tool";
+import { teammateAccessTools } from "../mcp/access-intent";
 import { searchPeople } from "../slack/people";
 import { slackSearchTools } from "../slack/search";
 import { extractUrl } from "../tools/web/extract";
 import { webSearch } from "../tools/web/search";
-import { allowedUrls } from "../tools/web";
-import { grantedLeases, leaseCandidates, requestLease } from "./lease";
+import { allowedUrls, registerUrls } from "../tools/web";
+import { grantedLeases } from "./lease";
 import { memoryTools } from "./memory-tools";
 import { readToolResultTool } from "./spill";
 import { allowedFamilies, likelyFamilies, type Depth, type ToolFamily } from "./depth";
@@ -37,6 +39,9 @@ export type ToolContext = {
   depth?: Depth;
   /** Set when personal/leased data entered this turn: shared memory capture and web_extract are then off. */
   touchedPrivateData?: boolean;
+  /** The user's own message text: URLs typed there are the only ones web_extract may read (plus search results). */
+  userText?: string;
+  allowedUrlSet?: Set<string>;
 };
 
 const MAX_EXTRACT_URLS = 3;
@@ -76,12 +81,9 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
       return r.length ? r.map((p) => `- ${p.name ?? "?"} <@${p.id}>${p.title ? `, ${p.title}` : ""}`).join("\n") : "No matches.";
     },
   });
-  core.load_skill = tool({
-    description: "Load a skill's full instructions by name.",
-    inputSchema: z.object({ name: z.string().min(1) }),
-    execute: async ({ name }) => (await loadSkill(name)) ?? `No skill named "${name}".`,
-  });
+  Object.assign(core, skillTools(ctx));
 
+  if (writable) Object.assign(core, teammateAccessTools(ctx, o.text));
   if (writable && !ctx.orgConnectionsOnly) {
     core.request_connection = tool({
       description: "Ask the user to connect an app (github, linear, notion...).",
@@ -89,21 +91,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
       execute: async ({ provider }) =>
         `Tell the user to connect ${provider} at ${config.PUBLIC_URL.replace(/\/$/, "")}/configure/integrations (or via the Home tab), then ask again.`,
     });
-    core.request_teammate_access = tool({
-      description: "Ask a teammate who has an app connected to allow ONE read-only request for the asker.",
-      inputSchema: z.object({ provider: z.string(), reason: z.string().max(300), ownerUserId: z.string().optional() }),
-      execute: async ({ provider, reason, ownerUserId }) => {
-        if (!ctx.userId) return "ERROR: no requesting user.";
-        const cands = await leaseCandidates(provider, ctx.userId);
-        if (!cands.length) return `Nobody has ${provider} connected. Use request_connection instead.`;
-        const pick = ownerUserId ? cands.find((c) => c.ownerUserId === ownerUserId) : cands.length === 1 ? cands[0] : undefined;
-        if (!pick) return `Several teammates have it: ${cands.map((c) => `${c.name} (${c.ownerUserId})`).join(", ")}. Ask the user whom to ask, then call again with ownerUserId.`;
-        try {
-          await requestLease({ connectionId: pick.connectionId, requesterId: ctx.userId, turnId: ctx.turnId, reason });
-          return `Asked ${pick.name ?? "the owner"} for one-time access. Tell the user you'll continue as soon as they allow it, then stop.`;
-        } catch (e) { return `ERROR: ${e instanceof Error ? e.message : String(e)}`; }
-      },
-    });
+    Object.assign(core, directoryTools(ctx));
   }
 
   // ---- rare families ----
@@ -113,6 +101,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
     execute: async ({ query }) => {
       const r = await webSearch(query);
       if (!r.results.length) return r.message ?? "No results.";
+      for (const x of r.results) registerUrls(ctx, x.url);
       return r.results.map((x) => `- ${x.title}\n  ${x.url}\n  ${x.snippet}`).join("\n");
     },
   });
@@ -120,11 +109,9 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
     description: `Read public web pages by URL (up to ${MAX_EXTRACT_URLS}).`,
     inputSchema: z.object({ urls: z.array(z.string().url()).min(1).max(MAX_EXTRACT_URLS) }),
     execute: async ({ urls }) => {
-      const verdict = allowedUrls(ctx as never, urls) as { ok: boolean; error?: string; urls?: string[] } | boolean;
-      if (verdict === false || (typeof verdict === "object" && !verdict.ok)) {
-        return `ERROR: ${typeof verdict === "object" && verdict.error ? verdict.error : "page reading is limited to links the user shared or search results, and is off once private data was used this turn."}`;
-      }
-      const list = typeof verdict === "object" && verdict.urls ? verdict.urls : urls;
+      const verdict = allowedUrls(ctx, urls);
+      if (!verdict.ok) return `ERROR: ${verdict.error}`;
+      const list = verdict.urls;
       return (await Promise.all(list.map(async (u) => {
         try { const p = await extractUrl(u); return `## ${p.title || p.url}\n${p.url}\n\n${p.text}`; }
         catch (e) { return `## ${u}\nCould not read this page: ${e instanceof Error ? e.message : String(e)}`; }

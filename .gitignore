@@ -1,4 +1,7 @@
 node_modules
 .env
+application_default_credentials.json
+.aws
 dist
 pgdata
+graphify-out

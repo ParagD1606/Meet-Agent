@@ -34,6 +34,23 @@ export const hashArgs = (input: unknown) => createHash("sha256").update(canonica
 /** Code fences and inline code in tool-controlled text must not be able to close our card's code block. */
 export const neutraliseBackticks = (s: string) => s.replace(/`/g, "\u02cb");
 
+const KEY_ARGS = ["title", "name", "subject", "to", "recipient", "recipients", "email", "repo", "repository", "owner", "project", "channel", "url", "query", "summary", "description", "text", "body", "content", "id", "prompt", "cron", "runAt", "kind"];
+
+const flat = (v: unknown): string => {
+  const t = typeof v === "string" ? v : Array.isArray(v) ? v.map(flat).join(", ") : v && typeof v === "object" ? JSON.stringify(v) : String(v);
+  const one = t.replace(/\s+/g, " ").trim();
+  return one.length > 80 ? `${one.slice(0, 77)}...` : one;
+};
+
+/** One plain-language line above the raw JSON: "Create issue on GitHub: title: Fix login, repo: acme/web". */
+export function approvalSummary(toolName: string, input: Record<string, unknown>): string {
+  const label = toolName.replace(/__/g, " / ").replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  const keys = KEY_ARGS.filter((k) => input[k] != null && input[k] !== "").slice(0, 4);
+  const picked = keys.length ? keys : Object.keys(input).slice(0, 3);
+  const args = picked.map((k) => `${k}: ${flat(input[k])}`).join(", ");
+  return args ? `${label}: ${args}` : label;
+}
+
 export class ApprovalTooLargeError extends Error {
   constructor(readonly chars: number) {
     super(`The arguments are too long to show in an approval card (${chars} characters, limit ${MAX_PREVIEW_CHARS}). Ask for a smaller request or split it into several.`);
@@ -60,10 +77,11 @@ async function postApproval(a: Posted): Promise<{ approvalId: string }> {
   try {
     const slack = await getSlack();
     const preview = esc(neutraliseBackticks(pretty));
+    const headline = esc(neutraliseBackticks(approvalSummary(a.toolName, input))).slice(0, 400);
     const res = await slack.chat.postMessage({
       channel: a.channelId, thread_ts: a.threadTs ?? undefined, text: `Approval needed: ${a.toolName}`,
       blocks: [
-        { type: "section", text: { type: "mrkdwn", text: `<@${a.requesterId}> ${esc(neutraliseBackticks(a.summary))} \`${esc(neutraliseBackticks(a.toolName))}\`:\n\`\`\`${preview}\`\`\`\nArguments fingerprint \`${hash.slice(0, 12)}\`. Expires in 15 minutes.` } },
+        { type: "section", text: { type: "mrkdwn", text: `<@${a.requesterId}> ${esc(neutraliseBackticks(a.summary))} \`${esc(neutraliseBackticks(a.toolName))}\`:\n> ${headline}\n\`\`\`${preview}\`\`\`\nArguments fingerprint \`${hash.slice(0, 12)}\`. Expires in 15 minutes.` } },
         { type: "actions", elements: [
           { type: "button", style: "primary", text: { type: "plain_text", text: "Approve" }, action_id: "approval_approve", value: row.id },
           { type: "button", style: "danger", text: { type: "plain_text", text: "Deny" }, action_id: "approval_deny", value: row.id },

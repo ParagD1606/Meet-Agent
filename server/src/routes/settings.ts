@@ -31,7 +31,7 @@ async function proactivity() {
   const raw = await getSetting("proactivity_default");
   const chans = await db.select({ id: channels.id, name: channels.name, mode: channels.proactivity })
     .from(channels).where(eq(channels.isIm, false)).orderBy(channels.name);
-  return { default: raw === "own" ? "own" : "all", channels: chans };
+  return { default: raw === "all" ? "all" : "own", channels: chans };
 }
 
 settingsRoutes.get("/settings/proactivity", requireAuth("admin"), async (c) => c.json(await proactivity()));
@@ -65,6 +65,10 @@ const MODELS: Record<string, { id: string; label: string; profile: "fast" | "tho
   google: [
     { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", profile: "fast" },
     { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro", profile: "thorough" },
+  ],
+  vertex: [
+    { id: "google/gemini-3.5-flash-lite", label: "Gemini 3.5 Flash-Lite (Vertex AI)", profile: "fast" },
+    { id: "google/gemini-3.8-flash", label: "Gemini 3.8 Flash (Vertex AI)", profile: "thorough" },
   ],
   xai: [
     { id: "grok-3-mini", label: "Grok 3 mini", profile: "fast" },

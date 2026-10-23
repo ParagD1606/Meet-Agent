@@ -21,6 +21,8 @@ const schema = z.object({
   EMBEDDING_MODEL: z.string().default("text-embedding-3-small"),
   EMBEDDING_DIM: z.coerce.number().default(1536),
   MODEL_NAME: z.string().optional(),
+  /** Path to the ADC JSON (authorized_user or service account). Read by google-auth-library for chat and embeddings. */
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   SLACK_CLIENT_ID: z.string().optional(),
   SLACK_CLIENT_SECRET: z.string().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
@@ -58,7 +60,10 @@ export function configProblems(c: Config, production = c.NODE_ENV === "productio
   if (!c.PUBLIC_URL.startsWith("https://")) p.push("PUBLIC_URL must be an https:// URL in production");
   if (c.SLACK_MODE === "http" && !c.SLACK_SIGNING_SECRET) p.push("SLACK_SIGNING_SECRET is required when SLACK_MODE=http");
   if (c.SLACK_MODE === "socket" && !c.SLACK_APP_TOKEN) p.push("SLACK_APP_TOKEN is required when SLACK_MODE=socket");
-  if (!c.EMBEDDING_API_KEY && !c.EMBEDDING_BASE_URL) p.push("EMBEDDING_API_KEY is required unless EMBEDDING_BASE_URL is set");
+  if (c.MODEL_PROVIDER === "vertex" && (!c.GOOGLE_APPLICATION_CREDENTIALS || !c.GOOGLE_VERTEX_PROJECT)) {
+    p.push("GOOGLE_APPLICATION_CREDENTIALS and GOOGLE_VERTEX_PROJECT are required when MODEL_PROVIDER=vertex");
+  }
+  if (!c.EMBEDDING_API_KEY && !c.EMBEDDING_BASE_URL && c.MODEL_PROVIDER !== "vertex") p.push("EMBEDDING_API_KEY is required unless EMBEDDING_BASE_URL is set");
   return p;
 }
 

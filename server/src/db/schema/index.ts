@@ -135,7 +135,7 @@ export const leases = pgTable("leases", {
 // ---------- behavior ----------
 export const skills = pgTable("skills", {
   id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   description: text("description").notNull(),
   body: text("body").notNull(),
   enabled: boolean("enabled").notNull().default(true),
@@ -144,7 +144,7 @@ export const skills = pgTable("skills", {
   version: integer("version").notNull().default(1), // optimistic lock
   createdBy: text("created_by"),
   createdAt: ts("created_at"),
-});
+}, (t) => [uniqueIndex("skills_name_owner_idx").on(sql`lower(${t.name})`, sql`coalesce(${t.ownerUserId}, '')`)]);
 
 export const automations = pgTable("automations", {
   id: text("id").primaryKey(),
@@ -217,7 +217,7 @@ export const turns = pgTable("turns", {
   error: text("error"),
   startedAt: ts("started_at"),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
-});
+}, (t) => [index("turns_thread_idx").on(t.channelId, t.threadTs)]);
 
 export const chimeLog = pgTable("chime_log", {
   id: bigserial("id", { mode: "number" }).primaryKey(),

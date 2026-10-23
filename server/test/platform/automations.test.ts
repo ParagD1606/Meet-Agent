@@ -195,19 +195,46 @@ test("runNow checks ownership", async () => {
   expect(await code(runNow("missing"))).toBe("not_found");
 });
 
-test("ai tools: schedule/list/cancel go through the same rules", async () => {
-  const t: any = automationTools({ turnId: "t", userId: "UMEM", channelId: "CPRIV", scope: {} as any, readOnly: false, orgConnectionsOnly: false });
-  const run = (name: string, input: unknown) => t[name].execute(input, { toolCallId: "x", messages: [] });
-  expect(await run("schedule_automation", { kind: "digest", prompt: "recap", cron: "*/5 * * * *" })).toMatch(/too often/);
-  expect(await run("schedule_automation", { kind: "digest", prompt: "recap", cron: "0 9 * * 1", destination: "here" })).toMatch(/^Scheduled: /); // member of CPRIV
-  const listed: string = await run("list_automations", {});
+test("ai tools: schedule/cancel only propose; nothing changes until the requester approves", async () => {
+  const { setSlackClient } = await import("../../src/turn/slack");
+  const { handleBlockAction, settled } = await import("../../src/turn/approval");
+  const { turns, approvals } = await import("../../src/db/schema");
+  const cards: any[] = [];
+  setSlackClient(async () => ({ chat: { postMessage: async (a: any) => { cards.push(a); return { ok: true, ts: `9.${cards.length}` }; }, update: async () => ({ ok: true }), postEphemeral: async () => ({ ok: true }) } }) as any);
+  const { setFollowUp } = await import("../../src/turn/followup");
+  const followUps: any[] = [];
+  setFollowUp(async (i) => { followUps.push(i); });
+  await db.insert(turns).values({ id: "t", channelId: "CPRIV", trigger: "mention" });
+  const mk = (userId: string | null) => automationTools({ turnId: "t", userId, channelId: "CPRIV", scope: {} as any, readOnly: false, orgConnectionsOnly: false }) as any;
+  const run = (t: any, name: string, input: unknown) => t[name].execute(input, { toolCallId: "x", messages: [] });
+  const t = mk("UMEM");
+  expect(await run(t, "schedule_automation", { kind: "digest", prompt: "recap", cron: "*/5 * * * *" })).toMatch(/too often/);
+  const proposed = await run(t, "schedule_automation", { kind: "reminder", prompt: "stand up <!channel> now", cron: "0 9 * * 1", destination: "here" });
+  expect(proposed.status).toBe("awaiting_approval");
+  expect(await db.select().from(automations)).toHaveLength(0); // nothing scheduled yet
+  expect(cards[0].blocks[1].elements.map((e: any) => e.action_id)).toEqual(["approval_approve", "approval_deny"]);
+  expect(cards[0].blocks[0].text.text).not.toContain("<!channel>"); // escaped in the card
+  // a stranger cannot approve
+  await handleBlockAction({ user: { id: "UMEM2" }, actions: [{ action_id: "approval_approve", value: proposed.approvalId }] });
+  await settled();
+  expect(await db.select().from(automations)).toHaveLength(0);
+  await handleBlockAction({ user: { id: "UMEM" }, actions: [{ action_id: "approval_approve", value: proposed.approvalId }] });
+  await settled();
+  const [row] = await db.select().from(automations);
+  expect(row!.prompt).toBe("stand up channel now"); // broadcast mention neutralised before storing
+  expect(followUps[0].readOnly).toBe(true);
+  const listed: string = await run(t, "list_automations", {});
   const id = /au_[\w-]+/.exec(listed)![0];
   expect(listed).toContain("<#CPRIV>");
-  expect(await run("cancel_automation", { id })).toBe(`Cancelled ${id}.`);
-  expect(await run("cancel_automation", { id })).toMatch(/not found/);
-  const stranger: any = automationTools({ turnId: "t", userId: "UMEM2", channelId: "CPRIV", scope: {} as any, readOnly: false, orgConnectionsOnly: false });
-  // in-channel proof is accepted because the asker is talking in that channel
-  expect(await stranger.schedule_automation.execute({ kind: "digest", prompt: "r", cron: "0 9 * * 1", destination: "CPRIV" }, { toolCallId: "x", messages: [] })).toMatch(/^Scheduled/);
-  const noUser: any = automationTools({ turnId: "t", userId: null, channelId: "CPUB", scope: {} as any, readOnly: false, orgConnectionsOnly: false });
-  expect(await noUser.list_automations.execute({}, { toolCallId: "x", messages: [] })).toMatch(/identity/);
+  const cancel = await run(t, "cancel_automation", { id });
+  expect(cancel.status).toBe("awaiting_approval");
+  expect(await db.select().from(automations)).toHaveLength(1);
+  await handleBlockAction({ user: { id: "UMEM" }, actions: [{ action_id: "approval_approve", value: cancel.approvalId }] });
+  await settled();
+  expect(await db.select().from(automations)).toHaveLength(0);
+  expect(await run(t, "cancel_automation", { id })).toMatch(/not found/);
+  const noUser = mk(null);
+  expect(await run(noUser, "list_automations", {})).toMatch(/identity/);
+  expect((await db.select().from(approvals)).length).toBe(2);
+  setSlackClient(undefined); setFollowUp(undefined);
 });

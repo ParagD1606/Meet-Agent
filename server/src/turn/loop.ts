@@ -107,9 +107,43 @@ export type LoopArgs = {
 const WRAP_UP = "[host] You are almost out of room for this request. Answer now with what you have found. Say plainly what you did not get to and what would let you go further. Do not call tools.";
 
 export async function runLoop(a: LoopArgs): Promise<LoopResult> {
-  const attempt = (model: LanguageModel) => runOnce(a, model);
-  if (modelOverride) return attempt(modelOverride);
-  return withFallback(a.role ?? "main", attempt);
+  const args = { ...a, budget: a.budget ?? await createTurnBudget() };
+  const attempt = (model: LanguageModel) => runOnce(args, model);
+  const first = modelOverride ? await attempt(modelOverride) : await withFallback(args.role ?? "main", attempt);
+
+  // A provider can finish successfully while returning only hidden reasoning or no text at all.
+  // Recover once for lightweight, tool-free turns; never replay a turn that may have acted.
+  if (first.text.trim() || /^\s*NO_REPLY\s*$/.test(first.text) || first.stopped || first.toolCalls.length || first.waitingApproval || !["direct", "memory"].includes(args.depth)) {
+    return first;
+  }
+
+  const recoveryInstruction = "The previous response contained no user-visible answer. Answer the user's latest request directly and concisely using only the supplied context. If the context is insufficient, say what is missing. Do not return an empty answer or a control token.";
+  const system = Array.isArray(args.system)
+    ? [...args.system, { role: "system", content: recoveryInstruction } as SystemModelMessage]
+    : `${args.system}\n\n${recoveryInstruction}`;
+  try {
+    const recovery = await runOnce({ ...args, system, tools: {}, maxSteps: 1, maxOutputTokens: Math.min(args.maxOutputTokens, 400), activeTools: undefined, onStatus: undefined }, getModel("triage"));
+    return {
+      ...recovery,
+      text: recovery.text || first.text,
+      inputTokens: first.inputTokens + recovery.inputTokens,
+      outputTokens: first.outputTokens + recovery.outputTokens,
+      cacheReadTokens: first.cacheReadTokens + recovery.cacheReadTokens,
+      cacheWriteTokens: first.cacheWriteTokens + recovery.cacheWriteTokens,
+      costMicros: first.costMicros + recovery.costMicros,
+      model: recovery.text ? recovery.model : first.model,
+      steps: first.steps + recovery.steps,
+      toolCalls: first.toolCalls,
+      waitingApproval: first.waitingApproval,
+      stopped: recovery.stopped,
+    };
+  } catch (error) {
+    log.warn("empty response recovery failed", {
+      turnId: args.turnId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return first;
+  }
 }
 
 async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {

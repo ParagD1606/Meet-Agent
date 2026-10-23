@@ -31,7 +31,12 @@ export async function getWorkspace(): Promise<WorkspaceRow | null> {
 }
 
 export function newWebClient(token?: string): WebClient {
-  return new WebClient(token, { logLevel: LogLevel.ERROR, ...(config.SLACK_API_URL ? { slackApiUrl: config.SLACK_API_URL } : {}) });
+  return new WebClient(token, {
+    logLevel: LogLevel.ERROR,
+    timeout: 30_000, // every Slack call is bounded; the SDK default is unbounded
+    retryConfig: { retries: 2, factor: 2, minTimeout: 500, maxTimeout: 5_000, randomize: true },
+    ...(config.SLACK_API_URL ? { slackApiUrl: config.SLACK_API_URL } : {}),
+  });
 }
 
 /** WebClient bound to the installed workspace's decrypted bot token. Throws SlackNotInstalledError if absent. */

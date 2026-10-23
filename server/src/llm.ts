@@ -17,12 +17,13 @@ const DEFAULTS = {
   openai: { fast: "gpt-4.1-mini", thorough: "gpt-4.1" },
   google: { fast: "gemini-2.5-flash", thorough: "gemini-2.5-pro" },
   xai: { fast: "grok-3-mini", thorough: "grok-4" },
-  vertex: { fast: "gemini-2.5-flash", thorough: "gemini-2.5-pro" },
+  // 3.5 family: 2.5 is not served to every Vertex project (404 "publisher model not found"); verify with scripts/vertex-probe.ts
+  vertex: { fast: "gemini-3.5-flash-lite", thorough: "gemini-3.5-flash" },
 } as const;
 
 /** Provider is inferred from the key prefix; MODEL_BASE_URL forces OpenAI-compatible (OpenRouter, Ollama). */
 export function detectProvider(key: string | undefined, baseUrl?: string): keyof typeof DEFAULTS | "compat" {
-  if (config.MODEL_PROVIDER === "vertex" && !baseUrl) return "vertex";
+  if (config.MODEL_PROVIDER === "vertex") return "vertex"; // ADC JSON only: stray MODEL_BASE_URL / keys never override it
   if (baseUrl) return "compat";
   if (!key) throw new Error("MODEL_API_KEY is not set");
   if (key.startsWith("sk-ant-")) return "anthropic";
@@ -73,7 +74,7 @@ function build(provider: ProviderName | "compat", name: string, key: string | un
     case "openai": return createOpenAI({ apiKey: key })(name);
     case "google": return createGoogleGenerativeAI({ apiKey: key })(name);
     case "xai": return createXai({ apiKey: key })(name);
-    case "vertex": return createVertex({ project: config.GOOGLE_VERTEX_PROJECT, location: config.GOOGLE_VERTEX_LOCATION })(name);
+    case "vertex": return createVertex({ project: config.GOOGLE_VERTEX_PROJECT, location: config.GOOGLE_VERTEX_LOCATION })(name.replace(/^google\//, "")); // tolerate saved "google/<model>" ids;
   }
 }
 
@@ -118,7 +119,7 @@ export function getFallbackModel(role: ModelRole | ModelProfile = "main"): Langu
   if (!["anthropic", "openai", "google", "xai", "compat"].includes(provider) || !model) return null;
   const envKey = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_GENERATIVE_AI_API_KEY", xai: "XAI_API_KEY", compat: "", vertex: "" }[provider];
   const key = (envKey && process.env[envKey]) || process.env.FALLBACK_MODEL_API_KEY;
-  if (!key && provider !== "compat") return null;
+  if (!key && provider !== "compat" && provider !== "vertex") return null;
   return build(provider, model, key, process.env.FALLBACK_MODEL_BASE_URL);
 }
 
@@ -186,7 +187,8 @@ export async function probeModel(role: ModelRole | ModelProfile = "main", timeou
   try {
     const m = getModel(role);
     model = (m as { modelId?: string }).modelId ?? "unknown";
-    await generateText({ model: m, prompt: "Reply with the single word: ok", maxOutputTokens: 8, abortSignal: AbortSignal.timeout(timeoutMs) });
+    // Gemini may spend the first few output tokens on internal reasoning. Keep enough budget for a visible answer.
+    await generateText({ model: m, prompt: "Reply with the single word: ok", maxOutputTokens: 128, abortSignal: AbortSignal.timeout(timeoutMs) });
     return { ok: true, model, ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, model, ms: Date.now() - t0, error: (e instanceof Error ? e.message : String(e)).slice(0, 300) };

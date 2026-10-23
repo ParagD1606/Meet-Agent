@@ -11,10 +11,10 @@ const EXPORT: Record<string, string> = {
 const DOWNLOAD = new Set(["text/plain", "text/markdown", "text/csv", "text/html", "application/pdf"]);
 const supported = (m: string) => m in EXPORT || DOWNLOAD.has(m);
 
-type DFile = { id: string; name: string; mimeType: string; trashed?: boolean };
-const FILE_FIELDS = "id,name,mimeType,trashed";
+type DFile = { id: string; name: string; mimeType: string; trashed?: boolean; parents?: string[] };
+const FILE_FIELDS = "id,name,mimeType,trashed,parents";
 const toRef = (f: DFile | undefined): DocRef[] =>
-  f && !f.trashed && supported(f.mimeType) ? [{ id: f.id, name: f.name, mimeType: f.mimeType }] : [];
+  f && !f.trashed && supported(f.mimeType) ? [{ id: f.id, name: f.name, mimeType: f.mimeType, ...(f.parents ? { parents: f.parents } : {}) }] : [];
 
 const tokenCall = (body: Record<string, string>) =>
   json<{ access_token: string; refresh_token?: string; expires_in?: number }>(TOKEN, {

@@ -42,7 +42,6 @@ const ROUTES: [string, string, R][] = [
   ["DELETE", "/api/sync/sources/x", "admin"],
   ["GET", "/sync/oauth/gdrive/callback", "admin"],
   ["GET", "/api/core-blocks", "member"],
-  ["PUT", "/api/core-blocks", "admin"], // company block (default scope) is admin-write
   ["GET", "/api/reviews", "admin"],
   ["POST", "/api/reviews/x/decide", "admin"],
   ["GET", "/api/memories/1/history", "member"],

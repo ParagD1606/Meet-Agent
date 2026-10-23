@@ -41,6 +41,14 @@ async function botInThread(channel: string, threadTs: string): Promise<boolean> 
 async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   const me = await botUserId();
   const route = routeMessage(ev, me, { botInThread: ev.thread_ts && ev.thread_ts !== ev.ts ? await botInThread(ev.channel, ev.thread_ts) : false });
+  if (ev.type === "app_mention" || route.kind === "turn") {
+    log.info("slack mention routed", {
+      eventType: ev.type,
+      route: route.kind,
+      ...(route.kind === "turn" ? { trigger: route.trigger } : {}),
+      ...(route.kind === "ignore" ? { reason: route.reason } : {}),
+    });
+  }
   if (route.kind === "ignore") return;
   // The same human message can arrive as both `message` and `app_mention`; process it once.
   if (!(await claimEvent(`m:${ev.channel}:${ev.ts}`))) return;
@@ -133,6 +141,7 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
     switch (ev.type) {
       case "message":
       case "app_mention":
+        log.info("slack message event received", { type: ev.type, workspaceMatched: true });
         return await handleMessage(ev as SlackMessageEvent);
       case "team_join":
         if (ev.user?.id) { await upsertSlackUser(ev.user); await onUserJoined(ev.user.id); }

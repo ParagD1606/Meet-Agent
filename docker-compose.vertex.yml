@@ -1,0 +1,6 @@
+services:
+  app:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/application_default_credentials.json
+    volumes:
+      - ./application_default_credentials.json:/app/application_default_credentials.json:ro

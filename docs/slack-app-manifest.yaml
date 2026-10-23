@@ -1,7 +1,8 @@
-# OAuth callbacks use https://slack.derpx06.live and must reach the app on localhost:3000 via your HTTPS proxy/tunnel. Socket mode (default): no Events Request URL needed; create an app-level token with connections:write.
-# For HTTP mode use GET /api/setup/manifest on your running server instead (it fills the request URLs).
-# Generated from server/src/slack/manifest.ts; test/mcp/manifest-yaml.test.ts keeps the two in sync.
-# Slack app manifest for Company Brain. Slack -> Create New App -> From a manifest -> paste this.
+# Production Slack manifest for Company Brain at https://slack.derpx06.live.
+# Socket Mode is enabled: Slack events and interactive actions use the app-level token; leave Request URL fields empty.
+# Apply this file in Slack API > Your Apps > Company Brain > App Manifest. Confirm both OAuth redirect URLs below.
+# Never put Slack tokens, client secrets, or signing secrets in this file; configure those in the server environment.
+# Scopes and events are maintained in server/src/slack/manifest.ts.
 display_information:
   name: "Company Brain"
   description: "A teammate with shared memory that lives in your Slack."
@@ -65,6 +66,12 @@ settings:
       - "team_join"
       - "user_change"
       - "reaction_added"
+      - "file_created"
+      - "file_shared"
+      - "assistant_thread_started"
+      - "assistant_thread_context_changed"
+      - "tokens_revoked"
+      - "app_uninstalled"
   interactivity:
     is_enabled: true
   org_deploy_enabled: false

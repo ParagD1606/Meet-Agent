@@ -24,7 +24,7 @@ interface Filters { scope: string; q: string }
 function GraphCanvas({ data, filters, selected, onSelect, focus }: { data: GraphData; filters: Filters; selected: number | null; onSelect: (n: GraphNode | null) => void; focus: { id: number; t: number } | null }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const { resolved } = useTheme()
-  const st = useRef({ pos: new Float32Array(0), view: { x: 0, y: 0, k: 1 } as View, w: 0, h: 0, hover: -1, settled: false, touched: false })
+  const st = useRef({ pos: new Float32Array(0) as Float32Array<ArrayBufferLike>, view: { x: 0, y: 0, k: 1 } as View, w: 0, h: 0, hover: -1, settled: false, touched: false })
   const live = useRef({ filters, selected, data, resolved })
   live.current = { filters, selected, data, resolved }
   const api2 = useRef<{ draw: () => void; fit: () => void; zoom: (f: number) => void; center: (i: number) => void }>({ draw() {}, fit() {}, zoom() {}, center() {} })

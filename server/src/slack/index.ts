@@ -73,7 +73,10 @@ export async function startSlack(): Promise<void> {
   if (socket) return;
   try {
     const client = new SocketModeClient({ appToken: config.SLACK_APP_TOKEN });
-    client.on("events_api", async ({ ack, body }: { ack: () => Promise<void>; body: EventCallback }) => {
+    // Socket Mode emits the Events API envelope on `slack_event` with type `events_api`.
+    // The per-event emitter is named after the inner Slack event (e.g. `app_mention`).
+    client.on("slack_event", async ({ ack, type, body }: { ack: () => Promise<void>; type: string; body: EventCallback }) => {
+      if (type !== "events_api") return;
       await ack();
       void handleEventCallback(body);
     });

@@ -41,7 +41,7 @@ afterEach(() => { globalThis.fetch = realFetch; setEmbedder(null); });
 
 async function mkSource(provider: "gdrive" | "onedrive" | "notion", cursor: string | null = null, auth: object = { accessToken: "tok" }) {
   const id = `s_${provider}`;
-  await db.insert(syncSources).values({ id, provider, authEnc: encrypt(JSON.stringify(auth)), cursor });
+  await db.insert(syncSources).values({ id, provider, authEnc: encrypt(JSON.stringify(auth)), cursor, selection: { ids: ["*"] } });
   return id;
 }
 const src = async (id: string) => (await db.select().from(syncSources).where(eq(syncSources.id, id)))[0]!;

@@ -1,12 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import type { Hono } from "hono";
 import { z } from "zod";
 import { sha256 } from "../crypto";
 import { db } from "../db";
 import { apiTokens, memories, users } from "../db/schema";
-import { log } from "../log";
+import { checkRate } from "../limits/rate";
+import { log, redactError } from "../log";
 import { searchMemory } from "../memory/search";
 
 /** Outward-facing scope: API tokens only ever read the org-wide "shared" tag. */
@@ -53,7 +54,10 @@ export function buildMcpServer(): McpServer {
   return server;
 }
 
-/** Returns the token owner's id for a valid, non-deactivated bearer token. */
+/** API tokens expire a year after creation (api_tokens has no explicit expiry column). */
+export const TOKEN_TTL_MS = 365 * 24 * 3600 * 1000;
+
+/** Returns the token owner's id for a valid, unexpired, non-deactivated bearer token. */
 export async function authenticateToken(header: string | undefined): Promise<string | null> {
   const m = /^Bearer\s+(\S+)$/i.exec(header ?? "");
   if (!m) return null;
@@ -61,7 +65,7 @@ export async function authenticateToken(header: string | undefined): Promise<str
     .select({ userId: apiTokens.userId })
     .from(apiTokens)
     .innerJoin(users, eq(users.id, apiTokens.userId))
-    .where(and(eq(apiTokens.hash, sha256(m[1]!)), eq(users.deactivated, false)))
+    .where(and(eq(apiTokens.hash, sha256(m[1]!)), eq(users.deactivated, false), gt(apiTokens.createdAt, new Date(Date.now() - TOKEN_TTL_MS))))
     .limit(1);
   return row?.userId ?? null;
 }
@@ -70,15 +74,21 @@ export function mountMcpServer(app: Hono<any>): void {
   app.on(["GET", "DELETE"], "/mcp", (c) =>
     c.json({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed (stateless server, use POST)" }, id: null }, 405));
   app.post("/mcp", async (c) => {
-    if (!(await authenticateToken(c.req.header("authorization")))) {
-      return c.json({ error: "unauthorized" }, 401, { "www-authenticate": 'Bearer realm="company-brain"' });
-    }
+    const userId = await authenticateToken(c.req.header("authorization"));
+    if (!userId) return c.json({ error: "unauthorized" }, 401, { "www-authenticate": 'Bearer realm="company-brain"' });
+    const rate = await checkRate({ userId, channelId: "mcp-server", kind: "mcp" });
+    if (!rate.ok) return c.json({ error: "rate_limited", message: rate.message }, 429, { "retry-after": String(rate.retryAfterSec) });
     // Stateless: a fresh server+transport per request, JSON responses.
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     const server = buildMcpServer();
-    await server.connect(transport);
-    const res = await transport.handleRequest(c.req.raw);
-    await server.close();
-    return res;
+    try {
+      await server.connect(transport);
+      return await transport.handleRequest(c.req.raw);
+    } catch (e) {
+      log.warn("mcp server request failed", { err: redactError(e) });
+      return c.json({ jsonrpc: "2.0", error: { code: -32603, message: "internal error" }, id: null }, 500);
+    } finally {
+      await server.close().catch(() => {});
+    }
   });
 }

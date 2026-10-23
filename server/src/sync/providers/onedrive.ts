@@ -6,7 +6,7 @@ const AUTH = "https://login.microsoftonline.com/common/oauth2/v2.0";
 const SCOPE = "offline_access Files.Read.All";
 const TEXTY = /\.(md|markdown|txt|csv|html?)$/i;
 
-type Item = { id: string; name: string; deleted?: unknown; file?: { mimeType?: string } };
+type Item = { id: string; name: string; deleted?: unknown; file?: { mimeType?: string }; parentReference?: { id?: string } };
 const mimeOf = (i: Item) => {
   const m = i.file?.mimeType ?? "";
   if (m.startsWith("text/") || m === "application/pdf") return m;
@@ -49,7 +49,7 @@ export const onedrive: SyncProvider = {
     const docs: DocRef[] = [];
     for (const i of r.value) {
       const mime = i.file && !i.deleted ? mimeOf(i) : null;
-      if (mime) docs.push({ id: i.id, name: i.name, mimeType: mime });
+      if (mime) docs.push({ id: i.id, name: i.name, mimeType: mime, ...(i.parentReference?.id ? { parents: [i.parentReference.id] } : {}) });
     }
     const next = r["@odata.nextLink"];
     return { docs, cursor: next ?? r["@odata.deltaLink"] ?? cursor, done: !next };

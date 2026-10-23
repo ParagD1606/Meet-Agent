@@ -49,3 +49,25 @@ describe("captureTurn", () => {
     expect(await captureTurn({ scope: scope({}), transcript: "t" })).toBe(0);
   });
 });
+
+describe("debounced thread capture (write-path diet)", () => {
+  test("extracts once per N turns, skips trivial turns, flushes on final", async () => {
+    const { scheduleCapture, flushIdleCaptures } = await import("../../src/memory/writeback");
+    const { setMemoryLlm } = await import("../../src/memory/llm");
+    let extractions = 0;
+    setMemoryLlm(async ({ system }) => { if (system.includes("extract durable")) extractions++; return '{"facts":["Dana owns the billing migration"],"superseded":[]}'; });
+    const scope = { channelId: "C_DEB", isPrivate: false, isIm: false, userId: "U1" };
+    const base = { scope, channelId: "C_DEB", threadTs: "1.0" };
+    expect((await scheduleCapture({ ...base, transcript: "hi\nAssistant: hello", userText: "hi" })).skipped).toBe("trivial");
+    expect((await scheduleCapture({ ...base, transcript: "Dana owns billing\nAssistant: noted", userText: "Dana owns billing migration now" })).deferred).toBe(true);
+    expect((await scheduleCapture({ ...base, transcript: "deadline is May\nAssistant: ok", userText: "the deadline is May 5th" })).deferred).toBe(true);
+    expect(extractions).toBe(0);
+    const third = await scheduleCapture({ ...base, transcript: "and finance approves\nAssistant: ok", userText: "finance approves the spend" });
+    expect(third.deferred).toBe(false);
+    expect(extractions).toBe(1);
+    // idle sweep
+    await scheduleCapture({ ...base, threadTs: "2.0", transcript: "another real fact here\nAssistant: ok", userText: "another real fact is here" });
+    expect(await flushIdleCaptures(0)).toBeGreaterThanOrEqual(0);
+    expect(extractions).toBe(2);
+  });
+});

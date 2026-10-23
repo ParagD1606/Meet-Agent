@@ -211,7 +211,7 @@ code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; font-featur
 .tbl th { position: sticky; top: 0; text-align: left; font-weight: 500; font-size: 12px; color: var(--fg-muted); padding: 0 12px; height: 32px; background: var(--sunken); border-bottom: 1px solid var(--line); white-space: nowrap; z-index: 1; }
 .tbl th button { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
 .tbl th button:focus-visible { outline: 2px solid var(--accent); border-radius: 3px; }
-.tbl td { padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl td { white-space: nowrap; padding: 0 12px; height: 40px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .tbl tbody tr:last-child td { border-bottom: 0; }
 .tbl tbody tr[data-click] { cursor: pointer; }
 .tbl tbody tr:hover { background: var(--hover); }
@@ -222,12 +222,14 @@ code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; font-featur
   .tbl, .tbl tbody { display: block; }
   .tbl tr { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
   .tbl tbody tr:last-child { border-bottom: 0; }
-  .tbl td { display: block; height: auto; border: 0; padding: 0; min-height: 20px; }
+  .tbl td { white-space: normal; display: block; height: auto; border: 0; padding: 0; min-height: 20px; }
   .tbl td[data-label]:not([data-primary])::before { content: attr(data-label); color: var(--fg-subtle); font-size: 11.5px; margin-right: 8px; }
   .tbl td[data-primary] { grid-column: 1; font-weight: 500; }
   .tbl td[data-hide-sm] { display: none; }
   .tbl td.num { text-align: left; }
   .tbl td[data-end] { grid-column: 2; grid-row: 1; justify-self: end; }
+  .tbl td[data-end]:has(button, a.btn) { grid-column: 1 / -1; grid-row: auto; justify-self: start; margin-top: 8px; }
+  .tbl tr { grid-template-columns: minmax(0, 1fr) auto; }
 }
 
 .switch { position: relative; width: 30px; height: 18px; border-radius: 9px; border: 0; background: var(--line-strong); cursor: pointer; flex: none; transition: background var(--dur) var(--ease); padding: 0; }
@@ -243,7 +245,7 @@ code, kbd, .mono { font-family: var(--font-mono); font-size: 0.92em; font-featur
 .check:checked::after { content: ""; width: 9px; height: 5px; border-left: 1.6px solid var(--accent-fg); border-bottom: 1.6px solid var(--accent-fg); transform: translateY(-1px) rotate(-45deg); }
 .check:indeterminate::after { content: ""; width: 8px; height: 1.6px; background: var(--accent-fg); }
 
-.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--radius-md); background: var(--sunken); border: 1px solid var(--line); }
+.seg { display: inline-flex; width: fit-content; max-width: 100%; padding: 2px; gap: 2px; border-radius: var(--radius-md); background: var(--sunken); border: 1px solid var(--line); }
 .seg > button { height: 26px; padding: 0 10px; border: 0; border-radius: 4px; background: transparent; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
 .seg > button:hover { color: var(--fg); }
 .seg > button[aria-selected="true"], .seg > button[aria-pressed="true"], .seg > button[aria-checked="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }

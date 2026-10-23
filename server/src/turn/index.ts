@@ -66,6 +66,7 @@ async function execute(input: TurnInput): Promise<void> {
 
   let sink: ReturnType<typeof createReplySink> | undefined;
   let slot = false;
+  let stage = "setup";
   try {
     const slack = await getSlack();
     const ws = await getWorkspace().catch(() => null);
@@ -79,6 +80,7 @@ async function execute(input: TurnInput): Promise<void> {
       if (!rate.ok) { await say(rate.message); await finishRow({ status: "done", depth: "denied" }); return; }
     }
     if (input.userId) {
+      stage = "admission";
       const cap = await dailyCapStatus(input.userId);
       if (!cap.ok) { if (interactive) await say(cap.message); await finishRow({ status: "done", depth: "denied" }); return; }
     }
@@ -86,6 +88,7 @@ async function execute(input: TurnInput): Promise<void> {
     if (!slot) { if (interactive) await say(BUSY_MESSAGE); await finishRow({ status: "done", depth: "denied" }); return; }
 
     // ---- depth router: decide how much work this turn deserves before spending anything ----
+    stage = "depth";
     const { depth, by } = await routeDepth({ trigger: input.trigger, text: input.text, hasFiles: !!input.files?.length, hasHistory: !!input.threadTs, readOnly });
     const plan = DEPTH_CONFIG[depth];
     const limits = await getLimits();
@@ -98,17 +101,20 @@ async function execute(input: TurnInput): Promise<void> {
       assistant: !!input.assistant && input.isIm,
       placeholder: interactive && depth !== "direct",
     });
+    stage = "reply_begin";
     if (interactive) await sink.begin();
 
     const ctx: ToolContext = {
       turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope,
-      readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth,
+      readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth, userText: input.text,
     };
     const narrate = interactive ? sink.narrate : undefined;
+    stage = "tools";
     const assembled = plan.tools ? await assembleTools(ctx, { depth, text: input.text, narrate }) : undefined;
     const tools = assembled?.tools ?? {};
 
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
+    stage = "context";
     const bc = await buildContext(input, { ...ctx, skipRecall: !plan.recall });
     const [self, asker, chan] = await Promise.all([
       botUserId().catch(() => null),
@@ -127,6 +133,7 @@ async function execute(input: TurnInput): Promise<void> {
     const messages: ModelMessage[] = [...history, { role: "user", content: userContent }];
     const system = buildSystemMessages(bc.frozenPrefixBlocks);
 
+    stage = "model";
     const result = await runLoop({
       system, messages, tools, turnId, role: plan.role, depth, maxSteps, maxOutputTokens: plan.maxOutputTokens,
       activeTools: assembled?.active,
@@ -141,8 +148,9 @@ async function execute(input: TurnInput): Promise<void> {
     if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
     else if (result.stopped === "timeout") out = reply && !silent ? reply : TIMEOUT_MSG;
     else if (result.stopped === "step_cap" && !silent) out = reply + STEP_CAP_HINT;
-    else if (silent) out = "I wasn't able to produce an answer for that. Try rephrasing?";
+    else if (silent) out = "I couldn't generate a reply just now. Please try again in a moment.";
     const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
+    stage = "reply_finish";
     if (!quiet) await sink.finish(out);
     reply = silent ? "" : reply;
 
@@ -177,7 +185,27 @@ async function execute(input: TurnInput): Promise<void> {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    log.error("turn failed", { turnId, error: msg });
+    const details = e as { name?: unknown; statusCode?: unknown; status?: unknown; code?: unknown; responseBody?: unknown };
+    let providerCode: unknown, providerType: unknown, providerParam: unknown;
+    if (typeof details.responseBody === "string") {
+      try {
+        const body = JSON.parse(details.responseBody) as { error?: Record<string, unknown> };
+        const error = body.error ?? {};
+        providerCode = error.code;
+        providerType = error.type;
+        providerParam = error.param;
+      } catch { /* never log raw provider response bodies */ }
+    }
+    const safeLabel = (v: unknown) => typeof v === "string" && /^[a-zA-Z0-9_.-]{1,80}$/.test(v) ? v : undefined;
+    log.error("turn failed", {
+      turnId, stage, error: msg,
+      ...(safeLabel(details.name) ? { errorName: details.name } : {}),
+      ...(typeof (details.statusCode ?? details.status) === "number" ? { httpStatus: details.statusCode ?? details.status } : {}),
+      ...(safeLabel(details.code) ? { errorCode: details.code } : {}),
+      ...(safeLabel(providerCode) ? { providerCode } : {}),
+      ...(safeLabel(providerType) ? { providerType } : {}),
+      ...(safeLabel(providerParam) ? { providerParam } : {}),
+    });
     if (interactive) await (sink?.fail(FAIL_MSG) ?? getSlack().then((s) => s.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text: FAIL_MSG })).catch(() => undefined));
     await finishRow({ status: "error", error: msg.slice(0, 1000) });
   } finally {

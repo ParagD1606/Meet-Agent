@@ -8,7 +8,7 @@ const MAX_DEPTH = 3;
 
 type Rich = { plain_text: string }[];
 type Block = { id: string; type: string; has_children?: boolean; [k: string]: any };
-type Page = { id: string; last_edited_time: string; archived?: boolean; properties?: Record<string, { type: string; title?: Rich }> };
+type Page = { id: string; last_edited_time: string; archived?: boolean; parent?: { page_id?: string; database_id?: string }; properties?: Record<string, { type: string; title?: Rich }> };
 
 const titleOf = (p: Page) => {
   const t = Object.values(p.properties ?? {}).find((x) => x.type === "title");
@@ -59,7 +59,10 @@ export const notion: SyncProvider = {
     for (const p of r.results) {
       if (st.w && p.last_edited_time <= st.w) { caughtUp = true; break; }
       if (!newest || p.last_edited_time > newest) newest = p.last_edited_time;
-      if (!p.archived) docs.push({ id: p.id, name: titleOf(p), mimeType: "text/plain" });
+      if (!p.archived) {
+        const parent = p.parent?.page_id ?? p.parent?.database_id;
+        docs.push({ id: p.id, name: titleOf(p), mimeType: "text/plain", ...(parent ? { parents: [parent] } : {}) });
+      }
     }
     if (caughtUp || !r.has_more) return { docs, cursor: newest ?? st.w, done: true };
     return { docs, cursor: JSON.stringify({ w: st.w, n: newest, p: r.next_cursor }), done: false };
