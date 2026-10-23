@@ -19,6 +19,17 @@ Vertex runs on the ADC JSON alone: the deploy script drops `MODEL_API_KEY`, `MOD
 
 The image runs in production mode: `PUBLIC_URL` must be `https://`, and boot fails with a list of missing settings otherwise.
 
+### Automatic deploys (GitHub Actions)
+
+`.github/workflows/ci-cd.yml` runs type-checks, the web build and the full test suite (against a pgvector Postgres) on every push and pull request. A push to `main` that passes then deploys through `scripts/ci-deploy.sh`: it uploads only the code, rebuilds the containers on the VM, waits for `/healthz`, runs the live Vertex probe, and rolls back to the previous image if any step fails. `.env` and `application_default_credentials.json` are never uploaded; they stay on the VM from the first `./scripts/deploy-gce.sh`, so GitHub needs only SSH access.
+
+One-time setup:
+1. `ssh-keygen -t ed25519 -N "" -C github-actions-deploy -f ./deploy_key` and authorize `deploy_key.pub` for `manas` on the VM (`~/.ssh/authorized_keys`; with OS Login enabled use `gcloud compute os-login ssh-keys add --key-file=deploy_key.pub` instead).
+2. Repo > Settings > Secrets and variables > Actions, add `DEPLOY_HOST` (VM IP or hostname), `DEPLOY_USER` (`manas`), `DEPLOY_SSH_KEY` (contents of `deploy_key`) and `DEPLOY_KNOWN_HOSTS` (output of `ssh-keyscan -t ed25519 <host>`). Delete the local `deploy_key` files afterwards.
+3. Optional: Settings > Environments > `production` > required reviewers, to approve each deploy.
+
+Run `./scripts/ci-deploy.sh` by hand with the same variables to test the connection. Use `./scripts/deploy-gce.sh` only when `.env` or the credentials file changes.
+
 Key env vars (full list in `.env.example`): `DATABASE_URL`, `PUBLIC_URL`, `ENCRYPTION_KEY` (encrypts every stored token; losing it invalidates them), `SETUP_TOKEN` (claims ownership, see step 3), either `MODEL_API_KEY` or Vertex ADC settings (`MODEL_PROVIDER=vertex`, `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_VERTEX_PROJECT`), `EMBEDDING_*` (dimension is fixed per database), `SLACK_MODE` (`socket` or `http`), `SLACK_TEAM_ID` (optional workspace pin), `SEARCH_PROVIDER` + `SEARCH_API_KEY` (optional web search).
 
 ## 2. Create or update the Slack app

@@ -1,0 +1,68 @@
+name: CI/CD
+
+# Every push and PR runs the checks. A push to main that passes them deploys to the VM.
+# One-time setup (repo secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS): see docs/guide/setup.md, "Automatic deploys".
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      # server/test/hardening/env.ts expects this exact database: user brain, port 5433, db brain_a
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_DB: brain_a
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U brain -d brain_a"
+          --health-interval 3s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgres://brain@localhost:5433/brain_a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Type-check server
+        run: bun run check-types
+      - name: Type-check and build web
+        run: bun --cwd web check-types && bun --cwd web run build
+      - name: Tests
+        run: bun run test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false # never kill a deploy half way; the next one queues
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to the VM
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          : "${DEPLOY_HOST:?missing secret DEPLOY_HOST}" "${DEPLOY_SSH_KEY:?missing secret DEPLOY_SSH_KEY}" "${DEPLOY_KNOWN_HOSTS:?missing secret DEPLOY_KNOWN_HOSTS}"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          DEPLOY_SSH_KEY_FILE=~/.ssh/deploy_key ./scripts/ci-deploy.sh
