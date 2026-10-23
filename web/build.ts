@@ -5,11 +5,13 @@ const outdir = `${import.meta.dir}/dist`
 await rm(outdir, { recursive: true, force: true })
 
 const result = await Bun.build({
-  entrypoints: [`${import.meta.dir}/index.html`],
+  entrypoints: [`${import.meta.dir}/index.html`, `${import.meta.dir}/pages/graph-worker.ts`],
   outdir,
   publicPath: "/", // absolute so SPA deep links (/configure/models) find the bundle
   plugins: [tailwind],
   minify: true,
+  splitting: true, // lazy page chunks
+  naming: { entry: "[name].[ext]", chunk: "chunk-[hash].[ext]", asset: "[name]-[hash].[ext]" },
   target: "browser",
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
 })

@@ -70,7 +70,7 @@ export function Setup({ signedIn = false }: { signedIn?: boolean }) {
       </form>
     </>,
     integration: <><P>Connect a tool so the agent can act on your behalf, such as GitHub, Linear or Notion. You can skip this and add one later.</P><div className="mt-4 flex gap-2"><LinkButton href="/integrations" variant="primary">Open integrations</LinkButton>{done.integration && <Badge tone="ok" dot>Connected</Badge>}</div></>,
-    test: <><P>Send a test message to #company-brain to confirm the bot can post.</P><div className="mt-4 flex items-center gap-3"><Button variant="primary" loading={test.isPending} onClick={() => test.mutate()}>Send test message</Button>
+    test: <><P>Send yourself a direct message from the bot to confirm its token and permissions work.</P><div className="mt-4 flex items-center gap-3"><Button variant="primary" loading={test.isPending} onClick={() => test.mutate()}>Send test message</Button>
       {test.data?.ok && <Badge tone="ok" dot>Posted{test.data.channel ? ` to ${test.data.channel}` : ""}</Badge>}
       {(test.error || (test.data && !test.data.ok)) && <span role="alert" className="text-sm text-danger">{test.error ? errMsg(test.error) : test.data?.error ?? "The message could not be posted."}</span>}</div>
       {testOk && <p className="mt-4 text-sm">Setup is complete. <Link href="/" className="text-accent-text underline underline-offset-2">Go to home</Link></p>}</>,

@@ -100,13 +100,14 @@ export interface Memory {
   createdBy?: string | null; permalink?: string | null; confidence?: number | null; importance?: number | null; reviewState?: string | null
 }
 export interface MemoryPage { items: Memory[]; total: number }
-export interface GraphNode { id: number; label: string; scope: string; kind: string; source?: string; createdAt?: string }
+export interface GraphNode { id: number; label: string; scope: string; kind: string; source?: string; createdAt?: string; status?: string }
 export interface GraphData { nodes: GraphNode[]; edges: { source: number; target: number; weight: number }[]; total?: number; truncated?: boolean }
 export interface CoreBlock { scopeTag: string; label: "company" | "channel" | "user"; text: string; charLimit: number; version: number }
 export interface Review {
-  id: number | string; status?: "pending" | "approved" | "rejected"; reason?: string | null
-  text?: string | null; proposedText?: string | null; existingText?: string | null; supersedes?: { id: number; text: string } | null
-  confidence?: number | null; source?: string | null; sourceRef?: string | null; permalink?: string | null; createdAt?: string; context?: string | null; scopeTag?: string
+  id: string; kind: "supersede" | "low_confidence" | "core_block" | "shared_write"; status: "pending" | "approved" | "rejected"
+  memoryId?: number | null; memory?: { id: number; text: string } | null; requestedBy?: string | null; createdAt: string
+  /** kind-specific: core_block {label,tag,op,text,match}; supersede {supersededIds}; shared_write {wouldSupersede,...} */
+  payload: Record<string, unknown>
 }
 
 // ---- behaviour
@@ -115,7 +116,8 @@ export interface Connection {
   id: string; provider: string; label: string; url: string; scope: "org" | "user"
   ownerUserId?: string | null; status: "pending" | "connected" | "error"; error?: string | null; lastError?: string | null; reason?: string | null; toolCount?: number | null; connectedAt?: string | null
 }
-export interface MarketItem { key: string; label: string; description?: string; url?: string; category?: string; authType?: string; installed?: boolean; personalOnly?: boolean }
+export interface MarketItem { key: string; name: string; url: string; categories: string[]; connectMode: "oauth" | "apikey"; personalOnly?: boolean; iconDomain?: string; connected?: boolean }
+export interface MarketPage { items: MarketItem[]; total: number }
 export interface Skill { id: string; name: string; description: string; body: string; enabled: boolean; scope?: "org" | "user"; version?: number; ownerUserId?: string | null }
 export interface Automation {
   id: string; ownerUserId: string; kind: "digest" | "reminder"; prompt: string; cron?: string | null
@@ -143,15 +145,16 @@ export interface SyncSource {
 }
 
 // ---- usage
+export type UsageRange = "1d" | "7d" | "30d" | "90d"
 export interface UsageRow { turns?: number; inputTokens: number; outputTokens: number; costMicros: number }
 export interface Usage {
   byDay: (UsageRow & { day: string })[]
-  byUser: (UsageRow & { userId: string })[]
+  byUser: (UsageRow & { userId: string | null; name?: string | null })[]
   byModel: (UsageRow & { model: string })[]
   byRole: (UsageRow & { role: string })[]
   cacheHitRate: number | null
   avgBreakdown: Partial<Record<string, number>>
-  topTurns: { id: string; userId?: string | null; model?: string | null; inputTokens: number; outputTokens: number; costMicros: number; startedAt: string; channelId?: string }[]
+  topTurns: { id: string; userId?: string | null; trigger?: string; depth?: string | null; steps?: number; model?: string | null; inputTokens: number; outputTokens: number; costMicros: number; startedAt: string; channelId?: string }[]
 }
 
 export const api = {
@@ -161,7 +164,7 @@ export const api = {
   setupManifest: () => fetch("/api/setup/manifest").then(async (r) => { if (!r.ok) throw new ApiError(r.status, "Could not load the manifest"); return r.text() }),
   testMessage: () => send<{ ok: boolean; error?: string; channel?: string }>("POST", "/api/setup/test-message"),
   overview: () => get<Overview>("/api/overview"),
-  graph: (limit: number) => get<GraphData>(`/api/graph${qs({ limit })}`),
+  graph: (p: { limit: number; kind?: string; source?: string; q?: string }) => get<GraphData>(`/api/graph${qs(p)}`),
   memories: (p: { q?: string; limit: number; offset: number; status?: string }) =>
     get<unknown>(`/api/memories${qs(p)}`).then((d): MemoryPage => { const items = list<Memory>(d, "memories"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
   memoryHistory: (id: number) => get<unknown>(`/api/memories/${id}/history`).then((d) => list<Memory>(d, "history")),
@@ -169,8 +172,8 @@ export const api = {
   uploadMemory: (file: File) => { const f = new FormData(); f.append("file", file); return request<{ name?: string; chunks?: number }>("POST", "/api/memories/upload", f) },
   exportMemoriesUrl: "/api/export/memories",
   coreBlock: (scope: string) => get<CoreBlock>(`/api/core-blocks${qs({ scope })}`),
-  saveCoreBlock: (scope: string, text: string, expectedVersion?: number) => send<CoreBlock>("PUT", `/api/core-blocks${qs({ scope })}`, { text, expectedVersion }),
-  reviews: (status = "pending") => get<unknown>(`/api/reviews${qs({ status })}`).then((d) => list<Review>(d, "reviews")),
+  saveCoreBlock: (scope: string, text: string) => send<{ block: CoreBlock; usage?: string; queuedForReview?: boolean }>("PUT", `/api/core-blocks${qs({ scope })}`, { text }),
+  reviews: (status: "pending" | "approved" | "rejected" = "pending") => get<unknown>(`/api/reviews${qs({ status })}`).then((d) => list<Review>(d, "reviews")),
   decideReview: (id: number | string, approve: boolean) => send("POST", `/api/reviews/${id}/decide`, { approve }),
   workspacePrompt: () => get<{ prompt: string }>("/api/settings/workspace-prompt"),
   saveWorkspacePrompt: (prompt: string) => send("PUT", "/api/settings/workspace-prompt", { prompt }),
@@ -180,7 +183,7 @@ export const api = {
   saveModel: (m: { role?: Role5; profile?: string; provider?: string; model?: string | null; fallback?: string | null }) => send<ModelSettings>("PUT", "/api/settings/models", m),
   limits: () => get<Limits>("/api/settings/limits"),
   saveLimits: (l: Limits) => send<Limits>("PUT", "/api/settings/limits", l),
-  usage: (range: "7d" | "30d") => get<Usage>(`/api/usage${qs({ range })}`),
+  usage: (range: UsageRange) => get<Usage>(`/api/usage${qs({ range })}`),
   skills: () => get<unknown>("/api/skills").then((d) => list<Skill>(d, "skills")),
   createSkill: (s: Partial<Skill>) => send<Skill>("POST", "/api/skills", s),
   uploadSkill: (file: File, scope: "org" | "user") => { const f = new FormData(); f.append("file", file); f.append("scope", scope); return request<Skill>("POST", "/api/skills/upload", f) },
@@ -192,8 +195,8 @@ export const api = {
   deleteAutomation: (id: string) => send("DELETE", `/api/automations/${id}`),
   runAutomation: (id: string) => send("POST", `/api/automations/${id}/run`),
   presets: () => get<unknown>("/api/mcp/presets").then((d) => list<Preset>(d, "presets")),
-  marketplace: (q: string) => get<unknown>(`/api/marketplace${qs({ q })}`).then((d) => list<MarketItem>(d, "items")),
-  installMarketplace: (key: string, scope: "org" | "user") => send<{ authUrl?: string } & Partial<Connection>>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, { scope }),
+  marketplace: (q: string, limit = 60) => get<unknown>(`/api/marketplace${qs({ q, limit })}`).then((d): MarketPage => { const items = list<MarketItem>(d, "items"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
+  installMarketplace: (key: string, body: { scope: "org" | "user"; token?: string; label?: string; url?: string }) => send<{ connection?: Connection; authUrl?: string }>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, body),
   connections: () => get<unknown>("/api/mcp/connections").then((d) => list<Connection>(d, "connections")),
   createConnection: (c: { provider?: string; url?: string; label?: string; scope: "org" | "user" }) => send<Connection>("POST", "/api/mcp/connections", c),
   deleteConnection: (id: string) => send("DELETE", `/api/mcp/connections/${id}`),
