@@ -14,7 +14,10 @@ export type LazyEntry = {
 };
 
 const STOP = new Set(["the", "a", "an", "of", "to", "for", "and", "or", "in", "on", "by", "with", "is", "it", "this", "that", "from", "as", "be"]);
-const stem = (w: string) => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+const stem = (w: string) =>
+  w.length > 4 && w.endsWith("ies") ? `${w.slice(0, -3)}y` : w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w;
+/** Everyday words the model uses that tool names rarely contain: "repos" for repository, "list" for search. */
+const QUERY_ALIASES: Record<string, string[]> = { repo: ["repository"], list: ["search"], find: ["search"] };
 export const tokenize = (s: string): string[] =>
   s.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w && !STOP.has(w)).map(stem);
 
@@ -33,7 +36,8 @@ function docOf(t: McpToolInfo): string[] {
 
 /** BM25 over name+description (no embeddings). Returns best matches first; unmatched tools are excluded. */
 export function rankTools<T extends { info: McpToolInfo }>(query: string, items: T[], limit = 8): T[] {
-  const q = [...new Set(tokenize(query))];
+  const base = tokenize(query);
+  const q = [...new Set([...base, ...base.flatMap((w) => QUERY_ALIASES[w] ?? [])])];
   if (!q.length || !items.length) return [];
   const docs = items.map((i) => docOf(i.info));
   const avg = docs.reduce((n, d) => n + d.length, 0) / docs.length || 1;
