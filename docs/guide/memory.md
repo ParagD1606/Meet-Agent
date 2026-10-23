@@ -4,6 +4,7 @@
 - **Facts**: short statements (decisions, owners, deadlines, preferences) extracted from conversations, with source, time and a Slack permalink when known.
 - **Document chunks**: from uploads (`POST /api/memories/upload`) and synced sources (Google Drive, OneDrive, Notion; hourly).
 - **Core blocks**: three small always-on notes (company, channel, user) the bot can edit with `core_memory`; over-limit edits are rejected and shared company edits by non-admins go to the review queue.
+- **Episodes**: a finished or long-idle thread is summarized in 3-6 sentences (decisions, owners, deadlines, open items) and stored in the thread's scope for later recall.
 
 ## Scoping
 `shared` (public channels), `channel_<id>` (private channels) and `user_<id>` (DMs). See [permissions](permissions.md). Nothing leaves its scope: search always requires an explicit list of tags.
