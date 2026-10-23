@@ -1,0 +1,43 @@
+import { log } from "../log";
+import { deps } from "./deps";
+import { setJourneyQuiet } from "./journey/engine";
+import { slackClient } from "./client";
+
+type Action = { action_id?: string; value?: string };
+type BlockActions = {
+  type?: string;
+  user?: { id?: string };
+  actions?: Action[];
+  channel?: { id?: string };
+  container?: { channel_id?: string; message_ts?: string };
+  message?: { ts?: string };
+};
+
+/**
+ * Slack interactivity payload. Brain-owned buttons (`journey_*`, link buttons `brain_*`) are handled here;
+ * everything else goes to the turn module's approval handler.
+ */
+export async function handleInteraction(payload: BlockActions): Promise<void> {
+  try {
+    if (payload.type !== "block_actions") return;
+    const actions = payload.actions ?? [];
+    const own = actions.filter((a) => a.action_id?.startsWith("journey_") || a.action_id?.startsWith("brain_"));
+    for (const a of own) {
+      if (a.action_id === "journey_quiet" && payload.user?.id) {
+        await setJourneyQuiet(payload.user.id);
+        const channel = payload.container?.channel_id ?? payload.channel?.id;
+        const ts = payload.container?.message_ts ?? payload.message?.ts;
+        if (channel && ts) {
+          await (await slackClient()).chat.update({ channel, ts, text: "Got it, I won't send more tips.", blocks: [] })
+            .catch((e: Error) => log.warn("journey quiet ack failed", { error: e.message }));
+        }
+      }
+    }
+    if (own.length < actions.length) {
+      const handled = await deps.handleBlockAction(payload);
+      if (!handled) log.warn("block action unhandled", { ids: actions.map((a) => a.action_id) });
+    }
+  } catch (err) {
+    log.error("interaction failed", { error: (err as Error).message });
+  }
+}
