@@ -24,6 +24,8 @@ export function getBoss(): PgBoss {
   return boss;
 }
 
+export const jobsStarted = (): boolean => started;
+
 function ready(): PgBoss {
   if (!started) throw new Error("jobs not started");
   return getBoss();
@@ -92,6 +94,9 @@ export async function startJobs(): Promise<void> {
   }
   const registerSyncJobs = await optionalExport<(boss: PgBoss) => Promise<void> | void>(["./platform2/sync", "./sync"], "registerSyncJobs");
   await registerSyncJobs?.(b);
+  const registerMemoryJobs = await optionalExport<(boss: PgBoss) => Promise<void> | void>(["./memory/observe"], "registerMemoryJobs");
+  if (registerMemoryJobs) await registerMemoryJobs(b);
+  else log.warn("registerMemoryJobs not available; observe/consolidate disabled");
 
   await seedBuiltinSkills().catch((err) => log.error("skill seed failed", { err: String(err) }));
   const stale = await failStaleResearch().catch(() => 0);
