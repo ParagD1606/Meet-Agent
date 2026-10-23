@@ -26,6 +26,10 @@ const db = {
   ] as any[],
   automations: [{ id: "a1", ownerUserId: "U1", kind: "digest", prompt: "Summarise yesterday's #eng activity", cron: "0 9 * * 1-5", destChannelId: "C1", enabled: true, lastRunAt: ago(300), lastStatus: "ok" },
     { id: "a2", ownerUserId: "U2", kind: "reminder", prompt: "Update the roadmap doc", cron: "0 17 * * 5", destChannelId: null, enabled: true, lastRunAt: ago(4000), lastStatus: "channel_not_found" }] as any[],
+  meetings: [{ id: "mt_1", sourceFileId: "FHUDDLE1", channelId: "C1", threadTs: "1700001000.000100", title: "Product planning Huddle", status: "ready", participantIds: ["U1", "U2", "U3"], endedAt: ago(95), createdAt: ago(95), updatedAt: ago(94),
+    transcript: "Ada Lovelace: We should ship the new onboarding checklist next Tuesday.\nMax Member: I will draft the checklist and share it for review by Friday.\nAda Lovelace: Great. We also need the release notes ready before launch.",
+    summary: "## Decisions\nShip the onboarding checklist next Tuesday.\n\n## Discussion\nThe team agreed that the checklist needs review before release.\n\n## Open questions\nThe final release-notes owner is still to be confirmed.",
+    tasks: [{ title: "Draft the onboarding checklist", description: "Prepare a reviewable first draft for the product team.", assigneeName: "Max Member", assigneeId: "U2", dueDate: "Friday", jiraKey: null, jiraUrl: null }, { title: "Prepare release notes", description: "Create release notes before the onboarding checklist launch.", assigneeName: null, assigneeId: null, dueDate: "Before launch", jiraKey: null, jiraUrl: null }] }] as any[],
   conns: [{ id: "c1", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "org", ownerUserId: null, status: "connected", toolCount: 24, connectedAt: ago(9000) },
     { id: "c2", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "U1", status: "error", error: "Token expired", toolCount: 0 }] as any[],
   tokens: [{ id: "t1", name: "Cursor", createdAt: ago(5000), lastUsedAt: ago(30) }] as any[],
@@ -150,6 +154,8 @@ Bun.serve({
       }
       if ((x = m("/api/automations/(\\w+)/run"))) { const a = db.automations.find((a) => a.id === x![1])!; a.lastRunAt = now(); a.lastStatus = "ok"; return json({ ok: true }) }
       if ((x = m("/api/automations/(\\w+)"))) { if (req.method === "DELETE") db.automations = db.automations.filter((a) => a.id !== x![1]); else Object.assign(db.automations.find((a) => a.id === x![1])!, body); return json({ ok: true }) }
+      if (p === "/api/meetings") return json(db.meetings.map(({ transcript: _transcript, ...meeting }) => meeting))
+      if ((x = m("/api/meetings/(\\w+)"))) { const meeting = db.meetings.find((meeting) => meeting.id === x![1]); return meeting ? json(meeting) : json({ error: "not_found" }, 404) }
       if (p === "/api/marketplace") { const q = (sp.get("q") ?? "").toLowerCase(); const items = market.filter((i) => !q || `${i.name} ${i.categories.join(" ")}`.toLowerCase().includes(q)).map((i) => ({ ...i, connected: db.conns.some((c) => c.provider === i.key && c.status === "connected") })); return json({ items, total: items.length }) }
       if ((x = m("/api/marketplace/([\\w-]+)/install"))) {
         if (body.scope === "org" && !admin) return json({ error: "forbidden" }, 403)

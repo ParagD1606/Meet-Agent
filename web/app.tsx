@@ -42,11 +42,12 @@ const Sync = page(() => import("@/pages/sync"))
 const Tokens = page(() => import("@/pages/tokens"))
 const Turns = page(() => import("@/pages/turns"))
 const Usage = page(() => import("@/pages/usage"))
+const Meetings = page(() => import("@/pages/meetings"))
 
 const ROUTES: Record<string, ComponentType> = {
   "/": Home, "/graph": Graph, "/memories": Memories, "/core-memory": CoreMemory, "/review": Review, "/skills": Skills,
   "/automations": Automations, "/models": Models, "/proactivity": Proactivity, "/prompt": Prompt, "/integrations": Integrations,
-  "/sync": Sync, "/tokens": Tokens, "/turns": Turns, "/usage": Usage,
+  "/sync": Sync, "/tokens": Tokens, "/turns": Turns, "/usage": Usage, "/meetings": Meetings,
 }
 // Old /configure/* deep links keep working.
 const LEGACY: Record<string, string> = { "/configure": "/integrations", "/configure/integrations": "/integrations", "/configure/models": "/models", "/configure/skills": "/skills", "/configure/automations": "/automations", "/configure/proactivity": "/proactivity", "/configure/prompt": "/prompt", "/configure/sync": "/sync", "/configure/tokens": "/tokens" }

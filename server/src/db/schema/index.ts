@@ -160,6 +160,30 @@ export const automations = pgTable("automations", {
   createdAt: ts("created_at"),
 });
 
+/** A completed Slack Huddle whose saved transcript was made available to the app. */
+export const meetings = pgTable("meetings", {
+  id: text("id").primaryKey(),
+  /** Slack file id. One meeting record per saved Huddle transcript. */
+  sourceFileId: text("source_file_id").notNull(),
+  channelId: text("channel_id").notNull(),
+  threadTs: text("thread_ts"),
+  title: text("title").notNull(),
+  transcript: text("transcript").notNull(),
+  summary: text("summary"),
+  /** Extracted action items; Jira references are added later when approved/created. */
+  tasks: jsonb("tasks").notNull().default([]),
+  participantIds: jsonb("participant_ids").notNull().default([]),
+  status: text("status", { enum: ["processing", "ready", "failed"] }).notNull().default("processing"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+}, (t) => [
+  uniqueIndex("meetings_source_file_uniq").on(t.sourceFileId),
+  index("meetings_channel_idx").on(t.channelId),
+  index("meetings_ended_idx").on(t.endedAt),
+]);
+
 export const researchRuns = pgTable("research_runs", {
   id: text("id").primaryKey(),
   requesterId: text("requester_id").notNull(),

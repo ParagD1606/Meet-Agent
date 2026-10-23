@@ -14,6 +14,7 @@ import { onAssistantThreadStarted, noteAssistantMessage, isAssistantThread } fro
 import { begin, drain, end, gateKey, mergeInbox, offer } from "./active-turn-gate";
 import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
+import { ingestHuddleFile } from "../meetings";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
@@ -166,6 +167,11 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
         return;
       case "reaction_added":
         return await handleReaction(ev);
+      case "file_created":
+      case "file_shared":
+        // Only saved Huddle transcripts are ingested; every other Slack file is ignored.
+        if (ev.file_id || ev.file?.id) await ingestHuddleFile(String(ev.file_id ?? ev.file.id), typeof ev.channel_id === "string" ? ev.channel_id : undefined);
+        return;
       case "assistant_thread_started":
         return await onAssistantThreadStarted(ev);
       case "app_uninstalled":

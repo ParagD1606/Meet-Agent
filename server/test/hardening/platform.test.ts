@@ -154,7 +154,7 @@ describe("MCP credentials", () => {
 });
 
 describe("jobs", () => {
-  beforeAll(async () => { await resetDb(); await startJobs(); });
+  beforeAll(async () => { await resetDb(); await startJobs(); await pool.query("delete from pgboss.job where name = $1", [Q.researchRun]); }); // resetDb leaves pgboss alone: drop jobs left by earlier runs
   afterAll(async () => { await stopJobs(); });
   test("research enqueue twice: two different runs are both accepted; a duplicate id fails loudly instead of being dropped", async () => {
     await db.insert(researchRuns).values([{ id: "rA", requesterId: "U", channelId: "C", question: "a" }, { id: "rB", requesterId: "U", channelId: "C", question: "b" }]);
