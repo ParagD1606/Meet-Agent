@@ -68,6 +68,7 @@ settings:
       - "reaction_added"
       - "file_created"
       - "file_shared"
+      - "file_change"
       - "assistant_thread_started"
       - "assistant_thread_context_changed"
       - "tokens_revoked"
