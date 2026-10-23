@@ -21,7 +21,7 @@ The image runs in production mode: `PUBLIC_URL` must be `https://`, and boot fai
 
 ### Automatic deploys (GitHub Actions)
 
-`.github/workflows/ci-cd.yml` runs type-checks, the web build and the full test suite (against a pgvector Postgres) on every push and pull request. A push to `main` that passes then deploys through `scripts/ci-deploy.sh`: it uploads only the code, rebuilds the containers on the VM, waits for `/healthz`, runs the live Vertex probe, and rolls back to the previous image if any step fails. `.env` and `application_default_credentials.json` are never uploaded; they stay on the VM from the first `./scripts/deploy-gce.sh`, so GitHub needs only SSH access.
+`.github/workflows/ci-cd.yml` runs type-checks, the web build and the full test suite (against a pgvector Postgres) on pull requests and manual runs. A push to `main` deploys immediately, without waiting for the tests, through `scripts/ci-deploy.sh` (to gate deploys on the tests again, see the comment at the top of the workflow): it uploads only the code, rebuilds the containers on the VM, waits for `/healthz`, runs the live Vertex probe, and rolls back to the previous image if any step fails. `.env` and `application_default_credentials.json` are never uploaded; they stay on the VM from the first `./scripts/deploy-gce.sh`, so GitHub needs only SSH access.
 
 One-time setup:
 1. `ssh-keygen -t ed25519 -N "" -C github-actions-deploy -f ./deploy_key` and authorize `deploy_key.pub` for `manas` on the VM (`~/.ssh/authorized_keys`; with OS Login enabled use `gcloud compute os-login ssh-keys add --key-file=deploy_key.pub` instead).

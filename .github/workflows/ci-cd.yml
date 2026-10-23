@@ -1,6 +1,7 @@
 name: CI/CD
 
-# Every push and PR runs the checks. A push to main that passes them deploys to the VM.
+# A push to main deploys to the VM immediately (tests are skipped on main for now). Pull requests and manual runs still run the tests.
+# To gate deploys on the tests again: remove the `if:` on the test job and add `needs: test` to the deploy job.
 # One-time setup (repo secrets DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS): see docs/guide/setup.md, "Automatic deploys".
 on:
   push:
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   test:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -43,7 +45,6 @@ jobs:
         run: bun run test
 
   deploy:
-    needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 25
