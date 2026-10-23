@@ -69,6 +69,12 @@ CREATE TABLE "core_blocks" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "embedding_cache" (
+	"hash" text PRIMARY KEY NOT NULL,
+	"embedding" vector(1536) NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "episodes" (
 	"id" text PRIMARY KEY NOT NULL,
 	"scope_tag" text NOT NULL,
@@ -241,6 +247,9 @@ CREATE TABLE "turns" (
 	"input_tokens" integer DEFAULT 0,
 	"output_tokens" integer DEFAULT 0,
 	"cache_read_tokens" integer DEFAULT 0,
+	"cache_write_tokens" integer DEFAULT 0,
+	"prompt_breakdown" jsonb,
+	"depth" text,
 	"cost_micros" bigint DEFAULT 0,
 	"model" text,
 	"steps" integer DEFAULT 0,

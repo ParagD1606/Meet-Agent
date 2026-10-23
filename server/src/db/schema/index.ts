@@ -208,6 +208,9 @@ export const turns = pgTable("turns", {
   inputTokens: integer("input_tokens").default(0),
   outputTokens: integer("output_tokens").default(0),
   cacheReadTokens: integer("cache_read_tokens").default(0),
+  cacheWriteTokens: integer("cache_write_tokens").default(0),
+  promptBreakdown: jsonb("prompt_breakdown"), // {system,coreBlocks,skills,toolSchemas,history,recall,toolResults,user} approx tokens, first step
+  depth: text("depth"), // router decision: direct | memory | tools | deep
   costMicros: bigint("cost_micros", { mode: "number" }).default(0), // USD * 1e6, estimated
   model: text("model"),
   steps: integer("steps").default(0),
@@ -303,3 +306,10 @@ export const usageDaily = pgTable("usage_daily", {
   inputTokens: bigint("input_tokens", { mode: "number" }).notNull().default(0),
   outputTokens: bigint("output_tokens", { mode: "number" }).notNull().default(0),
 }, (t) => [primaryKey({ columns: [t.userId, t.day] })]);
+
+// ---------- embedding cost control ----------
+export const embeddingCache = pgTable("embedding_cache", {
+  hash: text("hash").primaryKey(), // sha256(model + "\n" + text)
+  embedding: vector("embedding").notNull(),
+  createdAt: ts("created_at"),
+});
