@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: brain
+      POSTGRES_PASSWORD: brain
+      POSTGRES_DB: brain
+    ports: ["5432:5432"]
+    volumes: ["./pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brain"]
+      interval: 3s
+      retries: 10
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://brain:brain@postgres:5432/brain
+    ports: ["3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }

@@ -1,0 +1,12 @@
+{
+  "name": "brain",
+  "private": true,
+  "type": "module",
+  "workspaces": ["server", "web"],
+  "scripts": {
+    "dev": "bun --cwd server dev",
+    "check-types": "bun --cwd server check-types",
+    "test": "bun --cwd server test",
+    "db:generate": "bun --cwd server db:generate"
+  }
+}
