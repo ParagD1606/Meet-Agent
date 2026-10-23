@@ -79,6 +79,14 @@ export function signature(t: McpToolInfo, key: string): string {
 const missingRequired = (t: McpToolInfo, args: Record<string, unknown>) =>
   ((t.inputSchema?.required as string[] | undefined) ?? []).filter((k) => args[k] === undefined);
 
+/** Accepts the JSON string the model sends, or an already-parsed object. Null when it is not a JSON object. */
+function parseArgs(raw: unknown): Record<string, unknown> | null {
+  if (raw === undefined || raw === null || raw === "") return {};
+  let v = raw;
+  if (typeof raw === "string") { try { v = JSON.parse(raw); } catch { return null; } }
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+}
+
 /** `search_tools` + `call_tool` over the lazy (unlisted) tools of this turn. Empty set when nothing is lazy. */
 export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
   if (!entries.length) return {};
@@ -94,12 +102,14 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
       },
     }),
     call_tool: tool({
-      description: "Run a tool found with search_tools. `fields` (optional dot paths) keeps only those fields of a JSON result.",
-      inputSchema: z.object({ name: z.string(), args: z.record(z.string(), z.unknown()).optional(), fields: z.array(z.string()).max(20).optional() }),
+      description: "Run a tool found with search_tools. `args` is a JSON object as a string, e.g. {\"owner\":\"acme\"}. `fields` (optional dot paths) keeps only those fields of a JSON result.",
+      // args is a JSON string, not z.record: an open-ended object schema (additionalProperties, no properties) is rejected with HTTP 400 by Gemini.
+      inputSchema: z.object({ name: z.string(), args: z.string().optional(), fields: z.array(z.string()).max(20).optional() }),
       execute: async ({ name, args, fields }) => {
         const e = byName.get(name);
         if (!e) return toolError(name, "unknown tool: use search_tools to find the exact name", "not_found");
-        const a = args ?? {};
+        const a = parseArgs(args);
+        if (!a) return toolError(name, "args must be a JSON object string", "invalid_input");
         const miss = missingRequired(e.info, a);
         if (miss.length) return toolError(name, `missing required: ${miss.join(", ")}`, "invalid_input");
         return e.run(a, fields);
