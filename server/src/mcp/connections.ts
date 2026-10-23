@@ -1,0 +1,106 @@
+import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
+import { and, eq, or } from "drizzle-orm";
+import { id as newId } from "../crypto";
+import { db } from "../db";
+import { mcpConnections, users } from "../db/schema";
+import { log } from "../log";
+import { assertPublicUrl } from "../tools/web/ssrf";
+import { getPreset } from "./catalog";
+import { clearToolCache, type ConnectionRow } from "./client";
+import { DbOAuthProvider, readAuth, writeAuth } from "./oauth";
+
+export type Role = "owner" | "admin" | "member";
+export type PublicConnection = Omit<ConnectionRow, "authEnc">;
+
+const strip = ({ authEnc: _a, ...rest }: ConnectionRow): PublicConnection => rest;
+
+export async function getConnection(connectionId: string): Promise<ConnectionRow | undefined> {
+  const [row] = await db.select().from(mcpConnections).where(eq(mcpConnections.id, connectionId));
+  return row;
+}
+
+/** Members see org connections + their own; admins/owners see everything. Secrets never leave this module. */
+export async function listConnections(userId: string, role: Role): Promise<PublicConnection[]> {
+  const rows = role === "member"
+    ? await db.select().from(mcpConnections).where(or(eq(mcpConnections.scope, "org"), eq(mcpConnections.ownerUserId, userId)))
+    : await db.select().from(mcpConnections);
+  return rows.map(strip);
+}
+
+export async function createConnection(a: {
+  provider?: string;
+  url?: string;
+  label?: string;
+  scope: "org" | "user";
+  ownerUserId?: string | null;
+  /** Static API token for non-OAuth servers; stored encrypted, connection is immediately connected. */
+  token?: string;
+}): Promise<PublicConnection> {
+  const preset = a.provider ? getPreset(a.provider) : undefined;
+  if (a.provider && a.provider !== "custom" && !preset) throw new Error(`unknown provider: ${a.provider}`);
+  if (!preset && !a.url) throw new Error("url is required for custom connections");
+  if (preset?.personalOnly && a.scope === "org") throw new Error(`${preset.label} can only be connected personally`);
+  if (a.scope === "user" && !a.ownerUserId) throw new Error("ownerUserId is required for user-scoped connections");
+  const url = preset?.url ?? a.url!;
+  if (!preset) await assertPublicUrl(url);
+  const label = a.label?.trim() || preset?.label || new URL(url).hostname;
+  const row = {
+    id: newId("mcp_"),
+    provider: preset?.key ?? "custom",
+    label,
+    url,
+    scope: a.scope,
+    ownerUserId: a.scope === "user" ? a.ownerUserId! : null,
+    status: a.token ? ("connected" as const) : ("pending" as const),
+  };
+  await db.insert(mcpConnections).values(row);
+  if (a.token) await writeAuth(row.id, { accessToken: a.token, bearer: true }, true);
+  const created = (await getConnection(row.id))!;
+  return strip(created);
+}
+
+/** Begins OAuth 2.1 (DCR + PKCE). Resolves with the URL the user must visit. */
+export async function startConnect(connectionId: string): Promise<{ authUrl: string }> {
+  const conn = await getConnection(connectionId);
+  if (!conn) throw new Error("connection not found");
+  if ((await readAuth(connectionId)).bearer) throw new Error("this connection uses a static token; nothing to authorize");
+  if (!getPreset(conn.provider)) await assertPublicUrl(conn.url);
+  // fresh handshake: drop old tokens but keep the registered client
+  const prev = await readAuth(connectionId);
+  await writeAuth(connectionId, { clientInfo: prev.clientInfo }, true);
+  const provider = new DbOAuthProvider(connectionId, true);
+  const result = await auth(provider, { serverUrl: conn.url });
+  if (result !== "REDIRECT" || !provider.authUrl) throw new Error("server did not request authorization");
+  await db.update(mcpConnections).set({ status: "pending" }).where(eq(mcpConnections.id, connectionId));
+  return { authUrl: provider.authUrl.toString() };
+}
+
+export async function handleOAuthCallback(code: string, state: string): Promise<{ connectionId: string; label: string }> {
+  const connectionId = state.split(".")[0] ?? "";
+  const conn = await getConnection(connectionId);
+  const a = conn ? await readAuth(connectionId) : undefined;
+  if (!conn || !a?.state || a.state !== state) throw new Error("invalid or expired OAuth state");
+  try {
+    const result = await auth(new DbOAuthProvider(connectionId, true), { serverUrl: conn.url, authorizationCode: code });
+    if (result !== "AUTHORIZED") throw new Error("authorization was not completed");
+  } catch (e) {
+    await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, connectionId));
+    log.warn("mcp oauth callback failed", { connectionId, error: String(e) });
+    throw e;
+  }
+  clearToolCache(connectionId);
+  return { connectionId, label: conn.label };
+}
+
+/** Owner of a user connection, or an admin/owner (org connections need admin). */
+export async function deleteConnection(connectionId: string, userId: string): Promise<boolean> {
+  const conn = await getConnection(connectionId);
+  if (!conn) return false;
+  const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+  const admin = u?.role === "admin" || u?.role === "owner";
+  const allowed = conn.scope === "user" ? conn.ownerUserId === userId || admin : admin;
+  if (!allowed) throw new Error("not allowed to delete this connection");
+  await db.delete(mcpConnections).where(and(eq(mcpConnections.id, connectionId)));
+  clearToolCache(connectionId);
+  return true;
+}
