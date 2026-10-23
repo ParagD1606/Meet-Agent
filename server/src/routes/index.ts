@@ -1,0 +1,58 @@
+import { resolve, sep } from "node:path";
+import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { mountAuth } from "../auth/slack";
+import { csrf, type AppEnv } from "../auth/session";
+import { mountMcpServer } from "../mcp-server";
+import { mountSyncOAuth } from "../sync";
+import { log } from "../log";
+import { behavior } from "./behavior";
+import { core } from "./core";
+import { memory } from "./memory";
+import { settingsRoutes } from "./settings";
+import { syncRoutes } from "./sync";
+
+export function buildApi(): Hono<AppEnv> {
+  const api = new Hono<AppEnv>();
+  api.use("*", csrf);
+  api.route("/", core);
+  api.route("/", memory);
+  api.route("/", settingsRoutes);
+  api.route("/", behavior);
+  api.route("/", syncRoutes);
+  api.notFound((c) => c.json({ error: "not_found" }, 404));
+  api.onError((err, c) => {
+    if (err instanceof HTTPException) return err.getResponse();
+    log.error("api error", { path: c.req.path, err: String(err) });
+    return c.json({ error: "internal_error" }, 500);
+  });
+  return api;
+}
+
+const WEB_DIST = () => resolve(process.env.WEB_DIST ?? `${import.meta.dir}/../../../web/dist`);
+
+/** Static web app with SPA fallback. Never answers /api, /auth, /slack, /mcp or /sync paths. */
+function mountStatic(app: Hono<any>): void {
+  app.get("*", async (c) => {
+    const path = c.req.path;
+    if (/^\/(api|auth|slack|mcp|mcp-oauth|sync)(\/|$)/.test(path)) return c.json({ error: "not_found" }, 404);
+    const root = WEB_DIST();
+    let file: string;
+    try { file = resolve(root, `.${decodeURIComponent(path)}`); } catch { return c.json({ error: "not_found" }, 404); }
+    if (file !== root && !file.startsWith(root + sep)) return c.json({ error: "not_found" }, 404);
+    const f = Bun.file(file);
+    if (file !== root && (await f.exists())) return new Response(f);
+    const index = Bun.file(`${root}/index.html`);
+    if (await index.exists()) return new Response(index, { headers: { "content-type": "text/html; charset=utf-8" } });
+    return c.json({ error: "web_not_built" }, 404);
+  });
+}
+
+/** Mounts /api, the outward MCP server, auth, sync OAuth callbacks and the static web app (last). Call after the other mounts. */
+export function mountRoutes(app: Hono<any>): void {
+  mountAuth(app);
+  mountMcpServer(app);
+  mountSyncOAuth(app);
+  app.route("/api", buildApi());
+  mountStatic(app);
+}
