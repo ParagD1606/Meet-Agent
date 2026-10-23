@@ -1,0 +1,35 @@
+# ── Required ──────────────────────────────────────────────────────────────────
+# Your supermemory API key: this is where the brain reads and writes memory.
+# Get one at https://console.supermemory.ai
+SUPERMEMORY_API_KEY=""
+
+# One model API key: Anthropic, OpenAI, Google, xAI or OpenRouter. Paste whichever
+# you have; the brain tells them apart by prefix. An OpenRouter key (sk-or-)
+# reaches every provider's models. The prompts were tuned against Anthropic
+# and xAI models.
+MODEL_API_KEY=""
+
+# Or set providers explicitly, e.g. to give it more than one:
+# ANTHROPIC_API_KEY=""
+# OPENAI_API_KEY=""
+# GOOGLE_GENERATIVE_AI_API_KEY=""
+# XAI_API_KEY=""
+# OPENROUTER_API_KEY=""
+# OPENROUTER_BASE_URL=""
+# Optional: point the OpenRouter-compatible path at another OpenAI-compatible
+# router instead of openrouter.ai — e.g. FreeRouter:
+# OPENROUTER_BASE_URL="https://api.freerouter.com/v1"
+# with OPENROUTER_API_KEY set to your router key. Model ids stay vendor/model.
+
+# ── Optional ──────────────────────────────────────────────────────────────────
+# Sandbox tools (shell, git, files). On Workers Paid, with the paid block in
+# wrangler.jsonc enabled and CONTAINER_SANDBOX set to "on", they run on a
+# Cloudflare container (local dev then needs Docker). On the free plan, or if
+# you prefer it, set a Daytona key:
+# uncomment this, or add it later with `wrangler secret put DAYTONA_API_KEY`.
+# DAYTONA_API_KEY=""
+
+# Web search and page reading use Firecrawl's free keyless tier by default
+# (1,000 credits a month). Set a key for more, or a context.dev key to use that.
+# FIRECRAWL_API_KEY=""
+# CONTEXT_DEV_API_KEY=""

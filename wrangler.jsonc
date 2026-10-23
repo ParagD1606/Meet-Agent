@@ -1,0 +1,121 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "company-brain",
+	"main": "src/worker.ts",
+	"compatibility_date": "2025-06-22",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_compat_populate_process_env",
+		"enable_ctx_exports"
+	],
+	"minify": true,
+	"build": {
+		"command": "bun run build:web",
+		"watch_dir": ["src", "web"]
+	},
+	"assets": {
+		"directory": "./dist/web",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/brain/*",
+			"/slack/*",
+			"/auth/*",
+			"/setup",
+			"/setup/*",
+			"/health"
+		]
+	},
+	"vars": {
+		// "on" once the Workers Paid block below is enabled: sandbox tools then
+		// run on a Cloudflare container.
+		"CONTAINER_SANDBOX": "off",
+		// The sandbox SDK's RPC transport; artifact downloads stream over it.
+		"SANDBOX_TRANSPORT": "rpc"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "company-brain",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "BRAIN_KV",
+			"id": "company_brain_kv"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "COMPANY_BRAIN_AGENT",
+				"class_name": "CompanyBrainAgent"
+			},
+			{
+				"name": "Sandbox",
+				"class_name": "Sandbox"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"CompanyBrainAgent"
+			]
+		},
+		{
+			"tag": "v2",
+			"new_sqlite_classes": [
+				"Sandbox"
+			]
+		}
+	],
+	// ── Workers Paid ($5/mo) ─────────────────────────────────────────────────
+	// The brain runs on the free plan. On Workers Paid, uncomment this block
+	// and set CONTAINER_SANDBOX to "on" above to give it a built-in container
+	// sandbox (shell, git, Python). Without it, sandbox tools use Daytona when
+	// DAYTONA_API_KEY is set.
+	//
+	// "containers": [
+	// 	{
+	// 		"class_name": "Sandbox",
+	// 		"image": "./sandbox/Dockerfile",
+	// 		"instance_type": "basic",
+	// 		"max_instances": 10
+	// 	}
+	// ],
+	"unsafe": {
+		"bindings": [
+			{
+				"type": "ratelimit",
+				"name": "GMAIL_FETCH_RATE_LIMITER",
+				"namespace_id": "1101",
+				"simple": {
+					"limit": 150,
+					"period": 10
+				}
+			},
+			{
+				"type": "ratelimit",
+				"name": "GRANOLA_FETCH_RATE_LIMITER",
+				"namespace_id": "1102",
+				"simple": {
+					"limit": 25,
+					"period": 10
+				}
+			}
+		]
+	}
+}
