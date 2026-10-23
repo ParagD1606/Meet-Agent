@@ -11,6 +11,6 @@ export const SLACK_BOT_EVENTS = [
   "app_mention", "app_home_opened", "message.channels", "message.groups", "message.im", "message.mpim",
   "member_joined_channel", "member_left_channel", "channel_left", "group_left", "channel_rename", "channel_archive",
   "channel_unarchive", "channel_deleted", "team_join", "user_change", "reaction_added",
-  "file_created", "file_shared",
+  "file_created", "file_shared", "file_change",
   "assistant_thread_started", "assistant_thread_context_changed", "tokens_revoked", "app_uninstalled",
 ] as const;

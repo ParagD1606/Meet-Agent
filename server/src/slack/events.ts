@@ -169,6 +169,7 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
         return await handleReaction(ev);
       case "file_created":
       case "file_shared":
+      case "file_change":
         // Only saved Huddle transcripts are ingested; every other Slack file is ignored.
         if (ev.file_id || ev.file?.id) await ingestHuddleFile(String(ev.file_id ?? ev.file.id), typeof ev.channel_id === "string" ? ev.channel_id : undefined);
         return;
