@@ -1,82 +1,97 @@
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
-import { Link, Redirect, Route, Switch, useLocation } from "wouter"
+import { lazy, Suspense, type ComponentType } from "react"
+import { Redirect, Router, useLocation } from "wouter"
+import { useBrowserLocation } from "wouter/use-browser-location"
 import { api } from "@/lib/api"
 import { useMe } from "@/lib/auth"
-import { Button, ErrorState, Spinner, cn } from "@/lib/ui"
-import { Configure } from "@/pages/configure"
-import { GraphPage } from "@/pages/graph"
-import { Home } from "@/pages/home"
-import { Memories } from "@/pages/memories"
-import { Setup } from "@/pages/setup"
+import { allowNavigation, useTitle } from "@/lib/hooks"
+import { Shell } from "@/shell/shell"
+import { navFor } from "@/shell/nav"
+import { ConfirmHost } from "@/ui/dialog"
+import { EmptyState } from "@/ui/empty"
+import { ErrorBoundary } from "@/ui/error-boundary"
+import { ErrorState, Spinner } from "@/ui/page"
+import { LinkButton } from "@/ui/button"
 import { SignIn } from "@/pages/signin"
-import { Turns } from "@/pages/turns"
+import { Setup } from "@/pages/setup"
 
-function useTheme() {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"))
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark)
-    try { localStorage.setItem("theme", dark ? "dark" : "light") } catch {}
-  }, [dark])
-  return [dark, () => setDark((d) => !d)] as const
+const page = <T extends ComponentType>(f: () => Promise<{ default: T }>) => lazy(f)
+const Home = page(() => import("@/pages/home"))
+const Graph = page(() => import("@/pages/graph"))
+const Memories = page(() => import("@/pages/memories"))
+const CoreMemory = page(() => import("@/pages/core-memory"))
+const Review = page(() => import("@/pages/review"))
+const Skills = page(() => import("@/pages/skills"))
+const Automations = page(() => import("@/pages/automations"))
+const Models = page(() => import("@/pages/models"))
+const Proactivity = page(() => import("@/pages/proactivity"))
+const Prompt = page(() => import("@/pages/prompt"))
+const Integrations = page(() => import("@/pages/integrations"))
+const Sync = page(() => import("@/pages/sync"))
+const Tokens = page(() => import("@/pages/tokens"))
+const Turns = page(() => import("@/pages/turns"))
+const Usage = page(() => import("@/pages/usage"))
+
+const ROUTES: Record<string, ComponentType> = {
+  "/": Home, "/graph": Graph, "/memories": Memories, "/core-memory": CoreMemory, "/review": Review, "/skills": Skills,
+  "/automations": Automations, "/models": Models, "/proactivity": Proactivity, "/prompt": Prompt, "/integrations": Integrations,
+  "/sync": Sync, "/tokens": Tokens, "/turns": Turns, "/usage": Usage,
+}
+// Old /configure/* deep links keep working.
+const LEGACY: Record<string, string> = { "/configure": "/integrations", "/configure/integrations": "/integrations", "/configure/models": "/models", "/configure/skills": "/skills", "/configure/automations": "/automations", "/configure/proactivity": "/proactivity", "/configure/prompt": "/prompt", "/configure/sync": "/sync", "/configure/tokens": "/tokens" }
+
+function NotFound() {
+  useTitle("Page not found")
+  return <div className="mx-auto max-w-md pt-16"><EmptyState icon="search" title="Page not found" action={<LinkButton href="/" variant="primary">Go to home</LinkButton>}>That address doesn't match anything here. It may have moved.</EmptyState></div>
 }
 
-export function App() {
+function Routed({ admin }: { admin: boolean }) {
+  const [loc] = useLocation()
+  const item = navFor(loc)
+  useTitle(item ? item.label : LEGACY[loc] ? null : "Page not found")
+  if (LEGACY[loc]) return <Redirect to={LEGACY[loc]!} replace />
+  const C = ROUTES[item?.to ?? ""]
+  const bleed = item?.to === "/graph"
+  return (
+    <main id="main" className={bleed ? "page" : "page mx-auto w-full max-w-[1120px] px-4 py-6 md:px-8 md:py-8"}>
+      <ErrorBoundary resetKey={loc}>
+        <Suspense fallback={<Spinner />}>
+          {!C || (item?.admin && !admin) ? <NotFound /> : <C />}
+        </Suspense>
+      </ErrorBoundary>
+    </main>
+  )
+}
+
+function Authed() {
   const { me, loading, error, refetch, admin } = useMe()
   const [loc] = useLocation()
-  const [dark, toggle] = useTheme()
   // Public until a workspace exists; a 401 here just means "already configured".
   const setup = useQuery({ queryKey: ["setup-status"], queryFn: api.setupStatus, retry: false, enabled: me === null })
+  useTitle(!me ? (loc === "/setup" ? "Set up" : "Sign in") : undefined)
 
   if (loading || (me === null && setup.isPending)) return <Spinner />
   if (error) return <div className="mx-auto max-w-md p-6"><ErrorState error={error} retry={() => refetch()} /></div>
   if (!me) {
     const s = setup.data
-    const unconfigured = s && (!s.slack || s.workspace === false)
-    return loc === "/setup" || unconfigured ? <Setup signedIn={false} /> : <SignIn />
+    const unconfigured = s && (!s.slack || !s.workspace)
+    return loc === "/setup" || unconfigured ? <Setup /> : <SignIn />
   }
+  if (loc === "/setup") return <Setup signedIn />
+  return <Shell me={me} admin={admin}><Routed admin={admin} /></Shell>
+}
 
-  const nav = [
-    { to: "/", label: "Home" },
-    { to: "/graph", label: "Graph" },
-    { to: "/memories", label: "Memories" },
-    { to: "/configure", label: "Configure" },
-    ...(admin ? [{ to: "/turns", label: "Turns" }] : []),
-  ]
-  const active = (to: string) => (to === "/" ? loc === "/" : loc.startsWith(to))
+// Navigation goes through the dirty-state guard.
+const useGuardedLocation = (): ReturnType<typeof useBrowserLocation> => {
+  const [l, nav] = useBrowserLocation()
+  return [l, (to, o) => { void allowNavigation().then((ok) => ok && nav(to, o)) }]
+}
 
+export function App() {
   return (
-    <div className="flex min-h-dvh flex-col">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-surface focus:px-3 focus:py-1">Skip to content</a>
-      <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-          <Link href="/" className="flex items-center gap-2 font-semibold"><span aria-hidden className="size-5 rounded-md bg-primary" />Company Brain</Link>
-          <nav aria-label="Main" className="order-last -mx-1 flex w-full gap-1 overflow-x-auto px-1 sm:order-none sm:w-auto sm:flex-1">
-            {nav.map((n) => (
-              <Link key={n.to} href={n.to} aria-current={active(n.to) ? "page" : undefined}
-                className={cn("rounded-lg px-3 py-1.5 text-sm", active(n.to) ? "bg-raised font-medium" : "text-muted hover:text-fg")}>{n.label}</Link>
-            ))}
-          </nav>
-          <Button size="sm" variant="ghost" className="ml-auto sm:ml-0" onClick={toggle} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}>{dark ? "Light" : "Dark"}</Button>
-          <span className="hidden items-center gap-2 text-sm sm:flex">
-            {me.avatarUrl && <img src={me.avatarUrl} alt="" className="size-6 rounded-full" />}
-            <span className="max-w-32 truncate">{me.name}</span>
-            <span className="rounded bg-raised px-1.5 py-0.5 text-xs text-muted">{me.role}</span>
-          </span>
-          <Button size="sm" variant="ghost" onClick={() => fetch("/auth/logout", { method: "POST", headers: { "x-requested-with": "fetch" } }).finally(() => { window.location.href = "/" })}>Sign out</Button>
-        </div>
-      </header>
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <Switch>
-          <Route path="/"><Home /></Route>
-          <Route path="/graph"><GraphPage /></Route>
-          <Route path="/memories"><Memories /></Route>
-          <Route path="/setup"><Setup signedIn /></Route>
-          <Route path="/turns">{admin ? <Turns /> : <Redirect to="/" />}</Route>
-          <Route path="/configure/*?"><Configure /></Route>
-          <Route><Redirect to="/" /></Route>
-        </Switch>
-      </main>
-    </div>
+    <Router hook={useGuardedLocation}>
+      <Authed />
+      <ConfirmHost />
+    </Router>
   )
 }

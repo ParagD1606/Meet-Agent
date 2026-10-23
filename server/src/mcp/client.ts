@@ -4,9 +4,9 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { mcpConnections } from "../db/schema";
 import { log } from "../log";
-import { assertPublicUrl } from "../tools/web/ssrf";
+import { assertPublicUrl, guardedFetch } from "../tools/web/ssrf";
 import { getPreset } from "./catalog";
-import { DbOAuthProvider, McpReauthRequired, readAuth } from "./oauth";
+import { AuthDecryptError, DbOAuthProvider, McpReauthRequired, readAuth } from "./oauth";
 
 export type ConnectionRow = typeof mcpConnections.$inferSelect;
 export type McpToolInfo = {
@@ -23,6 +23,8 @@ export type McpSession = {
 export type McpFactory = (conn: ConnectionRow) => Promise<McpSession>;
 
 const CALL_TIMEOUT_MS = 60_000;
+const CONNECT_TIMEOUT_MS = 20_000;
+const LIST_TIMEOUT_MS = 20_000;
 
 async function realFactory(conn: ConnectionRow): Promise<McpSession> {
   const preset = getPreset(conn.provider);
@@ -30,23 +32,28 @@ async function realFactory(conn: ConnectionRow): Promise<McpSession> {
   const auth = await readAuth(conn.id);
   const url = new URL(conn.url);
   const transport = auth.bearer && auth.accessToken
-    ? new StreamableHTTPClientTransport(url, { requestInit: { headers: { authorization: `Bearer ${auth.accessToken}` } } }) // static bearer token
-    : new StreamableHTTPClientTransport(url, { authProvider: new DbOAuthProvider(conn.id, false) });
+    ? new StreamableHTTPClientTransport(url, { fetch: guardedFetch, requestInit: { headers: { authorization: `Bearer ${auth.accessToken}` } } }) // static bearer token
+    : new StreamableHTTPClientTransport(url, { fetch: guardedFetch, authProvider: new DbOAuthProvider(conn.id, false) });
   const client = new Client({ name: "company-brain", version: "1.0.0" });
-  await client.connect(transport);
+  try {
+    await client.connect(transport, { timeout: CONNECT_TIMEOUT_MS, signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS) });
+  } catch (e) {
+    await client.close().catch(() => {});
+    throw e;
+  }
   return {
     async listTools() {
       const out: McpToolInfo[] = [];
       let cursor: string | undefined;
       for (let i = 0; i < 20; i++) {
-        const page = await client.listTools(cursor ? { cursor } : undefined);
+        const page = await client.listTools(cursor ? { cursor } : undefined, { timeout: LIST_TIMEOUT_MS });
         out.push(...(page.tools as McpToolInfo[]));
         cursor = page.nextCursor;
         if (!cursor) break;
       }
       return out;
     },
-    callTool: (name, args) => client.callTool({ name, arguments: args }, undefined, { timeout: CALL_TIMEOUT_MS }),
+    callTool: (name, args) => client.callTool({ name, arguments: args }, undefined, { timeout: CALL_TIMEOUT_MS, signal: AbortSignal.timeout(CALL_TIMEOUT_MS + 5_000) }),
     close: () => client.close().catch(() => {}),
   };
 }
@@ -65,6 +72,12 @@ async function withSession<T>(conn: ConnectionRow, fn: (s: McpSession) => Promis
     s = await factory(conn);
     return await fn(s);
   } catch (e) {
+    if (e instanceof AuthDecryptError) {
+      // unreadable credentials can never work again: surface it as "needs reconnect", never as a silent unauthenticated call
+      await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, conn.id));
+      toolCache.delete(conn.id);
+      throw new McpReauthRequired(conn.id);
+    }
     if (e instanceof McpReauthRequired || (e as Error)?.name === "UnauthorizedError") {
       await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, conn.id));
       toolCache.delete(conn.id);

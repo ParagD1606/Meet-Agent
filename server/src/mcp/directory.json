@@ -1,0 +1,2156 @@
+{
+ "version": 1,
+ "entries": [
+  {
+   "id": "mcp-4",
+   "name": "Canva",
+   "url": "https://mcp.canva.com/mcp",
+   "categories": [
+    "design",
+    "education"
+   ],
+   "popularity": 22776,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "canva.com"
+  },
+  {
+   "id": "mcp-5",
+   "name": "Figma",
+   "url": "https://mcp.figma.com/mcp",
+   "categories": [
+    "creative"
+   ],
+   "popularity": 22484,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "figma.com"
+  },
+  {
+   "id": "mcp-6",
+   "name": "Notion",
+   "url": "https://mcp.notion.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 22426,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "notion.com"
+  },
+  {
+   "id": "mcp-7",
+   "name": "Microsoft 365",
+   "url": "https://microsoft365.mcp.claude.com/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 22403,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "microsoft.com"
+  },
+  {
+   "id": "mcp-8",
+   "name": "Atlassian Rovo",
+   "url": "https://mcp.atlassian.com/v1/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 22237,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "atlassian.com"
+  },
+  {
+   "id": "mcp-9",
+   "name": "Slack",
+   "url": "https://mcp.slack.com/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 22007,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "slack.com"
+  },
+  {
+   "id": "mcp-10",
+   "name": "HubSpot",
+   "url": "https://mcp.hubspot.com/anthropic",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 21648,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "hubspot.com"
+  },
+  {
+   "id": "mcp-11",
+   "name": "Linear",
+   "url": "https://mcp.linear.app/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 21402,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "linear.app"
+  },
+  {
+   "id": "mcp-13",
+   "name": "Intercom",
+   "url": "https://mcp.intercom.com/mcp",
+   "categories": [
+    "communication"
+   ],
+   "popularity": 21092,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "intercom.com"
+  },
+  {
+   "id": "mcp-16",
+   "name": "Miro",
+   "url": "https://mcp.miro.com/",
+   "categories": [
+    "code",
+    "productivity",
+    "design"
+   ],
+   "popularity": 20372,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "miro.com"
+  },
+  {
+   "id": "mcp-18",
+   "name": "Adobe for creativity",
+   "url": "https://adobe-creativity.adobe.io/mcp",
+   "categories": [
+    "design",
+    "creative"
+   ],
+   "popularity": 20115,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "adobe-creativity.adobe.io"
+  },
+  {
+   "id": "mcp-19",
+   "name": "Granola",
+   "url": "https://mcp.granola.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 19926,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "granola.ai"
+  },
+  {
+   "id": "mcp-20",
+   "name": "Gamma",
+   "url": "https://mcp.gamma.app/mcp",
+   "categories": [
+    "productivity",
+    "sales-and-marketing"
+   ],
+   "popularity": 19849,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "gamma.app"
+  },
+  {
+   "id": "mcp-22",
+   "name": "Vercel",
+   "url": "https://mcp.vercel.com/",
+   "categories": [
+    "code"
+   ],
+   "popularity": 19616,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "vercel.com"
+  },
+  {
+   "id": "mcp-23",
+   "name": "Lucid",
+   "url": "https://mcp.lucid.app/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 19599,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "lucid.app"
+  },
+  {
+   "id": "mcp-24",
+   "name": "Supabase",
+   "url": "https://mcp.supabase.com/mcp",
+   "categories": [
+    "code",
+    "data"
+   ],
+   "popularity": 19591,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "supabase.com"
+  },
+  {
+   "id": "mcp-25",
+   "name": "Indeed",
+   "url": "https://mcp.indeed.com/claude/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 19536,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "indeed.com"
+  },
+  {
+   "id": "mcp-26",
+   "name": "Airtable",
+   "url": "https://mcp.airtable.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 19507,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "airtable.com"
+  },
+  {
+   "id": "mcp-27",
+   "name": "Zapier",
+   "url": "https://mcp.zapier.com/api/v1/connect",
+   "categories": [
+    "productivity",
+    "communication",
+    "sales-and-marketing"
+   ],
+   "popularity": 19461,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "zapier.com"
+  },
+  {
+   "id": "mcp-30",
+   "name": "Sentry",
+   "url": "https://mcp.sentry.dev/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 19267,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "sentry.dev"
+  },
+  {
+   "id": "mcp-33",
+   "name": "ZoomInfo",
+   "url": "https://mcp.zoominfo.com/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "data-analytics",
+    "productivity"
+   ],
+   "popularity": 19117,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "zoominfo.com"
+  },
+  {
+   "id": "mcp-35",
+   "name": "ClickUp",
+   "url": "https://mcp.clickup.com/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 19038,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "clickup.com"
+  },
+  {
+   "id": "mcp-38",
+   "name": "Postman",
+   "url": "https://mcp.postman.com/minimal",
+   "categories": [
+    "code"
+   ],
+   "popularity": 18941,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "postman.com"
+  },
+  {
+   "id": "mcp-39",
+   "name": "Apollo.io",
+   "url": "https://mcp.apollo.io/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 18925,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "apollo.io"
+  },
+  {
+   "id": "mcp-40",
+   "name": "Clay",
+   "url": "https://api.clay.com/v3/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "data"
+   ],
+   "popularity": 18767,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "clay.com"
+  },
+  {
+   "id": "mcp-42",
+   "name": "Ahrefs",
+   "url": "https://api.ahrefs.com/mcp/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "data",
+    "communication"
+   ],
+   "popularity": 18730,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "ahrefs.com"
+  },
+  {
+   "id": "mcp-43",
+   "name": "Stripe",
+   "url": "https://mcp.stripe.com",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 18689,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "stripe.com"
+  },
+  {
+   "id": "mcp-44",
+   "name": "Windsor.ai",
+   "url": "https://mcp.windsor.ai",
+   "categories": [
+    "sales-and-marketing",
+    "data"
+   ],
+   "popularity": 18666,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "windsor.ai"
+  },
+  {
+   "id": "mcp-45",
+   "name": "Context7",
+   "url": "https://mcp.context7.com/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 18625,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "context7.com"
+  },
+  {
+   "id": "mcp-46",
+   "name": "Semrush",
+   "url": "https://mcp.semrush.com/claude/v1/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "data-analytics"
+   ],
+   "popularity": 18580,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "semrush.com"
+  },
+  {
+   "id": "mcp-49",
+   "name": "Todoist",
+   "url": "https://ai.todoist.net/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 18461,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "ai.todoist.net"
+  },
+  {
+   "id": "mcp-51",
+   "name": "WordPress.com",
+   "url": "https://public-api.wordpress.com/wpcom/v2/mcp/v1",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 18447,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "public-api.wordpress.com"
+  },
+  {
+   "id": "mcp-54",
+   "name": "PitchBook Premium",
+   "url": "https://premium.mcp.pitchbook.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 18410,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "premium.mcp.pitchbook.com"
+  },
+  {
+   "id": "mcp-56",
+   "name": "S&P - Deterministic Retrieval",
+   "url": "https://kfinance.kensho.com/integrations/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 18360,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "kfinance.kensho.com"
+  },
+  {
+   "id": "mcp-58",
+   "name": "Fireflies",
+   "url": "https://api.fireflies.ai/mcp",
+   "categories": [
+    "communication"
+   ],
+   "popularity": 18302,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "fireflies.ai"
+  },
+  {
+   "id": "mcp-59",
+   "name": "Webflow",
+   "url": "https://mcp.webflow.com/mcp",
+   "categories": [
+    "developer-tools",
+    "productivity"
+   ],
+   "popularity": 18246,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "webflow.com"
+  },
+  {
+   "id": "mcp-60",
+   "name": "Cloudflare Developer Platform",
+   "url": "https://bindings.mcp.cloudflare.com/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 18242,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "bindings.mcp.cloudflare.com"
+  },
+  {
+   "id": "mcp-61",
+   "name": "Supermetrics Marketing Analytics",
+   "url": "https://mcp.supermetrics.com/mcp",
+   "categories": [
+    "data-analytics",
+    "sales-and-marketing",
+    "productivity"
+   ],
+   "popularity": 18216,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "supermetrics.com"
+  },
+  {
+   "id": "mcp-63",
+   "name": "Strava",
+   "url": "https://mcp.strava.com/mcp",
+   "categories": [
+    "health"
+   ],
+   "popularity": 18100,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "strava.com"
+  },
+  {
+   "id": "mcp-64",
+   "name": "Lovable",
+   "url": "https://mcp.lovable.dev",
+   "categories": [
+    "code",
+    "productivity"
+   ],
+   "popularity": 18072,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "lovable.dev"
+  },
+  {
+   "id": "mcp-65",
+   "name": "Ramp",
+   "url": "https://ramp-mcp-remote.ramp.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 18006,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "ramp-mcp-remote.ramp.com"
+  },
+  {
+   "id": "mcp-66",
+   "name": "Mixpanel",
+   "url": "https://mcp.mixpanel.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 18004,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "mixpanel.com"
+  },
+  {
+   "id": "mcp-67",
+   "name": "Superhuman Mail",
+   "url": "https://mcp.mail.superhuman.com/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 17994,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "mail.superhuman.com"
+  },
+  {
+   "id": "mcp-68",
+   "name": "Make",
+   "url": "https://mcp.make.com",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17978,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "make.com"
+  },
+  {
+   "id": "mcp-69",
+   "name": "Hugging Face",
+   "url": "https://huggingface.co/mcp?login&gradio=none",
+   "categories": [
+    "code"
+   ],
+   "popularity": 17953,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "huggingface.co"
+  },
+  {
+   "id": "mcp-70",
+   "name": "Fathom – Your Meeting Intelligence Layer",
+   "url": "https://api.fathom.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17910,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "fathom.ai"
+  },
+  {
+   "id": "mcp-71",
+   "name": "Consensus",
+   "url": "https://mcp.consensus.app/mcp",
+   "categories": [
+    "data",
+    "life-sciences"
+   ],
+   "popularity": 17909,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "consensus.app"
+  },
+  {
+   "id": "mcp-72",
+   "name": "Netlify",
+   "url": "https://netlify-mcp.netlify.app/mcp",
+   "categories": [
+    "developer-tools"
+   ],
+   "popularity": 17869,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "netlify-mcp.netlify.app"
+  },
+  {
+   "id": "mcp-74",
+   "name": "Wispr Flow",
+   "url": "https://api.wisprflow.ai/connect/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 17821,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "wisprflow.ai"
+  },
+  {
+   "id": "mcp-75",
+   "name": "PostHog",
+   "url": "https://mcp.posthog.com/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 17808,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "posthog.com"
+  },
+  {
+   "id": "mcp-76",
+   "name": "Calendly",
+   "url": "https://mcp.calendly.com/",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17775,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "calendly.com"
+  },
+  {
+   "id": "mcp-78",
+   "name": "FactSet AI-Ready Data",
+   "url": "https://mcp.factset.com/content/v1",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 17636,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "factset.com"
+  },
+  {
+   "id": "mcp-80",
+   "name": "Adobe Experience Manager",
+   "url": "https://mcp.adobeaemcloud.com/adobe/mcp/aem",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17600,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "adobeaemcloud.com"
+  },
+  {
+   "id": "mcp-82",
+   "name": "Klaviyo",
+   "url": "https://mcp.klaviyo.com/mcp?include-mcp-app=true",
+   "categories": [
+    "sales-and-marketing",
+    "data",
+    "communication"
+   ],
+   "popularity": 17472,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "klaviyo.com"
+  },
+  {
+   "id": "mcp-83",
+   "name": "Harvey",
+   "url": "https://api.harvey.ai/hosted_mcp/mcp",
+   "categories": [
+    "productivity",
+    "legal"
+   ],
+   "popularity": 17427,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "harvey.ai"
+  },
+  {
+   "id": "mcp-84",
+   "name": "Interactive Brokers (IBKR)",
+   "url": "https://api.ibkr.com/v1/api/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 17402,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "ibkr.com"
+  },
+  {
+   "id": "mcp-85",
+   "name": "Dropbox",
+   "url": "https://mcp.dropbox.com/claude_app_mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17345,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "dropbox.com"
+  },
+  {
+   "id": "mcp-86",
+   "name": "Jotform",
+   "url": "https://mcp.jotform.com/mcp-app",
+   "categories": [
+    "productivity",
+    "data-analytics"
+   ],
+   "popularity": 17289,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "jotform.com"
+  },
+  {
+   "id": "mcp-87",
+   "name": "Outreach",
+   "url": "https://api.outreach.io/mcp/",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 17241,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "outreach.io"
+  },
+  {
+   "id": "mcp-88",
+   "name": "Wix",
+   "url": "https://mcp.wix.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17240,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "wix.com"
+  },
+  {
+   "id": "mcp-89",
+   "name": "Lusha",
+   "url": "https://mcp.lusha.com/mcp/claude",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17228,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "lusha.com"
+  },
+  {
+   "id": "mcp-91",
+   "name": "Adobe Marketing Agent",
+   "url": "https://aep-ai-ama.adobe.io/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 17203,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "aep-ai-ama.adobe.io"
+  },
+  {
+   "id": "mcp-92",
+   "name": "Similarweb",
+   "url": "https://mcp.similarweb.com",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 17145,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "similarweb.com"
+  },
+  {
+   "id": "mcp-93",
+   "name": "HyperFrames by HeyGen",
+   "url": "https://mcp.heygen.com/mcp/hyperframes",
+   "categories": [
+    "productivity",
+    "design"
+   ],
+   "popularity": 17141,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "heygen.com"
+  },
+  {
+   "id": "mcp-94",
+   "name": "Vibe Prospecting",
+   "url": "https://vibeprospecting.explorium.ai/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "data-analytics",
+    "financial-services"
+   ],
+   "popularity": 17117,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "vibe.com"
+  },
+  {
+   "id": "mcp-95",
+   "name": "Scholar Gateway",
+   "url": "https://connector.scholargateway.ai/mcp",
+   "categories": [
+    "life-sciences"
+   ],
+   "popularity": 17048,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "connector.scholargateway.ai"
+  },
+  {
+   "id": "mcp-96",
+   "name": "CoCounsel Legal",
+   "url": "https://legal-mcp.thomsonreuters.com/mcp",
+   "categories": [
+    "productivity",
+    "legal"
+   ],
+   "popularity": 17017,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "legal-mcp.thomsonreuters.com"
+  },
+  {
+   "id": "mcp-97",
+   "name": "Exa",
+   "url": "https://mcp.exa.ai/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 16997,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "exa.ai"
+  },
+  {
+   "id": "mcp-98",
+   "name": "incident.io",
+   "url": "https://mcp.incident.io/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 16997,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "incident.io"
+  },
+  {
+   "id": "mcp-102",
+   "name": "PDF Viewer",
+   "url": "https://example-server.modelcontextprotocol.io/pdf/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16967,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "example-server.modelcontextprotocol.io"
+  },
+  {
+   "id": "mcp-103",
+   "name": "Intuit Mailchimp",
+   "url": "https://ai-inc.mailchimp.com/claude/mcp/v2",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16947,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "ai-inc.mailchimp.com"
+  },
+  {
+   "id": "mcp-104",
+   "name": "Descript",
+   "url": "https://api.descript.com/v2/mcp/claude",
+   "categories": [
+    "design",
+    "productivity"
+   ],
+   "popularity": 16924,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "descript.com"
+  },
+  {
+   "id": "mcp-106",
+   "name": "CourtListener",
+   "url": "https://mcp.courtlistener.com/",
+   "categories": [
+    "productivity",
+    "legal"
+   ],
+   "popularity": 16863,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "courtlistener.com"
+  },
+  {
+   "id": "mcp-107",
+   "name": "Datasite",
+   "url": "https://mcp.global.datasite.com/mcp",
+   "categories": [
+    "financial-services",
+    "legal"
+   ],
+   "popularity": 16836,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "global.datasite.com"
+  },
+  {
+   "id": "mcp-112",
+   "name": "Adobe Journey Optimizer",
+   "url": "https://ajo-mcp.adobe.io/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 16767,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "ajo-mcp.adobe.io"
+  },
+  {
+   "id": "mcp-115",
+   "name": "Adobe Workfront",
+   "url": "https://mcp.workfront.adobe.com/mcp/v1/workfront",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16701,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "workfront.adobe.com"
+  },
+  {
+   "id": "mcp-116",
+   "name": "Ashby",
+   "url": "https://mcp.ashbyhq.com/mcp/v1",
+   "categories": [
+    "business-productivity"
+   ],
+   "popularity": 16665,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "ashbyhq.com"
+  },
+  {
+   "id": "mcp-117",
+   "name": "Motion Creative Analytics",
+   "url": "https://projects.motionapp.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 16664,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "projects.motionapp.com"
+  },
+  {
+   "id": "mcp-118",
+   "name": "Morningstar",
+   "url": "https://mcp.morningstar.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16655,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "morningstar.com"
+  },
+  {
+   "id": "mcp-120",
+   "name": "SurveyMonkey",
+   "url": "https://mcp.surveymonkey.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16617,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "surveymonkey.com"
+  },
+  {
+   "id": "mcp-122",
+   "name": "AWS Marketplace",
+   "url": "https://marketplace-mcp.us-east-1.api.aws/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16588,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "marketplace-mcp.us-east-1.api.aws"
+  },
+  {
+   "id": "mcp-123",
+   "name": "Dovetail",
+   "url": "https://dovetail.com/api/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16578,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "dovetail.com"
+  },
+  {
+   "id": "mcp-124",
+   "name": "PayPal",
+   "url": "https://mcp.paypal.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16562,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "paypal.com"
+  },
+  {
+   "id": "mcp-125",
+   "name": "BioRender",
+   "url": "https://mcp.services.biorender.com/mcp",
+   "categories": [
+    "health-life-sciences",
+    "life-sciences"
+   ],
+   "popularity": 16537,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "services.biorender.com"
+  },
+  {
+   "id": "mcp-128",
+   "name": "Attio",
+   "url": "https://mcp.attio.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16491,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "attio.com"
+  },
+  {
+   "id": "mcp-129",
+   "name": "Udemy Business",
+   "url": "https://api.udemy.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16477,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "udemy.com"
+  },
+  {
+   "id": "mcp-130",
+   "name": "Carta",
+   "url": "https://mcp.app.carta.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16476,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "app.carta.com"
+  },
+  {
+   "id": "mcp-131",
+   "name": "Brex",
+   "url": "https://api.brex.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16474,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "brex.com"
+  },
+  {
+   "id": "mcp-132",
+   "name": "LSEG",
+   "url": "https://api.analytics.lseg.com/lfa/mcp/server-cl",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16466,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "analytics.lseg.com"
+  },
+  {
+   "id": "mcp-133",
+   "name": "Daloopa",
+   "url": "https://mcp.daloopa.com/server/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16461,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "daloopa.com"
+  },
+  {
+   "id": "mcp-135",
+   "name": "Trimble SketchUp",
+   "url": "https://api.sketchup.com/mcp/v1/sketchup/mcp",
+   "categories": [
+    "design",
+    "creative"
+   ],
+   "popularity": 16458,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "sketchup.com"
+  },
+  {
+   "id": "mcp-138",
+   "name": "Otter.ai",
+   "url": "https://mcp.otter.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16421,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "otter.ai"
+  },
+  {
+   "id": "mcp-139",
+   "name": "Guru",
+   "url": "https://mcp.api.getguru.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16402,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "getguru.com"
+  },
+  {
+   "id": "mcp-140",
+   "name": "Plaud",
+   "url": "https://mcp.plaud.ai/mcp",
+   "categories": [
+    "business-productivity"
+   ],
+   "popularity": 16366,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "plaud.ai"
+  },
+  {
+   "id": "mcp-145",
+   "name": "Replit",
+   "url": "https://replit-mcp.com/anthropic/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 16272,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "replit-mcp.com"
+  },
+  {
+   "id": "mcp-147",
+   "name": "Wrike",
+   "url": "https://mcp.wrike.com/app/mcp/stream",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16254,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "wrike.com"
+  },
+  {
+   "id": "mcp-148",
+   "name": "Read AI",
+   "url": "https://api.read.ai/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 16223,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "read.ai"
+  },
+  {
+   "id": "mcp-149",
+   "name": "Metaview",
+   "url": "https://mcp.metaview.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16216,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "metaview.ai"
+  },
+  {
+   "id": "mcp-151",
+   "name": "Scite",
+   "url": "https://api.scite.ai/mcp",
+   "categories": [
+    "life-sciences"
+   ],
+   "popularity": 16208,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "scite.ai"
+  },
+  {
+   "id": "mcp-152",
+   "name": "Base44",
+   "url": "https://app.base44.com/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 16197,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "app.base44.com"
+  },
+  {
+   "id": "mcp-153",
+   "name": "FMP",
+   "url": "https://financialmodelingprep.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 16192,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "financialmodelingprep.com"
+  },
+  {
+   "id": "mcp-154",
+   "name": "Crossbeam",
+   "url": "https://mcp.crossbeam.com",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 16185,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "crossbeam.com"
+  },
+  {
+   "id": "mcp-155",
+   "name": "iManage Work",
+   "url": "https://cloudimanage.com/mcp/work",
+   "categories": [
+    "productivity",
+    "legal"
+   ],
+   "popularity": 16167,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "cloudimanage.com"
+  },
+  {
+   "id": "mcp-156",
+   "name": "Omni Analytics",
+   "url": "https://callbacks.omniapp.co/callback/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 16163,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "callbacks.omniapp.co"
+  },
+  {
+   "id": "mcp-157",
+   "name": "Trello",
+   "url": "https://mcp.trello.com/v1",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 16161,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "trello.com"
+  },
+  {
+   "id": "mcp-158",
+   "name": "Sanity",
+   "url": "https://mcp.sanity.io",
+   "categories": [
+    "developer-tools",
+    "productivity"
+   ],
+   "popularity": 16105,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "sanity.io"
+  },
+  {
+   "id": "mcp-160",
+   "name": "AdisInsight",
+   "url": "https://adisinsight-mcp.springer.com/mcp",
+   "categories": [
+    "life-sciences"
+   ],
+   "popularity": 16043,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "adisinsight-mcp.springer.com"
+  },
+  {
+   "id": "mcp-162",
+   "name": "PlayMCP",
+   "url": "https://playmcp.kakao.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15969,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "playmcp.kakao.com"
+  },
+  {
+   "id": "mcp-163",
+   "name": "Tavily",
+   "url": "https://mcp.tavily.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15964,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "tavily.com"
+  },
+  {
+   "id": "mcp-164",
+   "name": "Fellow.ai",
+   "url": "https://fellow.app/mcp",
+   "categories": [
+    "communication"
+   ],
+   "popularity": 15959,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "fellow.app"
+  },
+  {
+   "id": "mcp-165",
+   "name": "Elicit",
+   "url": "https://elicit.com/api/mcp",
+   "categories": [
+    "life-sciences"
+   ],
+   "popularity": 15938,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "elicit.com"
+  },
+  {
+   "id": "mcp-166",
+   "name": "Adobe Customer Journey Analytics",
+   "url": "https://cja-mcp.adobe.io/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15876,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "cja-mcp.adobe.io"
+  },
+  {
+   "id": "mcp-167",
+   "name": "BrightHire",
+   "url": "https://app.brighthire.ai/mcp/v1",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15874,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "app.brighthire.ai"
+  },
+  {
+   "id": "mcp-168",
+   "name": "Whimsical",
+   "url": "https://mcp.whimsical.com/mcp",
+   "categories": [
+    "design",
+    "productivity"
+   ],
+   "popularity": 15863,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "whimsical.com"
+  },
+  {
+   "id": "mcp-170",
+   "name": "Monte Carlo",
+   "url": "https://mcp.getmontecarlo.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15845,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "getmontecarlo.com"
+  },
+  {
+   "id": "mcp-171",
+   "name": "Gainsight (Staircase AI)",
+   "url": "https://mcp.staircase.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15843,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "staircase.ai"
+  },
+  {
+   "id": "mcp-174",
+   "name": "Three.js 3D Viewer",
+   "url": "https://example-server.modelcontextprotocol.io/threejs/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 15791,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "example-server.modelcontextprotocol.io"
+  },
+  {
+   "id": "mcp-176",
+   "name": "Salesloft",
+   "url": "https://mcp.salesloft.com/sse",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 15761,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "salesloft.com"
+  },
+  {
+   "id": "mcp-177",
+   "name": "Profound",
+   "url": "https://mcp.tryprofound.com/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 15751,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "tryprofound.com"
+  },
+  {
+   "id": "mcp-178",
+   "name": "Resy",
+   "url": "https://apigw.americanexpress.com/dining/v1/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15749,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "apigw.americanexpress.com"
+  },
+  {
+   "id": "mcp-179",
+   "name": "AirOps",
+   "url": "https://app.airops.com/mcp",
+   "categories": [
+    "productivity",
+    "data"
+   ],
+   "popularity": 15730,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "app.airops.com"
+  },
+  {
+   "id": "mcp-180",
+   "name": "Bitly",
+   "url": "https://api-ssl.bitly.com/v4/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15726,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "api-ssl.bitly.com"
+  },
+  {
+   "id": "mcp-182",
+   "name": "Common Room",
+   "url": "https://mcp.commonroom.io/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 15716,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "commonroom.io"
+  },
+  {
+   "id": "mcp-183",
+   "name": "Affinity",
+   "url": "https://mcp.affinity.co/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 15709,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "affinity.co"
+  },
+  {
+   "id": "mcp-185",
+   "name": "Peec AI",
+   "url": "https://api.peec.ai/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15676,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "peec.ai"
+  },
+  {
+   "id": "mcp-187",
+   "name": "Synapse.org",
+   "url": "https://mcp.synapse.org/mcp",
+   "categories": [
+    "life-sciences"
+   ],
+   "popularity": 15664,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "synapse.org"
+  },
+  {
+   "id": "mcp-188",
+   "name": "Enterpret",
+   "url": "https://wisdom-api.enterpret.com/server/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15629,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "wisdom-api.enterpret.com"
+  },
+  {
+   "id": "mcp-190",
+   "name": "CData Connect AI",
+   "url": "https://mcp.cloud.cdata.com/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15546,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "cloud.cdata.com"
+  },
+  {
+   "id": "mcp-191",
+   "name": "Superhuman Docs",
+   "url": "https://docs.superhuman.com/apis/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15542,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "docs.superhuman.com"
+  },
+  {
+   "id": "mcp-192",
+   "name": "Egnyte",
+   "url": "https://mcp-server.egnyte.com/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 15542,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "mcp-server.egnyte.com"
+  },
+  {
+   "id": "mcp-193",
+   "name": "PandaDoc",
+   "url": "https://mcp.pandadoc.com/v1/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15534,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "pandadoc.com"
+  },
+  {
+   "id": "mcp-194",
+   "name": "MSCI",
+   "url": "https://mcp.msci.com/mcp/v1.0/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 15518,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "msci.com"
+  },
+  {
+   "id": "mcp-197",
+   "name": "Pylon",
+   "url": "https://mcp.usepylon.com/",
+   "categories": [
+    "communication"
+   ],
+   "popularity": 15468,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "usepylon.com"
+  },
+  {
+   "id": "mcp-199",
+   "name": "Alpha Vantage MCP Server",
+   "url": "https://mcp.alphavantage.co/mcp",
+   "categories": [
+    "financial-services",
+    "data-analytics"
+   ],
+   "popularity": 15424,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "alphavantage.co"
+  },
+  {
+   "id": "mcp-200",
+   "name": "Craft",
+   "url": "https://mcp.craft.do/my/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15411,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "craft.do"
+  },
+  {
+   "id": "mcp-201",
+   "name": "Jam",
+   "url": "https://mcp.jam.dev/mcp",
+   "categories": [
+    "code"
+   ],
+   "popularity": 15373,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "jam.dev"
+  },
+  {
+   "id": "mcp-203",
+   "name": "Legal Data Hunter",
+   "url": "https://legaldatahunter.com/mcp",
+   "categories": [
+    "productivity",
+    "legal"
+   ],
+   "popularity": 15338,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "legaldatahunter.com"
+  },
+  {
+   "id": "mcp-204",
+   "name": "Workable",
+   "url": "https://mcp.workable.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15338,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "workable.com"
+  },
+  {
+   "id": "mcp-205",
+   "name": "EULER",
+   "url": "https://mcp.eulerapp.com/mcp",
+   "categories": [
+    "sales-and-marketing",
+    "productivity"
+   ],
+   "popularity": 15333,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "eulerapp.com"
+  },
+  {
+   "id": "mcp-206",
+   "name": "Gusto",
+   "url": "https://mcp.api.gusto.com/anthropic",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 15307,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "gusto.com"
+  },
+  {
+   "id": "mcp-207",
+   "name": "TickTick",
+   "url": "https://mcp.ticktick.com",
+   "categories": [
+    "business-productivity"
+   ],
+   "popularity": 15296,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "ticktick.com"
+  },
+  {
+   "id": "mcp-208",
+   "name": "Instacart",
+   "url": "https://fig-mcp.instacart.com/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15293,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "fig-mcp.instacart.com"
+  },
+  {
+   "id": "mcp-209",
+   "name": "Medidata",
+   "url": "https://mcp.imedidata.com/mcp",
+   "categories": [
+    "productivity",
+    "data",
+    "life-sciences"
+   ],
+   "popularity": 15281,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "imedidata.com"
+  },
+  {
+   "id": "mcp-210",
+   "name": "O’Reilly",
+   "url": "https://api.oreilly.com/api/content-discovery/v1/mcp/",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15279,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "oreilly.com"
+  },
+  {
+   "id": "mcp-211",
+   "name": "Highspot",
+   "url": "https://mcp.highspot.com/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 15274,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "highspot.com",
+   "note": "requires you to register your own OAuth client first"
+  },
+  {
+   "id": "mcp-212",
+   "name": "Intuit TurboTax",
+   "url": "https://ai-inc.turbotax.intuit.com/358A1C1B-F73B-46A7-B130-4B14916E6843/v1/mcp",
+   "categories": [
+    "financial-services"
+   ],
+   "popularity": 15253,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "ai-inc.turbotax.intuit.com"
+  },
+  {
+   "id": "mcp-214",
+   "name": "tldv",
+   "url": "https://mcp.tldv.io/mcp",
+   "categories": [
+    "productivity",
+    "communication"
+   ],
+   "popularity": 15224,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "tldv.io"
+  },
+  {
+   "id": "mcp-215",
+   "name": "Honeycomb",
+   "url": "https://mcp.honeycomb.io/mcp",
+   "categories": [
+    "data"
+   ],
+   "popularity": 15205,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "honeycomb.io"
+  },
+  {
+   "id": "mcp-217",
+   "name": "Krisp",
+   "url": "https://mcp.krisp.ai/mcp",
+   "categories": [
+    "productivity"
+   ],
+   "popularity": 15185,
+   "authMethods": [
+    "api-key"
+   ],
+   "dcr": false,
+   "iconDomain": "krisp.ai"
+  },
+  {
+   "id": "mcp-218",
+   "name": "Brevo",
+   "url": "https://mcp.brevo.com/v1/anthropic/mcp",
+   "categories": [
+    "sales-and-marketing"
+   ],
+   "popularity": 15161,
+   "authMethods": [
+    "oauth"
+   ],
+   "dcr": true,
+   "iconDomain": "brevo.com"
+  }
+ ]
+}

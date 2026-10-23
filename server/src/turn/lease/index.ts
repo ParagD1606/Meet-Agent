@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, lt, ne } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, ne, sql } from "drizzle-orm";
 import { id as newId } from "../../crypto";
 import { db } from "../../db";
 import { leases, mcpConnections, turns, users } from "../../db/schema";
@@ -71,16 +71,33 @@ export async function decideLease(leaseId: string, deciderId: string, allow: boo
   return row ?? null;
 }
 
-/** One-use: atomically flips granted -> used. Second call (or after expiry / wrong requester) returns false. */
-export async function consumeLease(leaseId: string, requesterId: string): Promise<boolean> {
+/** Where a lease may be spent: the same connection, in the thread the request came from, for a read-only tool. */
+export type LeaseBinding = { connectionId: string; toolIsRead: boolean; channelId: string; threadTs?: string | null };
+
+const sameThread = (b: LeaseBinding) => sql`exists (select 1 from ${turns} t where t.id = ${leases.turnId} and t.channel_id = ${b.channelId} and t.thread_ts is not distinct from ${b.threadTs ?? null})`;
+
+/**
+ * One-use: atomically flips granted -> used. Second call (or after expiry / wrong requester) returns false.
+ * With `bind` the lease is also pinned to its connection, to the originating thread (turn) and to read-only tools,
+ * so a granted lease cannot be spent by another conversation or on a write.
+ */
+export async function consumeLease(leaseId: string, requesterId: string, bind?: LeaseBinding): Promise<boolean> {
+  if (bind && !bind.toolIsRead) return false;
   const rows = await db.update(leases).set({ status: "used" })
-    .where(and(eq(leases.id, leaseId), eq(leases.requesterId, requesterId), eq(leases.status, "granted"), gt(leases.expiresAt, new Date())))
+    .where(and(
+      eq(leases.id, leaseId), eq(leases.requesterId, requesterId), eq(leases.status, "granted"), gt(leases.expiresAt, new Date()),
+      ...(bind ? [eq(leases.connectionId, bind.connectionId), sameThread(bind)] : []),
+    ))
     .returning({ id: leases.id });
   return rows.length === 1;
 }
 
-export async function grantedLeases(requesterId: string): Promise<Lease[]> {
-  return db.select().from(leases).where(and(eq(leases.requesterId, requesterId), eq(leases.status, "granted"), gt(leases.expiresAt, new Date())));
+/** Live granted leases of the requester; `scope` limits them to leases requested from that thread. */
+export async function grantedLeases(requesterId: string, scope?: { channelId: string; threadTs?: string | null }): Promise<Lease[]> {
+  return db.select().from(leases).where(and(
+    eq(leases.requesterId, requesterId), eq(leases.status, "granted"), gt(leases.expiresAt, new Date()),
+    ...(scope ? [sameThread({ connectionId: "", toolIsRead: true, ...scope })] : []),
+  ));
 }
 
 export async function expireLeases(now = new Date()): Promise<number> {
@@ -115,7 +132,8 @@ export async function handleLeaseAction(p: BlockActionsPayload): Promise<boolean
     if (turn) {
       await followUp({
         channelId: turn.channelId, threadTs: turn.threadTs, userId: decided.requesterId,
-        text: `[system] <@${decided.ownerUserId}> granted a one-time read-only lease on connection ${decided.connectionId}. Continue the original request using it.`,
+        text: `<@${decided.ownerUserId}> granted a one-time read-only lease on connection ${decided.connectionId}. Continue the original request using it.`,
+        readOnly: true,
       }).catch((e) => log.warn("lease follow-up failed", { error: String(e) }));
     }
   }

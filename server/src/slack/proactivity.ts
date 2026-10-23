@@ -6,8 +6,9 @@ export type ProactivityDefault = "all" | "own";
 export type ChannelProactivity = "default" | "proactive" | "quiet";
 export const HOME_CHANNEL_NAME = "company-brain";
 
+/** Default is "own": only #company-brain speaks unprompted; every other channel is opt-in. */
 export function parseDefault(raw: unknown): ProactivityDefault {
-  return raw === "own" ? "own" : "all";
+  return raw === "all" ? "all" : "own";
 }
 
 /**

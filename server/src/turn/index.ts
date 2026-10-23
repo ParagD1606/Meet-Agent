@@ -1,21 +1,31 @@
+import type { ModelMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
-import { channels, turns } from "../db/schema";
+import { channels, turns, users } from "../db/schema";
+import { acquireTurnSlot, BUSY_MESSAGE, checkRate, CEILING_MESSAGE, dailyCapStatus, getLimits, recordUsage, releaseTurnSlot } from "../limits";
 import { log } from "../log";
-import { captureTurn } from "../memory/writeback";
+import type { AgentContext } from "../memory/core-blocks";
+import { breakdown } from "../memory/budget";
+import { scheduleCapture } from "../memory/writeback";
+import { recordEpisode } from "../memory/episodes";
+import { botUserId, getWorkspace } from "../slack/client";
+import { prepareReply, createReplySink } from "../slack/stream";
 import { buildContext } from "./context";
+import { maybeCompact } from "./compact";
+import { DEPTH_CONFIG, routeDepth, type Depth } from "./depth";
 import { setFollowUp } from "./followup";
 import { runLoop } from "./loop";
+import { buildDynamicContext, buildSystemMessages, type Trigger } from "./prompt";
 import { serialize } from "./queue";
 import { getSlack } from "./slack";
-import { assembleTools } from "./tools";
+import { assembleTools, type ToolContext } from "./tools";
 
 export { handleBlockAction, resumePending, expireStale } from "./approval";
 export { buildTools, type ToolContext } from "./tools";
 
 export type TurnInput = {
-  trigger: "mention" | "dm" | "chime" | "automation" | "research";
+  trigger: Trigger;
   channelId: string;
   threadTs?: string;
   ts: string;
@@ -26,10 +36,16 @@ export type TurnInput = {
   files?: { name: string; mimeType: string; text: string }[];
   readOnly?: boolean;
   orgConnectionsOnly?: boolean;
+  /** Who is acting for memory-write purposes. Default "primary" (a human is waiting for this turn). */
+  agentContext?: AgentContext;
+  /** Slack assistant-pane thread: progress goes through assistant.threads.setStatus. */
+  assistant?: boolean;
 };
 
-const MAX_SLACK_TEXT = 38_000;
 const NO_REPLY = /^\s*NO_REPLY\s*$/;
+const STEP_CAP_HINT = "\n\n_I ran out of working room on this one. Say \"continue\" and I'll pick up from here._";
+const TIMEOUT_MSG = "That took longer than I'm allowed to spend on one request, so I stopped. Try narrowing it down, or say \"continue\" to have me pick it up.";
+const FAIL_MSG = ":warning: Something went wrong while working on that. Please try again.";
 
 /** One turn at a time per (channel, thread): in-process FIFO plus a pg advisory lock for multi-process safety. */
 export function runTurn(input: TurnInput): Promise<void> {
@@ -40,80 +56,150 @@ export function runTurn(input: TurnInput): Promise<void> {
 async function execute(input: TurnInput): Promise<void> {
   const turnId = newId("turn_");
   const readOnly = !!input.readOnly;
-  const orgConnectionsOnly = !!input.orgConnectionsOnly;
+  const agentContext: AgentContext = input.agentContext ?? "primary";
+  const interactive = input.trigger === "mention" || input.trigger === "dm";
   await db.insert(turns).values({ id: turnId, channelId: input.channelId, threadTs: input.threadTs ?? null, userId: input.userId, trigger: input.trigger });
 
   const scope = { channelId: input.channelId, isPrivate: input.isPrivate, isIm: input.isIm, userId: input.userId };
   // where the reply goes: DMs reply inline, channels reply in thread, automations post top-level
   const replyThread = input.trigger === "automation" || input.trigger === "research" ? input.threadTs : input.isIm ? input.threadTs : (input.threadTs ?? input.ts);
-  const interactive = input.trigger === "mention" || input.trigger === "dm";
-  let placeholderTs: string | undefined;
-  let slack: Awaited<ReturnType<typeof getSlack>> | undefined;
+  const finishRow = (set: Partial<typeof turns.$inferInsert>) => db.update(turns).set({ finishedAt: new Date(), ...set }).where(eq(turns.id, turnId));
 
-  const edit = async (text: string) => {
-    if (!slack || !placeholderTs) return;
-    await slack.chat.update({ channel: input.channelId, ts: placeholderTs, text: text.slice(0, MAX_SLACK_TEXT) }).catch((e) => log.warn("chat.update failed", { error: String(e) }));
-  };
-
+  let sink: ReturnType<typeof createReplySink> | undefined;
+  let slot = false;
   try {
-    slack = await getSlack();
-    if (interactive) {
-      const r = await slack.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text: "_Thinking..._" });
-      placeholderTs = r.ts;
-    }
-    const { tools, notes } = await assembleTools({ turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope, readOnly, orgConnectionsOnly });
-    const { system, messages } = await buildContext(input, scope, notes);
-
-    let lastEdit = 0;
-    const throttled = (text: string) => {
-      const now = Date.now();
-      if (now - lastEdit < 1200) return;
-      lastEdit = now;
-      void edit(text);
+    const slack = await getSlack();
+    const ws = await getWorkspace().catch(() => null);
+    const say = async (text: string) => { // a reply before/without a sink
+      for (const c of prepareReply(text)) await slack.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text: c });
     };
+
+    // ---- admission: per-user rate, daily caps, global concurrency (cost controls, A) ----
+    if (input.userId && interactive) {
+      const rate = await checkRate({ userId: input.userId, channelId: input.channelId, kind: "turn" });
+      if (!rate.ok) { await say(rate.message); await finishRow({ status: "done", depth: "denied" }); return; }
+    }
+    if (input.userId) {
+      const cap = await dailyCapStatus(input.userId);
+      if (!cap.ok) { if (interactive) await say(cap.message); await finishRow({ status: "done", depth: "denied" }); return; }
+    }
+    slot = await acquireTurnSlot();
+    if (!slot) { if (interactive) await say(BUSY_MESSAGE); await finishRow({ status: "done", depth: "denied" }); return; }
+
+    // ---- depth router: decide how much work this turn deserves before spending anything ----
+    const { depth, by } = await routeDepth({ trigger: input.trigger, text: input.text, hasFiles: !!input.files?.length, hasHistory: !!input.threadTs, readOnly });
+    const plan = DEPTH_CONFIG[depth];
+    const limits = await getLimits();
+    const maxSteps = depth === "direct" ? 1 : Math.min(60, limits.maxStepsByDepth[depth]);
+    log.info("turn depth", { turnId, depth, by });
+
+    sink = createReplySink({
+      slack, channel: input.channelId, threadTs: replyThread, teamId: ws?.id, userId: input.userId,
+      native: interactive && input.isIm && (depth === "direct" || depth === "memory"),
+      assistant: !!input.assistant && input.isIm,
+      placeholder: interactive && depth !== "direct",
+    });
+    if (interactive) await sink.begin();
+
+    const ctx: ToolContext = {
+      turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope,
+      readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth,
+    };
+    const narrate = interactive ? sink.narrate : undefined;
+    const assembled = plan.tools ? await assembleTools(ctx, { depth, text: input.text, narrate }) : undefined;
+    const tools = assembled?.tools ?? {};
+
+    // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
+    const bc = await buildContext(input, { ...ctx, skipRecall: !plan.recall });
+    const [self, asker, chan] = await Promise.all([
+      botUserId().catch(() => null),
+      input.userId ? db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, input.userId)).then((r) => r[0] ?? { id: input.userId!, name: null }) : Promise.resolve(null),
+      db.select({ name: channels.name }).from(channels).where(eq(channels.id, input.channelId)).then((r) => r[0]),
+    ]);
+    const dynamic = buildDynamicContext({
+      now: new Date(), botUserId: self, asker, channelName: chan?.name, trigger: input.trigger, isIm: input.isIm, isPrivate: input.isPrivate,
+      readOnly, depth, connectionNotes: assembled?.notes ?? [],
+    });
+    const recall = plan.recall ? bc.recallText : "";
+    const files = (input.files ?? []).map((f) => `\n\n[attachment: ${f.name} (${f.mimeType})]\n${f.text.slice(0, 20_000)}`).join("");
+    const speaker = input.userId && interactive ? `<@${input.userId}>: ` : "";
+    const userContent = `${dynamic}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
+    const history: ModelMessage[] = depth === "direct" ? bc.history.slice(-4) : bc.history;
+    const messages: ModelMessage[] = [...history, { role: "user", content: userContent }];
+    const system = buildSystemMessages(bc.frozenPrefixBlocks);
+
     const result = await runLoop({
-      system, messages, tools,
-      onStatus: (name) => { if (!input.isIm) throttled(`_Working: ${name.replace(/_+/g, " ")}..._`); },
-      onText: (t) => { if (input.isIm && interactive && t.trim()) throttled(t); },
+      system, messages, tools, turnId, role: plan.role, depth, maxSteps, maxOutputTokens: plan.maxOutputTokens,
+      activeTools: assembled?.active,
+      onStatus: (name) => { if (interactive) sink!.status(`Working: ${name.replace(/_+/g, " ")}...`); },
+      onText: (t) => { if (interactive && (depth === "direct" || depth === "memory")) sink!.text(t); },
     });
 
-    const reply = result.text;
+    // ---- reply (sanitised, mrkdwn, chunked inside the sink) ----
+    let reply = result.text;
     const silent = !reply || NO_REPLY.test(reply);
-    if (silent && input.trigger === "chime") {
-      // nothing worth saying: leave no trace
-    } else {
-      const text = (silent ? "I wasn't able to produce an answer for that. Try rephrasing?" : reply).slice(0, MAX_SLACK_TEXT);
-      if (placeholderTs) await slack.chat.update({ channel: input.channelId, ts: placeholderTs, text });
-      else await slack.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text });
-    }
+    let out = reply;
+    if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
+    else if (result.stopped === "timeout") out = reply && !silent ? reply : TIMEOUT_MSG;
+    else if (result.stopped === "step_cap" && !silent) out = reply + STEP_CAP_HINT;
+    else if (silent) out = "I wasn't able to produce an answer for that. Try rephrasing?";
+    const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
+    if (!quiet) await sink.finish(out);
+    reply = silent ? "" : reply;
 
-    await db.update(turns).set({
+    await finishRow({
       status: result.waitingApproval ? "waiting_approval" : "done",
       toolCalls: result.toolCalls, inputTokens: result.inputTokens, outputTokens: result.outputTokens,
-      finishedAt: result.waitingApproval ? null : new Date(),
-    }).where(eq(turns.id, turnId));
-    // approval.requestApproval already set waiting_approval; re-asserting above is idempotent unless the approval was resolved mid-turn
+      cacheReadTokens: result.cacheReadTokens, cacheWriteTokens: result.cacheWriteTokens, costMicros: result.costMicros,
+      model: result.model, steps: result.steps, depth,
+      promptBreakdown: breakdown({
+        system: system.map((m) => m.content).join("\n"), coreBlocks: "", toolSchemas: schemaTokens(tools, assembled?.active()),
+        history: history.map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content))).join("\n"), recall, user: userContent,
+      }),
+      ...(result.waitingApproval ? { finishedAt: null } : {}),
+    });
+    if (input.userId) await recordUsage({ userId: input.userId, inputTokens: result.inputTokens, outputTokens: result.outputTokens }).catch((e) => log.warn("recordUsage failed", { error: String(e) }));
 
-    if (!readOnly && !silent) {
-      captureTurn({ scope, transcript: `${input.text}\n\nAssistant: ${reply}` })
-        .catch((e) => log.warn("captureTurn failed", { turnId, error: String(e) }));
+    // ---- learn: only primary turns on shared-safe data; never from personal/leased tool use ----
+    const canLearn = agentContext === "primary" && !readOnly && !silent && !ctx.touchedPrivateData && depth !== "direct";
+    const threadKey = replyThread ?? input.ts;
+    if (canLearn) {
+      const transcript = `${input.text}\n\nAssistant: ${reply}`;
+      void scheduleCapture({ scope, channelId: input.channelId, threadTs: threadKey, transcript, userText: input.text })
+        .then((r) => (!r.deferred && !r.skipped ? recordEpisode({ scope, channelId: input.channelId, threadTs: threadKey, transcript: `${history.map((m) => (typeof m.content === "string" ? m.content : "")).join("\n")}\n${transcript}`.slice(-12_000) }) : undefined))
+        .catch((e) => log.warn("capture failed", { turnId, error: String(e) }));
+    }
+    if (depth !== "direct" && bc.compactHistory.length > 6) {
+      void maybeCompact({ channelId: input.channelId, threadTs: threadKey, messages: [
+        ...bc.compactHistory,
+        { ts: input.ts, role: "user", text: input.text },
+        { ts: (Date.now() / 1000).toFixed(6), role: "assistant", text: reply },
+      ] })
+        .catch((e) => log.warn("compaction failed", { turnId, error: String(e) }));
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     log.error("turn failed", { turnId, error: msg });
-    await edit(":warning: Something went wrong while working on that. Please try again.");
-    if (!placeholderTs && interactive && slack) {
-      await slack.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text: ":warning: Something went wrong while working on that. Please try again." }).catch(() => {});
-    }
-    await db.update(turns).set({ status: "error", error: msg.slice(0, 1000), finishedAt: new Date() }).where(eq(turns.id, turnId));
+    if (interactive) await (sink?.fail(FAIL_MSG) ?? getSlack().then((s) => s.chat.postMessage({ channel: input.channelId, thread_ts: replyThread, text: FAIL_MSG })).catch(() => undefined));
+    await finishRow({ status: "error", error: msg.slice(0, 1000) });
+  } finally {
+    if (slot) releaseTurnSlot();
   }
 }
 
-// Approval/lease resolutions continue the thread through a normal (serialized) turn.
-setFollowUp(async ({ channelId, threadTs, userId, text }) => {
+function schemaTokens(tools: Record<string, unknown>, active?: string[]): number {
+  const names = active ?? Object.keys(tools);
+  return Math.ceil(names.reduce((n, k) => n + k.length + String((tools[k] as { description?: string })?.description ?? "").length + 120, 0) / 4);
+}
+
+// Approval/lease resolutions continue the thread through a normal (serialized) turn. They may report, never act.
+setFollowUp(async ({ channelId, threadTs, userId, text, readOnly }) => {
   const [ch] = await db.select().from(channels).where(eq(channels.id, channelId));
   await runTurn({
     trigger: "mention", channelId, threadTs: threadTs ?? undefined, ts: (Date.now() / 1000).toFixed(6),
-    userId, text, isPrivate: ch?.isPrivate ?? false, isIm: ch?.isIm ?? false,
+    userId, text, isPrivate: ch?.isPrivate ?? true /* unknown => private (fail closed) */, isIm: ch?.isIm ?? false,
+    readOnly: readOnly ?? true,
   });
 });
+
+export type { Depth };

@@ -1,4 +1,4 @@
-import { cp, rm } from "node:fs/promises"
+import { rm } from "node:fs/promises"
 import tailwind from "bun-plugin-tailwind"
 
 const outdir = `${import.meta.dir}/dist`
@@ -17,5 +17,4 @@ if (!result.success) {
   for (const l of result.logs) console.error(l)
   process.exit(1)
 }
-await cp(`${import.meta.dir}/public`, outdir, { recursive: true })
 console.log(`web: ${result.outputs.length} files -> web/dist`)

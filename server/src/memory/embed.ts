@@ -1,4 +1,8 @@
+import { inArray } from "drizzle-orm";
 import { config } from "../config";
+import { sha256 } from "../crypto";
+import { db } from "../db";
+import { embeddingCache } from "../db/schema";
 import { log } from "../log";
 
 export type Embedder = (texts: string[]) => Promise<number[][]>;
@@ -8,15 +12,26 @@ const MAX_CHARS = 8000; // keeps inputs under the 8191-token limit of OpenAI-sty
 const RETRIES = 3;
 
 let override: Embedder | null = null;
-/** Test seam: replace the network embedder. Pass null to restore. */
-export function setEmbedder(fn: Embedder | null): void {
+let overrideCached = false;
+/** Test seam: replace the network embedder. Pass null to restore. The content-hash cache is bypassed for overrides unless `useCache`. */
+export function setEmbedder(fn: Embedder | null, opts?: { useCache?: boolean }): void {
   override = fn;
+  overrideCached = !!opts?.useCache;
 }
 
+/** Cache counters, for tests and the usage page. */
+export const embedStats = { hits: 0, misses: 0, calls: 0 };
+
 function endpoint(): { url: string; key: string } {
+  // EMBEDDING_BASE_URL may not be in the typed config yet; read the environment directly.
+  const explicit = (config as { EMBEDDING_BASE_URL?: string }).EMBEDDING_BASE_URL ?? process.env.EMBEDDING_BASE_URL;
+  if (explicit) {
+    // A dedicated embedding host never receives the chat key.
+    return { url: `${explicit.replace(/\/+$/, "")}/embeddings`, key: config.EMBEDDING_API_KEY ?? "none" };
+  }
   const key = config.EMBEDDING_API_KEY ?? config.MODEL_API_KEY;
   if (!key && !config.MODEL_BASE_URL) {
-    throw new Error("Embeddings are not configured: set EMBEDDING_API_KEY (or MODEL_API_KEY / MODEL_BASE_URL)");
+    throw new Error("Embeddings are not configured: set EMBEDDING_API_KEY (and EMBEDDING_BASE_URL for non-OpenAI hosts)");
   }
   const base = (config.MODEL_BASE_URL ?? "https://api.openai.com/v1").replace(/\/+$/, "");
   return { url: `${base}/embeddings`, key: key ?? "none" };
@@ -48,13 +63,69 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
-/** Embeds texts (batched). Every vector is validated against EMBEDDING_DIM. */
+const cacheKey = (text: string) => sha256(`${config.EMBEDDING_MODEL}:${config.EMBEDDING_DIM}\n${text}`);
+
+async function readCache(hashes: string[]): Promise<Map<string, number[]>> {
+  const out = new Map<string, number[]>();
+  try {
+    const rows = await db.select().from(embeddingCache).where(inArray(embeddingCache.hash, hashes));
+    for (const r of rows) out.set(r.hash, r.embedding);
+  } catch (e) {
+    log.warn("embedding cache read failed", { err: String(e) });
+  }
+  return out;
+}
+
+async function writeCache(entries: { hash: string; embedding: number[] }[]): Promise<void> {
+  if (!entries.length) return;
+  try {
+    await db.insert(embeddingCache).values(entries).onConflictDoNothing();
+  } catch (e) {
+    log.warn("embedding cache write failed", { err: String(e) });
+  }
+}
+
+async function network(texts: string[]): Promise<number[][]> {
+  const run = override ?? embedBatch;
+  const out: number[][] = [];
+  for (let i = 0; i < texts.length; i += BATCH) {
+    embedStats.calls++;
+    out.push(...(await run(texts.slice(i, i + BATCH))));
+  }
+  return out;
+}
+
+/**
+ * Embeds texts. Identical content (same model+dim) is served from `embedding_cache` and duplicates within the
+ * call are embedded once; misses go out batched. Every vector is validated against EMBEDDING_DIM.
+ */
 export async function embed(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
   const clipped = texts.map((t) => (t.trim() ? t.slice(0, MAX_CHARS) : " "));
-  const out: number[][] = [];
-  const run = override ?? embedBatch;
-  for (let i = 0; i < clipped.length; i += BATCH) out.push(...(await run(clipped.slice(i, i + BATCH))));
+  const useCache = override ? overrideCached : true;
+
+  let out: number[][];
+  if (!useCache) {
+    out = await network(clipped);
+  } else {
+    const hashes = clipped.map(cacheKey);
+    const cached = await readCache([...new Set(hashes)]);
+    const missIdx = new Map<string, number>(); // hash -> index into `missing`
+    const missing: string[] = [];
+    clipped.forEach((t, i) => {
+      const h = hashes[i]!;
+      if (!cached.has(h) && !missIdx.has(h)) { missIdx.set(h, missing.length); missing.push(t); }
+    });
+    embedStats.hits += clipped.length - missing.length;
+    embedStats.misses += missing.length;
+    const fresh = missing.length ? await network(missing) : [];
+    if (fresh.length !== missing.length) throw new Error(`embedder returned ${fresh.length} vectors for ${missing.length} texts`);
+    for (const v of fresh) {
+      if (v.length !== config.EMBEDDING_DIM) throw new Error(`embedding has ${v.length} dims but EMBEDDING_DIM=${config.EMBEDDING_DIM}`);
+    }
+    await writeCache([...missIdx.entries()].map(([hash, i]) => ({ hash, embedding: fresh[i]! })));
+    out = clipped.map((_, i) => cached.get(hashes[i]!) ?? fresh[missIdx.get(hashes[i]!)!]!);
+  }
   if (out.length !== texts.length) throw new Error(`embedder returned ${out.length} vectors for ${texts.length} texts`);
   for (const v of out) {
     if (v.length !== config.EMBEDDING_DIM) {

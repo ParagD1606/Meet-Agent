@@ -88,6 +88,6 @@ describe("scope-leak matrix (real Postgres)", () => {
 
   test("empty tag lists yield empty list/graph results", async () => {
     expect(await listMemories({ tags: [], limit: 10, offset: 0 })).toEqual({ items: [], total: 0 });
-    expect(await getGraph({ tags: [], limit: 10 })).toEqual({ nodes: [], edges: [] });
+    expect(await getGraph({ tags: [], limit: 10 })).toEqual({ nodes: [], edges: [], total: 0, truncated: false });
   });
 });

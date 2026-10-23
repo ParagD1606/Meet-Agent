@@ -1,0 +1,72 @@
+# Replace YOUR-DOMAIN with your PUBLIC_URL host. Socket mode (default): no request URLs needed, create an app-level token with connections:write.
+# For HTTP mode use GET /api/setup/manifest on your running server instead (it fills the request URLs).
+# Generated from server/src/slack/manifest.ts; test/mcp/manifest-yaml.test.ts keeps the two in sync.
+# Slack app manifest for Company Brain. Slack -> Create New App -> From a manifest -> paste this.
+display_information:
+  name: "Company Brain"
+  description: "A teammate with shared memory that lives in your Slack."
+  background_color: "#000b36"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: "Company Brain"
+    always_online: true
+oauth_config:
+  redirect_urls:
+    - "https://YOUR-DOMAIN/slack/oauth/callback"
+    - "https://YOUR-DOMAIN/auth/slack/callback"
+  scopes:
+    user:
+      - "openid"
+      - "profile"
+      - "email"
+    bot:
+      - "app_mentions:read"
+      - "assistant:write"
+      - "channels:history"
+      - "channels:join"
+      - "channels:manage"
+      - "channels:read"
+      - "chat:write"
+      - "chat:write.public"
+      - "files:read"
+      - "groups:history"
+      - "groups:read"
+      - "im:history"
+      - "im:read"
+      - "im:write"
+      - "mpim:history"
+      - "mpim:read"
+      - "reactions:read"
+      - "reactions:write"
+      - "users:read"
+      - "users:read.email"
+      - "team:read"
+settings:
+  event_subscriptions:
+    bot_events:
+      - "app_mention"
+      - "app_home_opened"
+      - "message.channels"
+      - "message.groups"
+      - "message.im"
+      - "message.mpim"
+      - "member_joined_channel"
+      - "member_left_channel"
+      - "channel_left"
+      - "group_left"
+      - "channel_rename"
+      - "channel_archive"
+      - "channel_unarchive"
+      - "channel_deleted"
+      - "team_join"
+      - "user_change"
+      - "reaction_added"
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

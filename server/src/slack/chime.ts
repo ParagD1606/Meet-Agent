@@ -2,18 +2,22 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { users } from "../db/schema";
 import { log } from "../log";
+import { checkRate } from "../limits";
 import { addReaction, slackClient } from "./client";
 import { reserveChime } from "./chime-budget";
 import { deps } from "./deps";
 import { channelIsProactive } from "./proactivity";
 import { stripMention, type SlackMessageEvent } from "./routing";
 import { triageDetailed, type TriageInput } from "./triage";
+import { sampleTriage, triagePrefilter } from "./triage-prefilter";
 
-export type ChimeOutcome = "quiet" | "pass" | "ack" | "answered" | "investigated" | "budget";
+export type ChimeOutcome = "quiet" | "pass" | "ack" | "answered" | "investigated" | "budget" | "filtered" | "sampled" | "rate_limited";
 
 type HistMsg = { user?: string; bot_id?: string; text?: string; ts?: string };
 
-async function loadHistory(ev: SlackMessageEvent, context: "thread" | "channel", botId: string): Promise<NonNullable<TriageInput["history"]>> {
+type Loaded = { history: NonNullable<TriageInput["history"]>; lastSpeakerId: string | null; lastWasBot: boolean };
+
+async function loadHistory(ev: SlackMessageEvent, context: "thread" | "channel", botId: string): Promise<Loaded> {
   try {
     const c = await slackClient();
     const msgs: HistMsg[] = context === "thread"
@@ -23,14 +27,16 @@ async function loadHistory(ev: SlackMessageEvent, context: "thread" | "channel",
     const ids = [...new Set(prior.flatMap((m) => (m.user ? [m.user] : [])))];
     const names = new Map<string, string>();
     if (ids.length) for (const r of await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids))) names.set(r.id, r.name ?? r.id);
-    return prior.map((m) => ({
+    const history = prior.map((m) => ({
       user: m.user ? (m.user === botId ? "Company Brain" : names.get(m.user) ?? m.user) : "app",
       text: stripMention(m.text ?? "", botId),
       isBot: Boolean(m.bot_id) || m.user === botId,
     }));
+    const lastRaw = prior[prior.length - 1];
+    return { history, lastSpeakerId: lastRaw?.user ?? null, lastWasBot: Boolean(lastRaw && (lastRaw.bot_id || lastRaw.user === botId)) };
   } catch (err) {
     log.warn("triage history unavailable", { channel: ev.channel, error: (err as Error).message });
-    return [];
+    return { history: [], lastSpeakerId: null, lastWasBot: false };
   }
 }
 
@@ -44,8 +50,15 @@ export async function handleChannelMessage(
   o: { context: "thread" | "channel"; botUserId: string; channelName?: string; isPrivate: boolean },
 ): Promise<ChimeOutcome> {
   if (!(await channelIsProactive(ev.channel))) return "quiet";
+  // free heuristics first: most chatter never reaches a model
+  const pre = triagePrefilter({ text: ev.text ?? "", botUserId: o.botUserId, context: o.context });
+  if (!pre.pass) return "filtered";
   const [speaker] = ev.user ? await db.select({ name: users.name }).from(users).where(eq(users.id, ev.user)) : [];
-  const history = await loadHistory(ev, o.context, o.botUserId);
+  const { history, lastSpeakerId, lastWasBot } = await loadHistory(ev, o.context, o.botUserId);
+  if (!triagePrefilter({ text: ev.text ?? "", botUserId: o.botUserId, context: o.context, lastSpeakerId, speakerId: ev.user, lastWasBot }).pass) return "filtered";
+  if (!sampleTriage(ev.channel, ev.ts).sampled) return "sampled";
+  const rate = await checkRate({ userId: ev.user ?? "unknown", channelId: ev.channel, kind: "triage" });
+  if (!rate.ok) return "rate_limited";
   const t = await triageDetailed({
     text: stripMention(ev.text ?? "", o.botUserId), context: o.context, speaker: speaker?.name ?? ev.user,
     channelName: o.channelName, history,

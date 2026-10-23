@@ -102,7 +102,7 @@ export function parseTriage(raw: string): TriageResult {
 }
 
 const defaultGenerator: TriageGenerator = async ({ system, prompt, signal }) =>
-  (await generateText({ model: getModel("fast"), system, prompt, abortSignal: signal, maxOutputTokens: 200 })).text;
+  (await generateText({ model: getModel("triage"), system, prompt, abortSignal: signal, maxOutputTokens: 60 })).text;
 
 let generator: TriageGenerator = defaultGenerator;
 /** Test hook: swap the LLM call. Call with no argument to restore. */

@@ -41,3 +41,16 @@ export function routeMessage(ev: SlackMessageEvent, botUserId: string, o: { botI
   }
   return { kind: "triage", context: "channel" };
 }
+
+export type Privacy = { isPrivate: boolean; isIm: boolean };
+
+/**
+ * Where is this conversation, privacy-wise? Fails CLOSED: when neither the event nor our records say, it is private,
+ * so nothing said there is ever written to (or recalled from) shared memory. The stricter signal always wins.
+ */
+export function resolvePrivacy(channelType: SlackMessageEvent["channel_type"], known?: Privacy | null): Privacy {
+  if (channelType === "im" || known?.isIm) return { isIm: true, isPrivate: false };
+  const fromEvent = channelType === "group" || channelType === "mpim" ? true : channelType === "channel" ? false : undefined;
+  if (fromEvent === undefined && !known) return { isIm: false, isPrivate: true };
+  return { isIm: false, isPrivate: Boolean(fromEvent) || Boolean(known?.isPrivate) };
+}

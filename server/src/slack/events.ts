@@ -4,19 +4,34 @@ import { channels, turns } from "../db/schema";
 import { log } from "../log";
 import { claimEvent } from "./dedupe";
 import { handleChannelMessage } from "./chime";
-import { botUserId, getWorkspace, slackClient } from "./client";
+import { botUserId, getWorkspace, postMessage, slackClient } from "./client";
 import { deps } from "./deps";
 import { introduceInChannel, onAppHome, onUserJoined } from "./onboarding";
 import { ratingFor, recordFeedback, ack, done } from "./reactions";
 import { readSlackFiles } from "./attachments";
-import { routeMessage, stripMention, type SlackMessageEvent } from "./routing";
+import { resolvePrivacy, routeMessage, stripMention, type SlackMessageEvent } from "./routing";
+import { onAssistantThreadStarted, noteAssistantMessage, isAssistantThread } from "./assistant";
+import { begin, drain, end, gateKey, mergeInbox, offer } from "./active-turn-gate";
+import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
 
-const IM_TYPES = new Set(["im"]);
-const PRIVATE_TYPES = new Set(["group", "mpim"]);
+/** Event channel_type if present, else our channel row, else conversations.info; unknown => private. */
+async function privacyOf(ev: SlackMessageEvent): Promise<{ isPrivate: boolean; isIm: boolean }> {
+  if (ev.channel_type) {
+    const [row] = await db.select().from(channels).where(eq(channels.id, ev.channel));
+    return resolvePrivacy(ev.channel_type, row ? { isPrivate: row.isPrivate, isIm: row.isIm } : null);
+  }
+  const [row] = await db.select().from(channels).where(eq(channels.id, ev.channel));
+  if (row) return resolvePrivacy(undefined, { isPrivate: row.isPrivate, isIm: row.isIm });
+  try {
+    const c = (await (await slackClient()).conversations.info({ channel: ev.channel })).channel;
+    if (c) return resolvePrivacy(undefined, { isPrivate: Boolean(c.is_private || c.is_mpim), isIm: Boolean(c.is_im) });
+  } catch (err) { log.warn("channel privacy unknown; treating as private", { channel: ev.channel, error: (err as Error).message }); }
+  return resolvePrivacy(undefined, null);
+}
 
 async function botInThread(channel: string, threadTs: string): Promise<boolean> {
   const [row] = await db.select({ id: turns.id }).from(turns).where(and(eq(turns.channelId, channel), eq(turns.threadTs, threadTs))).limit(1);
@@ -30,8 +45,7 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   // The same human message can arrive as both `message` and `app_mention`; process it once.
   if (!(await claimEvent(`m:${ev.channel}:${ev.ts}`))) return;
 
-  const isIm = IM_TYPES.has(ev.channel_type ?? "");
-  const isPrivate = PRIVATE_TYPES.has(ev.channel_type ?? "");
+  const { isIm, isPrivate } = await privacyOf(ev);
   // A `message` event is only delivered for channels the bot is in, so it doubles as a membership signal.
   if (ev.type === "message" && !isIm) await upsertChannel({ id: ev.channel, isPrivate, isIm: false, botIsMember: true });
   else await ensureChannel({ id: ev.channel, isIm, isPrivate });
@@ -39,26 +53,43 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   const [ch] = await db.select().from(channels).where(eq(channels.id, ev.channel));
 
   if (route.kind === "triage") {
-    await handleChannelMessage(ev, { context: route.context, botUserId: me, channelName: ch?.name ?? undefined, isPrivate: ch?.isPrivate ?? isPrivate });
+    await handleChannelMessage(ev, { context: route.context, botUserId: me, channelName: ch?.name ?? undefined, isPrivate: Boolean(ch?.isPrivate) || isPrivate });
     return;
   }
-  await runUserTurn(ev, route.trigger, me, ch?.isPrivate ?? isPrivate, ch?.isIm ?? isIm);
+  await runUserTurn(ev, route.trigger, me, Boolean(ch?.isPrivate) || isPrivate, Boolean(ch?.isIm) || isIm);
 }
 
 async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me: string, isPrivate: boolean, isIm: boolean) {
-  await ack(ev.channel, ev.ts);
-  let ok = true;
-  try {
-    const files = await readSlackFiles(ev.files);
-    await deps.runTurn({
-      trigger, channelId: ev.channel, threadTs: isIm ? ev.thread_ts : (ev.thread_ts ?? ev.ts), ts: ev.ts,
-      userId: ev.user ?? null, text: stripMention(ev.text ?? "", me), isPrivate, isIm, ...(files.length ? { files } : {}),
-    });
-  } catch (err) {
-    ok = false;
-    log.error("turn failed", { channel: ev.channel, trigger, error: (err as Error).message });
+  const files = await readSlackFiles(ev.files);
+  const text = stripMention(ev.text ?? "", me);
+  const threadTs = isIm ? ev.thread_ts : (ev.thread_ts ?? ev.ts);
+  const key = gateKey(ev.channel, threadTs ?? "dm");
+  const assistant = isIm && isAssistantThread(ev.channel, threadTs);
+  if (assistant) void noteAssistantMessage(ev.channel, threadTs, text);
+
+  // A turn is already running in this thread: queue this message for one merged follow-up instead of racing it.
+  if (!begin(key)) {
+    const q = offer(key, { userId: ev.user ?? null, ts: ev.ts, text, files });
+    if (q.notice) {
+      await postMessage({ channel: ev.channel, thread_ts: threadTs ?? ev.thread_ts, text: "_Got your message. I'll pick it up as soon as I finish this one._" })
+        .catch((e) => log.warn("queue notice failed", { error: (e as Error).message }));
+    }
+    return;
   }
-  await done(ev.channel, ev.ts, ok);
+  try {
+    await ack(ev.channel, ev.ts);
+    let ok = await runOne({ trigger, channelId: ev.channel, threadTs, ts: ev.ts, userId: ev.user ?? null, text, isPrivate, isIm, assistant, ...(files.length ? { files } : {}) });
+    for (let batch = drain(key); batch.length; batch = drain(key)) {
+      const m = mergeInbox(batch);
+      ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, ...(m.files.length ? { files: m.files } : {}) })) && ok;
+    }
+    await done(ev.channel, ev.ts, ok);
+  } finally { end(key); }
+}
+
+async function runOne(input: Parameters<typeof deps.runTurn>[0]): Promise<boolean> {
+  try { await deps.runTurn(input); return true; }
+  catch (err) { log.error("turn failed", { channel: input.channelId, trigger: input.trigger, error: (err as Error).message }); return false; }
 }
 
 async function handleReaction(ev: Record<string, any>): Promise<void> {
@@ -126,6 +157,13 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
         return;
       case "reaction_added":
         return await handleReaction(ev);
+      case "assistant_thread_started":
+        return await onAssistantThreadStarted(ev);
+      case "app_uninstalled":
+      case "tokens_revoked":
+        // only the bot token matters: we store no user tokens
+        if (ev.type === "tokens_revoked" && !ev.tokens?.bot?.length) return;
+        return await handleWorkspaceGone(ev.type);
       case "app_home_opened":
         if (ev.tab !== "messages" && ev.user) await onAppHome(ev.user);
         return;

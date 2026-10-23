@@ -7,6 +7,7 @@ import { db } from "../db";
 import { users, workspace } from "../db/schema";
 import { log } from "../log";
 import { cookieOpts, csrf, createSession, destroySession } from "./session";
+import { grantSetupProof, hasSetupProof, ownerExists, teamAllowed, verifySetupToken } from "./setup-token";
 
 const STATE_COOKIE = "brain_oauth_state";
 const callbackUrl = () => `${config.PUBLIC_URL.replace(/\/$/, "")}/auth/slack/callback`;
@@ -47,6 +48,12 @@ export function mountAuth(app: Hono<any>): void {
     }
     const state = randomBytes(16).toString("base64url");
     setCookie(c, STATE_COOKIE, state, cookieOpts(600));
+    // first-owner claim: a correct ?setup_token= is remembered (httpOnly) until the callback
+    const setup = c.req.query("setup_token");
+    if (setup) {
+      if (!verifySetupToken(setup)) return refuse("That setup token is not correct. Use the token printed in the server log.", 403);
+      grantSetupProof(c);
+    }
     const url = new URL("https://slack.com/openid/connect/authorize");
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", "openid email profile");
@@ -68,7 +75,7 @@ export function mountAuth(app: Hono<any>): void {
 
     try {
       const tok = (await fetch("https://slack.com/api/openid.connect.token", {
-        method: "POST",
+        method: "POST", signal: AbortSignal.timeout(10_000),
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           client_id: config.SLACK_CLIENT_ID, client_secret: config.SLACK_CLIENT_SECRET, code, redirect_uri: callbackUrl(),
@@ -77,14 +84,19 @@ export function mountAuth(app: Hono<any>): void {
       if (!tok.ok || !tok.access_token) return refuse(`Slack refused the sign-in (${tok.error ?? "unknown error"}).`);
 
       const me = (await fetch("https://slack.com/api/openid.connect.userInfo", {
+        signal: AbortSignal.timeout(10_000),
         headers: { authorization: `Bearer ${tok.access_token}` },
       }).then((r) => r.json())) as Identity;
       const userId = me["https://slack.com/user_id"];
       const teamId = me["https://slack.com/team_id"];
       if (!me.ok || !userId || !teamId) return refuse("Slack didn't share your identity.");
 
+      if (!teamAllowed(teamId)) return refuse("This Company Brain is locked to a different Slack workspace.");
       const [ws] = await db.select({ id: workspace.id }).from(workspace).limit(1);
       if (ws && ws.id !== teamId) return refuse("This Company Brain belongs to another Slack workspace.");
+      if (!(await ownerExists()) && !hasSetupProof(c)) {
+        return refuse("This server has no owner yet. Open /auth/slack?setup_token=<token> using the setup token printed in the server log to claim it.");
+      }
 
       const [existing] = await db.select({ deactivated: users.deactivated }).from(users).where(eq(users.id, userId));
       if (existing?.deactivated) return refuse("Your account is deactivated.");
@@ -93,6 +105,7 @@ export function mountAuth(app: Hono<any>): void {
         id: userId, name: me.name ?? null, email: me.email?.toLowerCase() ?? null, avatarUrl: me.picture ?? null,
       });
       await createSession(c, user.id);
+      deleteCookie(c, "brain_setup", { path: "/" });
       return c.redirect(ws ? "/" : "/setup");
     } catch (e) {
       log.error("slack sign-in failed", { err: String(e) });

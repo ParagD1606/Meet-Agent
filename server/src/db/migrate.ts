@@ -1,7 +1,7 @@
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { config } from "../config";
 import { log } from "../log";
-import { db, pool } from "./index";
+import { db, lockPool, pool } from "./index";
 
 /** The embedding column's dimension is baked into the generated SQL; make it follow EMBEDDING_DIM. */
 async function reconcileEmbeddingDim() {
@@ -23,13 +23,24 @@ async function reconcileEmbeddingDim() {
   await pool.query("create index memories_emb_idx on memories using hnsw (embedding vector_cosine_ops)");
 }
 
+const MIGRATION_LOCK = 7_300_001;
+
+/** Serialised across processes with a session advisory lock so two booting replicas never race the DDL. */
 export async function runMigrations() {
-  await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
-  await migrate(db, { migrationsFolder: new URL("../../drizzle", import.meta.url).pathname });
-  await reconcileEmbeddingDim();
+  const client = await lockPool.connect();
+  try {
+    await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
+    await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
+    await migrate(db, { migrationsFolder: new URL("../../drizzle", import.meta.url).pathname });
+    await reconcileEmbeddingDim();
+  } finally {
+    const unlocked = await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK]).then(() => true, () => false);
+    client.release(!unlocked);
+  }
 }
 
 if (import.meta.main) {
   await runMigrations();
   await pool.end();
+  await lockPool.end();
 }

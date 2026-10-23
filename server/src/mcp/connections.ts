@@ -4,10 +4,13 @@ import { id as newId } from "../crypto";
 import { db } from "../db";
 import { mcpConnections, users } from "../db/schema";
 import { log } from "../log";
-import { assertPublicUrl } from "../tools/web/ssrf";
+import { assertPublicUrl, guardedFetch } from "../tools/web/ssrf";
 import { getPreset } from "./catalog";
 import { clearToolCache, type ConnectionRow } from "./client";
-import { DbOAuthProvider, readAuth, writeAuth } from "./oauth";
+import { type AuthState, AuthDecryptError, DbOAuthProvider, readAuth, writeAuth } from "./oauth";
+
+/** Reconnecting is how an unreadable blob gets repaired, so startConnect treats it as empty. */
+const readAuthOrEmpty = (id: string): Promise<AuthState> => readAuth(id).catch((e) => (e instanceof AuthDecryptError ? ({} as AuthState) : Promise.reject(e)));
 
 export type Role = "owner" | "admin" | "member";
 export type PublicConnection = Omit<ConnectionRow, "authEnc">;
@@ -63,13 +66,13 @@ export async function createConnection(a: {
 export async function startConnect(connectionId: string): Promise<{ authUrl: string }> {
   const conn = await getConnection(connectionId);
   if (!conn) throw new Error("connection not found");
-  if ((await readAuth(connectionId)).bearer) throw new Error("this connection uses a static token; nothing to authorize");
+  if ((await readAuthOrEmpty(connectionId)).bearer) throw new Error("this connection uses a static token; nothing to authorize");
   if (!getPreset(conn.provider)) await assertPublicUrl(conn.url);
   // fresh handshake: drop old tokens but keep the registered client
-  const prev = await readAuth(connectionId);
+  const prev = await readAuthOrEmpty(connectionId);
   await writeAuth(connectionId, { clientInfo: prev.clientInfo }, true);
   const provider = new DbOAuthProvider(connectionId, true);
-  const result = await auth(provider, { serverUrl: conn.url });
+  const result = await auth(provider, { serverUrl: conn.url, fetchFn: guardedFetch });
   if (result !== "REDIRECT" || !provider.authUrl) throw new Error("server did not request authorization");
   await db.update(mcpConnections).set({ status: "pending" }).where(eq(mcpConnections.id, connectionId));
   return { authUrl: provider.authUrl.toString() };
@@ -79,9 +82,9 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
   const connectionId = state.split(".")[0] ?? "";
   const conn = await getConnection(connectionId);
   const a = conn ? await readAuth(connectionId) : undefined;
-  if (!conn || !a?.state || a.state !== state) throw new Error("invalid or expired OAuth state");
+  if (!conn || !a?.state || a.state !== state || !a.stateExpiresAt || a.stateExpiresAt < Date.now()) throw new Error("invalid or expired OAuth state");
   try {
-    const result = await auth(new DbOAuthProvider(connectionId, true), { serverUrl: conn.url, authorizationCode: code });
+    const result = await auth(new DbOAuthProvider(connectionId, true), { serverUrl: conn.url, authorizationCode: code, fetchFn: guardedFetch });
     if (result !== "AUTHORIZED") throw new Error("authorization was not completed");
   } catch (e) {
     await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, connectionId));

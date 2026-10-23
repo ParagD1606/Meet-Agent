@@ -11,19 +11,19 @@ const button = (text: string, actionId: string, extra: Record<string, unknown> =
 
 export function welcomeCard(name?: string | null): Card {
   const hi = name ? `Hi ${escapeSlackText(name.split(" ")[0]!)}!` : "Hi!";
-  const text = `${hi} I'm Company Brain: a teammate that remembers what your team decides and can act on your tools. DM me or @mention me in any channel I'm in.`;
+  const text = `${hi} I'm Company Brain: a teammate that remembers what you tell me and can use the tools you connect. DM me or @mention me in any channel I've been added to.`;
   return {
     text,
     blocks: [
-      section(`*${hi}* I'm Company Brain, a teammate that remembers what your team decides and can act on your tools.`),
-      section("• Ask me anything: _\"what did we decide about pricing?\"_\n• I quietly note decisions and owners from channels I'm in\n• Say _\"remind me…\"_ or _\"every Monday, send a digest of…\"_"),
+      section(`*${hi}* I'm Company Brain, a teammate that remembers what you tell me and can use the tools you connect.`),
+      section("• Ask me anything: _\"what did we decide about pricing?\"_ (I only know what I've been told or connected to)\n• I save decisions and owners from conversations I'm part of; an admin can opt channels in to learn from more\n• Say _\"remind me…\"_ or _\"every Monday, send a digest of…\"_"),
       { type: "actions", elements: [button("Connect your tools", "brain_open_dashboard", { url: link("/configure/integrations") })] },
     ],
   };
 }
 
 export function channelIntroCard(): Card {
-  const text = "Hi, I'm Company Brain. I keep up with this channel and remember decisions, owners and deadlines. @mention me to ask anything; I'll only chime in unprompted when I can genuinely help.";
+  const text = "Hi, I'm Company Brain. @mention me to ask anything or to save a decision, owner or deadline. I stay quiet here unless an admin has turned on proactive replies, and I only learn from this channel's history if an admin opts it in.";
   return { text, blocks: [section(text)] };
 }
 
@@ -41,7 +41,7 @@ export function teamInviteCard(): Card {
 
 const NUDGES: Record<JourneyRung, { text: string; cta: string; path: string }> = {
   connect_tool: { text: "Connect a tool (GitHub, Linear, Notion, Google...) and I can answer from, and act in, the systems you already use.", cta: "Connect a tool", path: "/configure/integrations" },
-  first_ask: { text: "Try asking me something: DM me _\"what do we know about <topic>?\"_ and I'll search everything the team has told me.", cta: "Open the dashboard", path: "/" },
+  first_ask: { text: "Try asking me something: DM me _\"what do we know about <topic>?\"_ and I'll search what the team has told me and the tools you've connected.", cta: "Open the dashboard", path: "/" },
   automation: { text: "Want a standing digest or reminder? Tell me _\"every Monday 9am, summarize what moved last week in #product\"_ and I'll schedule it.", cta: "See automations", path: "/configure/automations" },
 };
 

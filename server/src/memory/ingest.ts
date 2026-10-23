@@ -87,11 +87,21 @@ export async function ingestDocument(a: {
 }): Promise<number> {
   const text = await extractDocumentText(a.name, a.mimeType, a.data);
   const pieces = text ? chunkText(text).map((c) => `From ${a.name}:\n${c}`) : [];
-  const vectors = pieces.length ? await embed(pieces) : [];
+  // Unchanged chunks of a re-synced document reuse their stored vector (no embed call at all).
+  const prior = new Map<string, number[]>();
+  if (a.sourceRef && pieces.length) {
+    const rows = await db.select({ text: memories.text, embedding: memories.embedding }).from(memories)
+      .where(and(eq(memories.scopeTag, a.tag), eq(memories.source, a.source), eq(memories.sourceRef, a.sourceRef), eq(memories.kind, "chunk")));
+    for (const r of rows) prior.set(r.text, r.embedding);
+  }
+  const todo = [...new Set(pieces.filter((p) => !prior.has(p)))];
+  const fresh = todo.length ? await embed(todo) : [];
+  todo.forEach((p, i) => prior.set(p, fresh[i]!));
+  const vectors = pieces.map((p) => prior.get(p)!);
   return db.transaction(async (tx) => {
     if (a.sourceRef) {
       const old = await tx.select({ id: memories.id }).from(memories)
-        .where(and(eq(memories.source, a.source), eq(memories.sourceRef, a.sourceRef), eq(memories.kind, "chunk")));
+        .where(and(eq(memories.scopeTag, a.tag), eq(memories.source, a.source), eq(memories.sourceRef, a.sourceRef), eq(memories.kind, "chunk")));
       const ids = old.map((o) => o.id);
       if (ids.length) {
         await tx.delete(memoryEdges).where(or(inArray(memoryEdges.fromId, ids), inArray(memoryEdges.toId, ids)));

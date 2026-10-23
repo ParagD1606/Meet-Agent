@@ -1,5 +1,6 @@
 import { dynamicTool, jsonSchema, type ToolSet } from "ai";
-import { and, eq, or } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
+import { sha256 } from "../crypto";
 import { db } from "../db";
 import { mcpConnections } from "../db/schema";
 import { log } from "../log";
@@ -7,7 +8,12 @@ import { requestApproval } from "../turn/approval";
 import { consumeLease, grantedLeases } from "../turn/lease";
 import { getPreset } from "./catalog";
 import { callConnectionTool, listConnectionTools, type ConnectionRow, type McpToolInfo } from "./client";
+import { isTransientError, toolError } from "./errors";
+import { capResult, minifyResult } from "./minify";
+import { runForConnection } from "./operation-queue";
 import { classifyTool } from "./policy";
+import { withResetRetry } from "./reset-retry";
+import { lazyToolSet, shortDesc, type LazyEntry } from "./tool-search";
 
 export type McpToolCtx = {
   turnId: string;
@@ -16,83 +22,134 @@ export type McpToolCtx = {
   threadTs?: string;
   readOnly: boolean;
   orgConnectionsOnly: boolean;
+  /** Apps with more tools than this are reached through search_tools/call_tool. Default 12. */
+  lazyThreshold?: number;
 };
 
-const safeName = (provider: string, tool: string) => `${provider}__${tool}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
-const schemaOf = (t: McpToolInfo) => jsonSchema((t.inputSchema?.type ? t.inputSchema : { type: "object", properties: {} }) as any);
+export const LAZY_TOOL_THRESHOLD = 12;
+const MAX_NAME = 64;
+
+/** Preset key, or a readable host-based prefix for custom servers (all of which have provider "custom"). */
+function appPrefix(c: ConnectionRow): string {
+  if (c.provider !== "custom") return c.provider;
+  try { return new URL(c.url).hostname.replace(/^(www|mcp|api)\./, "").replace(/[^a-zA-Z0-9]+/g, "_").slice(0, 24); } catch { return "custom"; }
+}
+/** Same app = same preset, or same custom URL. Own/org preference is decided within a group. */
+const groupKey = (c: ConnectionRow) => (c.provider === "custom" ? `url:${c.url.replace(/\/+$/, "").toLowerCase()}` : c.provider);
+
+/** `<app>__<tool>`; on overflow or collision, truncated + a short hash of (connection id, tool) so keys stay unique. */
+export function toolKey(c: Pick<ConnectionRow, "id" | "provider" | "url">, tool: string, used: Set<string>): string {
+  const base = `${appPrefix(c as ConnectionRow)}__${tool}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+  let key = base;
+  if (key.length > MAX_NAME || used.has(key)) key = `${base.slice(0, MAX_NAME - 7)}_${sha256(`${c.id}\0${tool}`).slice(0, 6)}`;
+  used.add(key);
+  return key;
+}
+
+const DROP_SCHEMA_KEYS = new Set(["$schema", "title", "examples", "$id"]);
+/** Smaller schema, same meaning: drops decoration and caps property descriptions. */
+export function minSchema(s: unknown): unknown {
+  if (Array.isArray(s)) return s.map(minSchema);
+  if (!s || typeof s !== "object") return s;
+  const o: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(s)) {
+    if (DROP_SCHEMA_KEYS.has(k) || (k === "additionalProperties" && v === false)) continue;
+    o[k] = k === "description" && typeof v === "string" ? shortDesc(v, 100) : minSchema(v);
+  }
+  return o;
+}
+const schemaOf = (t: McpToolInfo) => jsonSchema(minSchema(t.inputSchema?.type ? t.inputSchema : { type: "object", properties: {} }) as any);
+
+type Slot = { own?: ConnectionRow; org?: ConnectionRow; leased?: { conn: ConnectionRow; leaseId: string } };
 
 /**
  * Builds the model-facing MCP tools for one turn.
  *  - reads: user's own connection first, else the org's, else a one-use lease on a teammate's
  *  - writes: ONLY the asker's own connection, never on readOnly / orgConnectionsOnly turns, and always behind an approval card
+ *  - apps with > lazyThreshold tools are not listed; `search_tools` + `call_tool` reach them (catalog cached with the client's TTL cache)
  * Write tools are not constructed at all when the turn is read-only.
  */
 export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; notes: string[] }> {
   const tools: ToolSet = {};
   const notes: string[] = [];
   const uid = ctx.orgConnectionsOnly ? null : ctx.userId;
+  const threshold = ctx.lazyThreshold ?? LAZY_TOOL_THRESHOLD;
 
   const rows = await db.select().from(mcpConnections).where(and(
     eq(mcpConnections.status, "connected"),
     uid ? or(eq(mcpConnections.scope, "org"), and(eq(mcpConnections.scope, "user"), eq(mcpConnections.ownerUserId, uid))) : eq(mcpConnections.scope, "org"),
-  ));
-  const byProvider = new Map<string, { own?: ConnectionRow; org?: ConnectionRow; leased?: { conn: ConnectionRow; leaseId: string } }>();
+  )).orderBy(asc(mcpConnections.id));
+  const groups = new Map<string, Slot>();
   for (const c of rows) {
-    const slot = byProvider.get(c.provider) ?? {};
+    const slot = groups.get(groupKey(c)) ?? {};
     if (c.scope === "user") slot.own = c; else slot.org = c;
-    byProvider.set(c.provider, slot);
+    groups.set(groupKey(c), slot);
   }
 
   if (ctx.userId && !ctx.orgConnectionsOnly && !ctx.readOnly) {
     for (const lease of await grantedLeases(ctx.userId)) {
       const [conn] = await db.select().from(mcpConnections).where(eq(mcpConnections.id, lease.connectionId));
       if (!conn || conn.status !== "connected" || conn.scope !== "user" || conn.ownerUserId !== lease.ownerUserId) continue;
-      const slot = byProvider.get(conn.provider) ?? {};
-      if (!slot.own && !slot.org) { slot.leased = { conn, leaseId: lease.id }; byProvider.set(conn.provider, slot); }
+      const slot = groups.get(groupKey(conn)) ?? {};
+      if (!slot.own && !slot.org) { slot.leased = { conn, leaseId: lease.id }; groups.set(groupKey(conn), slot); }
     }
   }
 
-  for (const [provider, slot] of byProvider) {
-    const trust = getPreset(provider)?.trusted === true;
+  const used = new Set<string>();
+  const lazy: LazyEntry[] = [];
+  const lazyApps: string[] = [];
+
+  for (const slot of groups.values()) {
     const readConn = slot.own ?? slot.org ?? slot.leased?.conn;
-    const writeConn = ctx.readOnly || ctx.orgConnectionsOnly ? undefined : slot.own;
     if (!readConn) continue;
+    const trust = getPreset(readConn.provider)?.trusted === true;
+    const writeConn = ctx.readOnly || ctx.orgConnectionsOnly ? undefined : slot.own;
+    const leased = slot.leased && readConn === slot.leased.conn ? slot.leased : undefined;
     let listed: McpToolInfo[];
     try { listed = await listConnectionTools(readConn); }
     catch (e) { notes.push(`${readConn.label}: unavailable (${e instanceof Error && e.name === "McpReauthRequired" ? "needs reconnect" : "error"})`); log.warn("mcp list failed", { connection: readConn.id, error: String(e) }); continue; }
 
+    const isLazy = listed.length > threshold;
+    let exposed = 0;
     for (const t of listed) {
       const kind = classifyTool(t.name, t.description, t.annotations, { trustAnnotations: trust });
-      const name = safeName(provider, t.name);
-      const base = `[${readConn.label}] ${t.description ?? t.name}`;
-      if (kind === "read") {
-        const leased = slot.leased && readConn === slot.leased.conn ? slot.leased : undefined;
-        tools[name] = dynamicTool({
-          description: leased ? `${base} (one-time lease from a teammate: usable for a single call)` : base,
-          inputSchema: schemaOf(t),
-          execute: async (input) => {
+      if (kind === "write" && !(writeConn && ctx.userId)) continue;
+      const name = toolKey(readConn, t.name, used);
+      const run = kind === "read"
+        ? async (input: Record<string, unknown>, fields?: string[]) => {
             if (leased && !(await consumeLease(leased.leaseId, ctx.userId!))) return "ERROR: the teammate's one-time access has already been used or has expired. Ask them again with request_teammate_access.";
-            try { return await callConnectionTool(readConn, t.name, (input ?? {}) as Record<string, unknown>); }
-            catch (e) { return `ERROR: ${e instanceof Error ? e.message : String(e)}`; }
-          },
-        });
-      } else if (writeConn && ctx.userId) {
-        // the write connection may differ from the read one only if own != read (never: own always wins), but keep it explicit
-        tools[name] = dynamicTool({
-          description: `${base} (WRITE: posts an approval card; the action runs only if the requester approves)`,
-          inputSchema: schemaOf(t),
-          execute: async (input) => {
+            return runRead(readConn, t.name, name, input, ctx, fields);
+          }
+        : async (input: Record<string, unknown>) => {
             try {
               const { approvalId } = await requestApproval({
                 turnId: ctx.turnId, requesterId: ctx.userId!, channelId: ctx.channelId, threadTs: ctx.threadTs,
-                connectionId: writeConn.id, toolName: name, mcpTool: t.name, input: (input ?? {}) as Record<string, unknown>,
+                connectionId: writeConn!.id, toolName: name, mcpTool: t.name, input,
               });
               return { status: "awaiting_approval", approvalId, instruction: "An approval card was posted. Tell the user briefly that you're waiting for their approval, then stop. Do not retry." };
             } catch (e) { return `ERROR: ${e instanceof Error ? e.message : String(e)}`; }
-          },
-        });
-      }
+          };
+      exposed++;
+      if (isLazy) { lazy.push({ name, info: t, kind, run }); continue; }
+      const desc = shortDesc(t.description ?? t.name) + (kind === "write" ? " [WRITE: needs user approval]" : leased ? " [one-time lease]" : "");
+      tools[name] = dynamicTool({ description: desc, inputSchema: schemaOf(t), execute: async (input) => run((input ?? {}) as Record<string, unknown>) });
     }
+    if (isLazy && exposed) lazyApps.push(`${appPrefix(readConn)}:${exposed}`);
   }
+
+  Object.assign(tools, lazyToolSet(lazy, lazyApps));
   return { tools, notes };
+}
+
+/** One read: serialized per connection, retried once on a transport reset, errors structured, output minified + capped. */
+async function runRead(conn: ConnectionRow, mcpTool: string, name: string, input: Record<string, unknown>, ctx: McpToolCtx, fields?: string[]): Promise<unknown> {
+  let raw: string;
+  try {
+    raw = await runForConnection(conn.id, () =>
+      withResetRetry(() => callConnectionTool(conn, mcpTool, input), isTransientError, () => log.warn("mcp transient error, retrying once", { connection: conn.id, tool: mcpTool })));
+  } catch (e) {
+    return toolError(name, e);
+  }
+  if (raw.startsWith("ERROR: ")) return toolError(name, raw);
+  return capResult(minifyResult(raw, { fields }), { turnId: ctx.turnId, toolName: name });
 }
