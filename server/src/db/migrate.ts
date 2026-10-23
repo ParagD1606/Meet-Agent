@@ -5,6 +5,7 @@ import { db, lockPool, pool } from "./index";
 
 /** The embedding column's dimension is baked into the generated SQL; make it follow EMBEDDING_DIM. */
 async function reconcileEmbeddingDim() {
+  await reconcileCacheDim();
   const { rows } = await pool.query(
     `select atttypmod as dim from pg_attribute where attrelid = 'memories'::regclass and attname = 'embedding'`,
   );
@@ -21,6 +22,18 @@ async function reconcileEmbeddingDim() {
   await pool.query("drop index if exists memories_emb_idx");
   await pool.query(`alter table memories alter column embedding type vector(${config.EMBEDDING_DIM})`);
   await pool.query("create index memories_emb_idx on memories using hnsw (embedding vector_cosine_ops)");
+}
+
+/** The embedding cache is disposable, so a dimension change just empties and resizes it. */
+async function reconcileCacheDim() {
+  const { rows } = await pool.query(
+    `select atttypmod as dim from pg_attribute where attrelid = 'embedding_cache'::regclass and attname = 'embedding'`,
+  );
+  const current = rows[0]?.dim as number | undefined;
+  if (!current || current === config.EMBEDDING_DIM) return;
+  log.warn("resizing embedding_cache.embedding", { from: current, to: config.EMBEDDING_DIM });
+  await pool.query("truncate embedding_cache");
+  await pool.query(`alter table embedding_cache alter column embedding type vector(${config.EMBEDDING_DIM})`);
 }
 
 const MIGRATION_LOCK = 7_300_001;

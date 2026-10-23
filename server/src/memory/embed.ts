@@ -10,6 +10,8 @@ export type Embedder = (texts: string[]) => Promise<number[][]>;
 const BATCH = 96;
 const MAX_CHARS = 8000; // keeps inputs under the 8191-token limit of OpenAI-style embedding models
 const RETRIES = 3;
+/** Models whose API accepts `dimensions` (Matryoshka); others return their native size and must match EMBEDDING_DIM. */
+const SUPPORTS_DIMENSIONS = /^(text-embedding-3|gemini-embedding)/;
 
 let override: Embedder | null = null;
 let overrideCached = false;
@@ -45,7 +47,7 @@ async function embedBatch(texts: string[]): Promise<number[][]> {
       const res = await fetch(url, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model: config.EMBEDDING_MODEL, input: texts }),
+        body: JSON.stringify({ model: config.EMBEDDING_MODEL, input: texts, ...(SUPPORTS_DIMENSIONS.test(config.EMBEDDING_MODEL) ? { dimensions: config.EMBEDDING_DIM } : {}) }),
         signal: AbortSignal.timeout(30_000),
       });
       if (res.status === 429 || res.status >= 500) throw new Error(`embeddings HTTP ${res.status}`);
