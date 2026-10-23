@@ -9,7 +9,8 @@ export type Preset = {
 };
 
 export const PRESETS: Preset[] = [
-  { key: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", authType: "oauth", trusted: true },
+  // GitHub's MCP server has no dynamic client registration, so OAuth cannot work: connect with a personal access token.
+  { key: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", authType: "bearer", trusted: true },
   { key: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", authType: "oauth", trusted: true },
   { key: "notion", label: "Notion", url: "https://mcp.notion.com/mcp", authType: "oauth", trusted: true },
   { key: "sentry", label: "Sentry", url: "https://mcp.sentry.dev/mcp", authType: "oauth", trusted: true },

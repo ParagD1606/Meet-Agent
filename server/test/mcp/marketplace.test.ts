@@ -26,9 +26,9 @@ describe("marketplace REST", () => {
   test("search + connected flags; members only", async () => {
     expect((await call("GET", "/api/marketplace")).status).toBe(401);
     const cookie = await login("UM");
-    await db.insert(mcpConnections).values({ id: "c1", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "user", ownerUserId: "UM", status: "connected" });
-    const r = await (await call("GET", "/api/marketplace?q=github", { cookie })).json() as any;
-    expect(r.items[0]).toMatchObject({ key: "github", connected: true, connectMode: "oauth" });
+    await db.insert(mcpConnections).values({ id: "c1", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "UM", status: "connected" });
+    const r = await (await call("GET", "/api/marketplace?q=linear", { cookie })).json() as any;
+    expect(r.items[0]).toMatchObject({ key: "linear", connected: true, connectMode: "oauth" });
     expect(r.total).toBeGreaterThan(0);
     const all = await (await call("GET", "/api/marketplace?limit=5", { cookie })).json() as any;
     expect(all.items).toHaveLength(5);
@@ -78,17 +78,17 @@ describe("connect_app", () => {
 
   test("posts a PRIVATE (ephemeral) button to the landing URL of a fresh personal pending connection; reuses it next time", async () => {
     const tools = directoryTools(tctx);
-    const r = await exec(tools, "connect_app", { key: "github" });
+    const r = await exec(tools, "connect_app", { key: "linear" });
     expect(r.status).toBe("button_posted");
     const eph = slack.of("postEphemeral");
     expect(eph).toHaveLength(1);
     expect(slack.of("postMessage")).toHaveLength(0);
     expect(eph[0]!.args).toMatchObject({ channel: "C1", user: "UASK", thread_ts: "1.1" });
     const [conn] = await db.select().from(mcpConnections);
-    expect(conn).toMatchObject({ scope: "user", ownerUserId: "UASK", status: "pending", provider: "github" });
+    expect(conn).toMatchObject({ scope: "user", ownerUserId: "UASK", status: "pending", provider: "linear" });
     const button = eph[0]!.args.blocks[1].elements[0];
     expect(button.url).toBe(`http://localhost:3000/mcp-connect/${conn!.id}`);
-    await exec(tools, "connect_app", { key: "github" });
+    await exec(tools, "connect_app", { key: "linear" });
     expect(await db.select().from(mcpConnections)).toHaveLength(1);
   });
 
@@ -108,7 +108,7 @@ describe("connect_app", () => {
   test("when the private button cannot be posted the model is told to use Integrations, not to paste a link", async () => {
     const { setSlackClient } = await import("../../src/turn/slack");
     setSlackClient(async () => ({ chat: { postEphemeral: async () => { throw new Error("channel_not_found"); } } }) as any);
-    const r = await exec(directoryTools(tctx), "connect_app", { key: "github" });
+    const r = await exec(directoryTools(tctx), "connect_app", { key: "linear" });
     expect(r.status).toBe("error");
     expect(r.setupUrl).toContain("/configure/integrations");
     expect(JSON.stringify(r)).not.toContain("mcp-connect");
@@ -120,7 +120,7 @@ describe("GET /mcp-connect/:id", () => {
   test("401 signed out; neutral 404 for someone else's or unknown id; connected owner sees a done page", async () => {
     const owner = await login("UASK");
     const other = await login("UOTH");
-    await db.insert(mcpConnections).values({ id: "p1", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "user", ownerUserId: "UASK", status: "pending" });
+    await db.insert(mcpConnections).values({ id: "p1", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "UASK", status: "pending" });
     expect((await get("p1")).status).toBe(401);
     expect((await get("p1", other)).status).toBe(404);
     expect((await get("missing", owner)).status).toBe(404);
@@ -132,7 +132,7 @@ describe("GET /mcp-connect/:id", () => {
 
   test("an org connection id is never forwarded", async () => {
     const owner = await login("UASK");
-    await db.insert(mcpConnections).values({ id: "o1", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "org", status: "pending" });
+    await db.insert(mcpConnections).values({ id: "o1", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "org", status: "pending" });
     expect((await get("o1", owner)).status).toBe(404);
   });
 });
