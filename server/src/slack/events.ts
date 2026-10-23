@@ -68,6 +68,19 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   await runUserTurn(ev, route.trigger, me, Boolean(ch?.isPrivate) || isPrivate, Boolean(ch?.isIm) || isIm);
 }
 
+/** Huddle notes can be announced as a regular channel message containing a canvas file. */
+async function ingestHuddleAttachments(ev: SlackMessageEvent): Promise<void> {
+  for (const file of ev.files ?? []) {
+    if (!file.id) continue;
+    try {
+      const imported = await ingestHuddleFile(file.id, ev.channel);
+      if (imported) log.info("huddle imported from message attachment", { fileId: file.id, channelId: ev.channel });
+    } catch (err) {
+      log.warn("huddle attachment import failed", { fileId: file.id, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+}
+
 async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me: string, isPrivate: boolean, isIm: boolean) {
   const files = await readSlackFiles(ev.files);
   const text = stripMention(ev.text ?? "", me);
@@ -143,6 +156,7 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
       case "message":
       case "app_mention":
         log.info("slack message event received", { type: ev.type, workspaceMatched: true });
+        await ingestHuddleAttachments(ev as SlackMessageEvent);
         return await handleMessage(ev as SlackMessageEvent);
       case "team_join":
         if (ev.user?.id) { await upsertSlackUser(ev.user); await onUserJoined(ev.user.id); }
@@ -171,7 +185,15 @@ export async function handleEventCallback(body: EventCallback): Promise<void> {
       case "file_shared":
       case "file_change":
         // Only saved Huddle transcripts are ingested; every other Slack file is ignored.
-        if (ev.file_id || ev.file?.id) await ingestHuddleFile(String(ev.file_id ?? ev.file.id), typeof ev.channel_id === "string" ? ev.channel_id : undefined);
+        if (ev.file_id || ev.file?.id) {
+          const fileId = String(ev.file_id ?? ev.file.id);
+          try {
+            const imported = await ingestHuddleFile(fileId, typeof ev.channel_id === "string" ? ev.channel_id : undefined);
+            log.info("slack file event processed", { type: ev.type, fileId, imported });
+          } catch (err) {
+            log.warn("slack huddle file import failed", { type: ev.type, fileId, error: err instanceof Error ? err.message : String(err) });
+          }
+        }
         return;
       case "assistant_thread_started":
         return await onAssistantThreadStarted(ev);

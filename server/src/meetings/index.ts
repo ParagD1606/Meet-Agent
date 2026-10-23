@@ -20,6 +20,8 @@ export type MeetingTask = {
 type Actor = { userId: string; role: "owner" | "admin" | "member" };
 type HuddleFile = Record<string, any>;
 
+type HuddleSyncResult = { found: number; imported: number; failed: number };
+
 const taskSchema = z.object({
   title: z.string().trim().min(1).max(240),
   description: z.string().trim().max(4000).default(""),
@@ -134,4 +136,30 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
   }
   return true;
+}
+
+/**
+ * Finds Huddle canvases/transcripts the installed bot can currently see and imports them.
+ * This is deliberately callable on demand: Slack does not replay file events that happened
+ * before an app subscribed, and a Huddle transcript can finish processing after its first event.
+ */
+export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> {
+  const client = await slackClient();
+  const response = await client.files.list({ count: Math.min(Math.max(limit, 1), 100) });
+  const files = (response.files ?? []) as HuddleFile[];
+  const candidates = files.filter((file) => Boolean(file.is_huddle_canvas || file.huddle_transcription || file.huddle_transcript_file_id));
+  let imported = 0;
+  let failed = 0;
+  for (const file of candidates) {
+    if (typeof file.id !== "string") continue;
+    try {
+      const channelId = Array.isArray(file.channels) && typeof file.channels[0] === "string" ? file.channels[0] : undefined;
+      if (await ingestHuddleFile(file.id, channelId)) imported += 1;
+    } catch (err) {
+      failed += 1;
+      log.warn("meeting sync item failed", { fileId: file.id, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  log.info("meeting sync completed", { found: candidates.length, imported, failed });
+  return { found: candidates.length, imported, failed };
 }
