@@ -69,42 +69,64 @@ export function HeroWindow() {
   )
 }
 
-/** Four meeting apps feed one set of notes: tiles bob, lines draw, dots travel, the notes write themselves. */
-export function HeroScene() {
-  const tiles = [
-    { id: "meet", cx: 80, cy: 70, C: <MeetLogo size={50} />, dot: "#00ac47" },
-    { id: "teams", cx: 150, cy: 190, C: <TeamsLogo size={54} />, dot: "#7B83EB" },
-    { id: "zoom", cx: 70, cy: 320, C: <ZoomLogo size={56} />, dot: "#3b82f6" },
-    { id: "slack", cx: 150, cy: 450, C: <SlackLogo size={46} />, dot: "#E01E5A" },
-  ]
-  const ends = [110, 200, 290, 380]
-  const d = (t: (typeof tiles)[number], i: number) => `M${t.cx + 42},${t.cy} C${t.cx + 130},${t.cy} ${258 - 90},${ends[i]} 258,${ends[i]}`
+const CHIPS = [
+  { y: 226, c: "#00ac47", t: "meet: Ana · we decided to launch" },
+  { y: 263, c: "#E01E5A", t: "slack: #launch-plan" },
+  { y: 300, c: "#7B83EB", t: "teams: weekly standup" },
+  { y: 337, c: "#3b82f6", t: "zoom: planning call" },
+  { y: 374, c: "#ffe14d", t: "huddle: AI notes saved" },
+]
+const TICKER = [
+  ["NEW DECISION", "launch on Friday"], ["NEW TASK", "advertisements → Parag"], ["DROPPED", "“AI integration”: nobody said it"],
+  ["REMEMBERED", "AWS until December"], ["OWNER", "Ana · free this week"],
+]
+const CARDS = [
+  { id: "tl", n: "01", h: "CAPTIONS", items: ["Google Meet", "Microsoft Teams", "Zoom (web)", "Slack Huddles"], x: 4, y: 1 },
+  { id: "tr", n: "04", h: "SUGGESTIONS", items: ["Skills", "Deadlines", "Workload", "Evidence"], x: 76, y: 3 },
+  { id: "bl", n: "02", h: "NOTES", items: ["Decisions", "Tasks", "Open questions", "Owners"], x: 3, y: 73 },
+  { id: "br", n: "03", h: "MEMORY", items: ["Shared", "Private channels", "Just you", "Sources"], x: 77, y: 72 },
+]
+const pct = (v: number, of: number) => `${(v / of) * 100}%`
+
+/** The hero diagram: meeting events flow into the Brain, which writes notes and remembers them. */
+export function BrainField() {
+  const tiles = [{ x: 478, C: <MeetLogo size={30} /> }, { x: 556, C: <TeamsLogo size={32} /> }, { x: 634, C: <ZoomLogo size={34} /> }, { x: 712, C: <SlackLogo size={28} /> }]
   return (
-    <div className="scene" aria-label="Meetings in Google Meet, Teams, Zoom and Slack turn into notes">
-      <svg className="paths" viewBox="0 0 600 560" aria-hidden>
-        {tiles.map((t, i) => <path key={t.id} className="path" d={d(t, i)} />)}
-        <g className="flowg">{tiles.map((t) => <circle key={t.id} className="dot" r="5.5" fill={t.dot} />)}</g>
+    <div className="field" aria-label="Meeting captions flow into Company Brain, which writes the notes and remembers them">
+      <div className="fglow" aria-hidden />
+      <svg className="fsvg" viewBox="0 0 1180 560" aria-hidden>
+        <g className="rings">
+          <circle cx="590" cy="300" r="118" /><circle cx="590" cy="300" r="170" strokeDasharray="3 9" className="spin" /><circle cx="590" cy="300" r="232" />
+        </g>
+        {[[230, 226], [250, 263], [270, 300], [250, 337], [230, 374]].map(([x, y], i) => <path key={i} className="fline" d={`M${x},${y} C${x + 150},${y} 430,${300 + (y - 300) * 0.35} 482,${300 + (y - 300) * 0.35}`} />)}
+        <path className="fline" d="M590,64 L590,178" /><path className="fline" d="M590,422 L590,452" />
+        {tiles.map((t, i) => <path key={i} className="fline" d={`M590,424 C590,470 ${t.x + 26},448 ${t.x + 26},478`} />)}
       </svg>
-      {tiles.map((t) => (
-        <div key={t.id} className="tilepos" style={{ left: `${((t.cx - 42) / 600) * 100}%`, top: `${((t.cy - 42) / 560) * 100}%` }}><Tile size={84} className="bob">{t.C}</Tile></div>
-      ))}
-      <div className="note">
-        <i className="tape" />
-        <div className="nhead"><span>Q4 launch sync</span><Tile size={28}><MeetLogo size={17} /></Tile></div>
-        <div className="lab">What was said</div>
-        <div className="tline"><b>Ana:</b> We decided to launch on Friday.</div>
-        <div className="tline"><b>Ana:</b> The advertisements are handled by Parag.</div>
-        <div className="tline"><b>Bob:</b> I'll write the user guide by Thursday.</div>
-        <div className="lab">Written down</div>
-        <div className="rows">
-          <div className="row"><Check /><span>Decision: launch on Friday</span></div>
-          <div className="row"><Check /><span>Handle the advertisements</span><span className="who"><Av n="Parag" size={20} />Parag</span></div>
-          <div className="row"><Check /><span>Write the user guide</span><span className="who"><Av n="Bob" size={20} />Bob</span></div>
-        </div>
+      <div className="core" style={{ left: pct(590, 1180), top: pct(300, 560) }}>
+        <span className="ctag">COMPANY</span><Brain size={40} color="#3ddc84" /><span className="cname">Brain</span>
       </div>
+      <span className="spoke" style={{ left: pct(590, 1180), top: pct(30, 560), transform: "translateX(-50%)" }}>QUOTE-CHECKED<i>{I("tick", 14, 2.8)}</i></span>
+      <span className="spoke" style={{ right: pct(1180 - 462, 1180), top: pct(290, 560) }}>CAPTIONS IN</span>
+      <span className="spoke" style={{ left: pct(716, 1180), top: pct(290, 560) }}>MEMORY</span>
+      {CHIPS.map((c) => <span key={c.t} className="chip" style={{ top: pct(c.y - 13, 560), left: 0 }}><i style={{ background: c.c }} />{c.t}</span>)}
+      <div className="ticker" style={{ left: pct(790, 1180), top: pct(290, 560) }}>
+        <div className="ttrack">{[...TICKER, ...TICKER].map(([k, v], i) => <span key={i}><b>[ {k} ]</b> {v}<em>▸</em></span>)}</div>
+      </div>
+      {CARDS.map((c) => (
+        <div key={c.id} className="fcard" style={{ left: `${c.x}%`, top: `${c.y}%` }}>
+          <div className="fh"><i>{c.n}</i>{c.h}</div>
+          {c.items.map((x) => <div className="fi" key={x}><u />{x}</div>)}
+        </div>
+      ))}
+      {tiles.map((t, i) => <div key={i} className="ftile" style={{ left: pct(t.x, 1180), top: pct(480, 560) }}><Tile size={52}>{t.C}</Tile></div>)}
     </div>
   )
 }
+
+export const PLATFORMS = [
+  { n: "GOOGLE MEET", L: <MeetLogo size={17} /> }, { n: "MICROSOFT TEAMS", L: <TeamsLogo size={18} /> },
+  { n: "ZOOM", L: <ZoomLogo size={18} /> }, { n: "SLACK", L: <SlackLogo size={16} /> },
+]
 
 export const MiniMeet = () => (
   <div className="mock m1">

@@ -5,7 +5,7 @@ import { DrawSVGPlugin } from "gsap/DrawSVGPlugin"
 import { MotionPathPlugin } from "gsap/MotionPathPlugin"
 import { useLayoutEffect, useRef } from "react"
 import { APPS, MeetLogo, SlackLogo, TeamsLogo, Tile, ZoomLogo } from "./logos"
-import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, Brain, FAQ, HeroScene, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PRIVACY } from "./scenes"
+import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, BrainField, Brain, FAQ, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PLATFORMS, PRIVACY } from "./scenes"
 import { css } from "./styles"
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, DrawSVGPlugin, MotionPathPlugin)
@@ -64,15 +64,38 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       // ---- hero
       const intro = gsap.timeline({ defaults: { ease: "power3.out" } })
       intro
-        .from(".li", { yPercent: 118, duration: 1.1, stagger: 0.12 }, 0)
-        .fromTo(".squig path", { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.9, ease: "power2.inOut" }, 0.95)
-        .from(".hero .sub", { y: 24, opacity: 0, duration: 0.8 }, 0.5)
-        .from(".hero .bul li", { y: 16, opacity: 0, stagger: 0.08, duration: 0.6 }, 0.7)
-        .from(".hero .ctas > *", { y: 20, opacity: 0, stagger: 0.1, duration: 0.7 }, 0.8)
-        .from(".hero .fine", { opacity: 0, duration: 0.8 }, 1.1)
-        .from(".hero .works .tile", { scale: 0, rotate: -20, stagger: 0.08, ease: "back.out(2.2)", duration: 0.55 }, 1.15)
-        .from(".hwrap", { y: 70, opacity: 0, duration: 1.2, ease: "expo.out" }, 0.9)
+        .from(".pillb", { y: 18, opacity: 0, duration: 0.7 }, 0)
+        .from(".li", { yPercent: 118, duration: 1.1, stagger: 0.12 }, 0.1)
+        .fromTo(".squig path", { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.9, ease: "power2.inOut" }, 1.0)
+        .from(".hero .bul li", { y: 16, opacity: 0, stagger: 0.08, duration: 0.6 }, 0.6)
+        .from(".hero .ctas > *", { y: 20, opacity: 0, stagger: 0.1, duration: 0.7 }, 0.75)
+        .from(".hero .fine, .platforms span", { opacity: 0, y: 10, stagger: 0.06, duration: 0.6 }, 1.0)
+        .from(".fglow", { opacity: 0, duration: 1.6 }, 0.6)
+        .from(".core", { opacity: 0, duration: 1 }, 0.9)
+        .from(".rings circle", { opacity: 0, duration: 1.2, stagger: 0.2 }, 0.9)
+        .from(".fcard", { opacity: 0, y: 20, stagger: 0.12, duration: 0.8 }, 1.3)
+        .from(".ftile", { opacity: 0, y: 24, stagger: 0.1, duration: 0.7, ease: "back.out(1.6)" }, 1.5)
+        .from(".spoke, .ticker", { opacity: 0, duration: 0.9 }, 1.6)
       gsap.fromTo(".hw", { rotateX: 12, scale: 0.92 }, { rotateX: 0, scale: 1, ease: "none", scrollTrigger: { trigger: ".hwrap", start: "top 92%", end: "top 30%", scrub: true } })
+
+      // the diagram lives: meeting events flow toward the Brain, notes stream out, the rings turn
+      {
+        const field = $(".field")!
+        $$(".chip", field).forEach((chip, i) => {
+          const w = () => chip.offsetWidth, run = () => field.clientWidth * 0.385 - w()
+          const tl = gsap.timeline({ repeat: -1, defaults: { ease: "none" } })
+          const d = 9 + i * 0.7 // each row has its own pace, so the chips never line up
+          tl.fromTo(chip, { x: () => -w() - 20, opacity: 0 }, { x: run, duration: d }, 0)
+            .to(chip, { opacity: 1, duration: 1.2 }, 0).to(chip, { opacity: 0, duration: 1.6 }, d - 1.6)
+          tl.progress((i * 0.37 + 0.1) % 1)
+        })
+        gsap.fromTo(".ttrack", { xPercent: -50 }, { xPercent: 0, duration: 34, ease: "none", repeat: -1 })
+        gsap.to(".rings .spin", { rotation: 360, svgOrigin: "590 300", duration: 70, ease: "none", repeat: -1 })
+        gsap.to(".fglow", { scale: 1.06, opacity: 0.85, duration: 3.2, yoyo: true, repeat: -1, ease: "sine.inOut" })
+        const cards = $$(".fcard", field), hot = gsap.timeline({ repeat: -1 })
+        cards.forEach((c, i) => hot.call(() => { cards.forEach((o) => o.classList.remove("hot")); c.classList.add("hot") }, undefined, i * 1.7))
+        hot.to({}, { duration: cards.length * 1.7 })
+      }
 
       // the product preview plays a short meeting, then the panel turns it into notes
       {
@@ -101,23 +124,6 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       const rows = $$(".mrow")
       gsap.to(rows[0]!, { xPercent: -50, duration: 48, ease: "none", repeat: -1 })
       gsap.fromTo(rows[1]!, { xPercent: -50 }, { xPercent: 0, duration: 56, ease: "none", repeat: -1 })
-
-      // ---- four apps, one set of notes
-      {
-        const scene = $(".scene")!, tiles = $$(".tilepos", scene), note = $(".note", scene)!, paths = $$<SVGPathElement>(".path", scene), dots = $$(".dot", scene)
-        const tlines = $$(".tline", note), rws = $$(".row", note)
-        gsap.to($$(".bob", scene), { y: "+=9", rotate: "random(-3,3)", duration: "random(2.2,3.2)", yoyo: true, repeat: -1, ease: "sine.inOut", stagger: 0.35 })
-        dots.forEach((d, i) => gsap.to(d, { motionPath: { path: paths[i]!, align: paths[i]!, alignOrigin: [0.5, 0.5] }, duration: 2.6, repeat: -1, ease: "none", delay: i * 0.6 }))
-        const tl = gsap.timeline({ repeat: -1, repeatDelay: 2.2 })
-        tl.set(tiles, { opacity: 1 }, 0)
-          .fromTo(tiles, { scale: 0, rotate: -25 }, { scale: 1, rotate: 0, duration: 0.7, ease: "back.out(2)", stagger: 0.12 }, 0)
-          .fromTo(note, { y: 50, opacity: 0, rotate: 4 }, { y: 0, opacity: 1, rotate: 1.2, duration: 0.8, ease: "power3.out" }, 0.3)
-          .fromTo(paths, { drawSVG: "0%" }, { drawSVG: "100%", duration: 1, stagger: 0.12, ease: "power2.inOut" }, 0.8)
-        tlines.forEach((t, i) => typeIn(tl, t, 1.7 + i * 1.1, 1.0))
-        rws.forEach((r, i) => tl.fromTo(r, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35 }, 5.3 + i * 0.55).fromTo(r.querySelector(".ck"), { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.35 }, 5.5 + i * 0.55))
-        tl.to({}, { duration: 2.6 }).to([...tiles, note], { opacity: 0, duration: 0.5 })
-        whenVisible(tl, scene)
-      }
 
       // ---- the three feature rows
       gsap.set(".frow .ftxt > *", { opacity: 0, y: 30 })
@@ -242,16 +248,16 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       </div></header>
 
       <section className="hero" id="top"><div className="wrap">
+        <span className="pillb"><b>New</b>Notes from Meet, Teams, Zoom and Slack</span>
         <h1 className="h1">
           <span className="lm"><span className="li">Meetings that write</span></span>
           <span className="lm"><span className="li">their <span className="own"><span className="it">own</span><svg className="squig" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden><path d="M2,12 C28,2 48,19 78,10 S128,3 158,11 S190,16 198,7" fill="none" stroke="#ffe14d" strokeWidth="5" strokeLinecap="round" /></svg></span> notes.</span></span>
         </h1>
-        <p className="sub">Company Brain reads the captions in Google Meet, Teams, Zoom and Slack Huddles, then writes down what was decided and who does what.</p>
         <ul className="bul"><li>{I("tick", 18, 2.6)}Decisions and tasks with real owners</li><li>{I("tick", 18, 2.6)}Suggests who should take each task</li><li>{I("tick", 18, 2.6)}Never writes what wasn't said</li></ul>
         <div className="ctas"><a href={go} className="btn pri"><SlackLogo size={20} /><Roll>{goLabel}</Roll></a><a href="#how" className="btn ghost"><Roll>See how it works</Roll></a></div>
         <p className="fine">Self-hosted. Your data stays on your own server.</p>
-        {works}
-        <div className="hwrap"><HeroWindow /></div>
+        <div className="platforms">{PLATFORMS.map((p) => <span key={p.n}>{p.L}{p.n}</span>)}<span>CHROME EXTENSION</span></div>
+        <BrainField />
       </div></section>
 
       <section className="strip" aria-label="Works with">
@@ -260,10 +266,10 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <div className="mrow">{[...strip].reverse().map((a, i) => <span className="mitem" key={i}><Tile size={52}><a.Logo size={30} /></Tile>{a.name}</span>)}</div>
       </section>
 
-      <section className="sec"><div className="wrap split">
-        <div><p className="tag" data-reveal>One set of notes</p><h2 className="big" data-reveal style={{ marginTop: 16 }}>Every meeting app, <span className="it">one</span> place.</h2>
-          <p className="lead" data-reveal>Meet, Teams, Zoom and Slack each have their own way of keeping notes. Company Brain reads them all and keeps one clean record, searchable by the whole team.</p></div>
-        <HeroScene />
+      <section className="sec" style={{ paddingBottom: 40 }}><div className="wrap" style={{ textAlign: "center" }}>
+        <p className="tag" data-reveal>In a real meeting</p>
+        <h2 className="big" data-reveal style={{ marginTop: 16 }}>Watch a meeting turn into <span className="it">notes</span>.</h2>
+        <div className="hwrap"><HeroWindow /></div>
       </div></section>
 
       <section className="sec" id="how" style={{ paddingTop: 20 }}><div className="wrap">
