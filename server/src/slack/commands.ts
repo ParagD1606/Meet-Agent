@@ -12,6 +12,7 @@ import { slackClient } from "./client";
 import { button, section } from "./cards";
 import { escapeSlackText } from "./format";
 import { FRESH_START_REPLY, resetContext } from "../turn/reset";
+import { listGithubRepositoriesForUser } from "../mcp/github";
 
 export type SlashPayload = { command?: string; text?: string; user_id?: string; channel_id?: string; trigger_id?: string; response_url?: string };
 export type Msg = { response_type: "ephemeral"; text: string; blocks?: unknown[]; replace_original?: boolean };
@@ -122,6 +123,22 @@ async function newChat(p: SlashPayload): Promise<Msg> {
   return say(FRESH_START_REPLY);
 }
 
+/** Personal and ephemeral by design: a Slack command never reveals another member's repositories. */
+async function repos(p: SlashPayload, userId: string): Promise<Msg> {
+  const raw = (p.text ?? "").trim();
+  if (raw && !/^\d+$/.test(raw)) return say("Usage: `/repos` or `/repos 2` for the next page.");
+  try {
+    const result = await listGithubRepositoriesForUser(userId, raw ? Number(raw) : 1);
+    if (!result) return say("Connect your personal GitHub account first in Company Brain → Integrations → GitHub.");
+    if (!result.repositories.length) return say("No repositories were returned on this page. Try `/repos 1`.");
+    const more = result.next_page ? `\n\nMore repositories are available: run \`/repos ${result.next_page}\`.` : "";
+    return say(`*Your GitHub repositories — page ${result.page}*\n${result.repositories.map((name) => `• \`${escapeSlackText(name)}\``).join("\n")}${more}`);
+  } catch (err) {
+    const message = err instanceof Error && /McpReauthRequired/.test(err.name) ? "Your GitHub connection needs to be reconnected in Integrations." : "Could not load your GitHub repositories. Try again or reconnect GitHub in Integrations.";
+    return say(message);
+  }
+}
+
 // ---- entrypoints ----
 
 /** Runs a slash command and returns the ephemeral reply (null when a modal was opened instead). */
@@ -136,6 +153,7 @@ export async function runSlashCommand(p: SlashPayload): Promise<Msg | null> {
     case "/whatdoyouknow": return whatDoYouKnow(p, userId);
     case "/brain-review": return openReview(userId, p.trigger_id);
     case "/brain-new": return newChat(p);
+    case "/repos": return repos(p, userId);
     default: return say("Unknown command.");
   }
 }

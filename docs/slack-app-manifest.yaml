@@ -56,6 +56,11 @@ features:
       command: "/brain-resume"
       description: "Resume learning from this channel (admins, channel creator)"
       should_escape: true
+    -
+      command: "/repos"
+      description: "List your connected GitHub repositories"
+      usage_hint: "[page]"
+      should_escape: true
 oauth_config:
   redirect_urls:
     - "https://slack.derpx06.live/slack/oauth/callback"

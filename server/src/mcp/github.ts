@@ -127,6 +127,19 @@ export async function githubCall(conn: ConnectionRow, name: string, args: Record
   }
 }
 
+export type GitHubRepositoryPage = { page: number; repositories: string[]; next_page: number | null };
+
+/** Used by the private `/repos` Slack command. Legacy PAT/MCP rows are skipped: the command only reads the caller's GitHub App OAuth connection. */
+export async function listGithubRepositoriesForUser(userId: string, requestedPage = 1): Promise<GitHubRepositoryPage | null> {
+  const rows = await db.select().from(mcpConnections).where(eq(mcpConnections.provider, "github"));
+  for (const conn of rows) {
+    if (conn.scope !== "user" || conn.ownerUserId !== userId || conn.status !== "connected") continue;
+    if ((await readAuth(conn.id)).bearer) continue;
+    return await githubCall(conn, "list_repositories", { page: Math.max(1, Math.min(requestedPage, 1000)) }) as GitHubRepositoryPage;
+  }
+  return null;
+}
+
 export async function githubSession(conn: ConnectionRow): Promise<McpSession> {
   return {
     // Health checks use listTools, so verify the token against GitHub here instead of
