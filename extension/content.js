@@ -54,6 +54,10 @@
 
   chrome.runtime.onMessage.addListener((msg, _s, reply) => {
     if (msg?.type === "status") reply({ platform: adapter.platform, lines: payload().lines.length, title: adapter.title() });
+    if (msg?.type === "snapshot") {
+      const p = payload();
+      reply({ key: `${p.platform}:${p.externalId}`, platform: p.platform, title: p.title, startedAt: p.startedAt, lines: p.lines });
+    }
     if (msg?.type === "send") { sent = 0; upload(); reply({ ok: true }); }
   });
 })();

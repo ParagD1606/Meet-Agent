@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brain Meeting Notes</title><link rel="stylesheet" href="sidepanel.css"></head>
+<body>
+<header>
+  <div class="brand"><span id="dot" class="dot"></span><div><div id="title" class="title">Brain</div><div id="sub" class="sub">Waiting for a call…</div></div></div>
+  <nav id="tabs" role="tablist">
+    <button data-tab="live" class="on">Live</button><button data-tab="ask">Ask</button><button data-tab="tasks">Tasks</button><button data-tab="settings">Settings</button>
+  </nav>
+</header>
+<main>
+  <section id="live" class="tab on"><div id="transcript" class="transcript"></div><div id="liveEmpty" class="empty"></div></section>
+
+  <section id="ask" class="tab">
+    <div id="chips" class="chips"></div>
+    <div id="chat" class="chat"></div>
+    <form id="askForm"><input id="q" placeholder="Ask about this meeting…" autocomplete="off"><button class="primary">Ask</button></form>
+  </section>
+
+  <section id="tasks" class="tab">
+    <div class="bar"><button id="analyze" class="primary">Find decisions &amp; tasks</button><span id="analyzeMsg" class="muted"></span></div>
+    <h3>Decisions</h3><ul id="decisions" class="list"></ul>
+    <form id="decForm" class="add"><input id="decText" placeholder="Add a decision…" autocomplete="off"><button>Add</button></form>
+    <h3>Who does what</h3><ul id="taskList" class="list"></ul>
+    <form id="taskForm" class="add"><input id="taskText" placeholder="Add a task…" autocomplete="off"><button>Add</button></form>
+    <datalist id="people"></datalist>
+  </section>
+
+  <section id="settings" class="tab">
+    <label for="server">Brain server</label><input id="server" autocomplete="off" spellcheck="false">
+    <label for="token">API token</label>
+    <div class="row"><input id="token" type="password" placeholder="cbt_…" autocomplete="off"><button id="reveal" type="button">Show</button></div>
+    <div id="conn" class="conn"></div>
+    <p class="muted">Saved automatically on this device. Create a token in the Brain web app under Configure &rarr; API tokens.</p>
+    <label class="check"><input type="checkbox" id="autoSend" checked> Send the transcript to Meeting notes when the call ends</label>
+  </section>
+</main>
+<script src="sidepanel.js"></script>
+</body></html>

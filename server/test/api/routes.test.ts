@@ -162,6 +162,16 @@ describe("extension upload", () => {
     expect((await app.request("/ext/ping", { headers: { authorization: "Bearer nope" } })).status).toBe(401);
   });
 
+  test("live ask/analyze need a token and a valid body", async () => {
+    const post = (path: string, headers: Record<string, string>, b: unknown) => app.request(path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(b) });
+    expect((await post("/ext/ask", {}, { lines: [], question: "x" })).status).toBe(401);
+    expect((await post("/ext/analyze", {}, { lines: [] })).status).toBe(401);
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const auth = { authorization: `Bearer ${tok.token}` };
+    expect((await post("/ext/ask", auth, { lines: [], question: "x" })).status).toBe(400);
+    expect((await post("/ext/analyze", auth, { lines: [{ speaker: "A", text: "hi" }] })).status).not.toBe(401);
+  });
+
   test("stores an upload privately for its owner", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const body = { externalId: "abc", platform: "meet", title: "Standup", lines: [{ speaker: "Ana", text: "Ship it Friday." }] };

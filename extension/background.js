@@ -46,7 +46,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     pending().then((p) => { p[`${msg.payload.platform}:${msg.payload.externalId}`] = msg.payload; return setPending(p); }).then(() => reply({ ok: true }));
     return true;
   }
-  if (msg?.type === "upload") { upload(msg.payload).then(() => reply({ ok: true })); return true; }
+  if (msg?.type === "upload") {
+    chrome.storage.local.get("autoSend").then(({ autoSend }) => (autoSend === false && !msg.manual ? null : upload(msg.payload))).then(() => reply({ ok: true }));
+    return true;
+  }
   if (msg?.type === "test") {
     settings().then(async ({ server, token }) => {
       try {
@@ -58,6 +61,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   }
 });
 
+// The side panel never holds the token: it asks the worker to call the server.
+async function api(path, body) {
+  const { server, token } = await settings();
+  if (!server || !token) return { ok: false, status: 0, error: "not_configured" };
+  try {
+    const res = await fetch(`${server}${path}`, {
+      method: body ? "POST" : "GET",
+      headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) { return { ok: false, status: 0, error: String(e.message ?? e) }; }
+}
+chrome.runtime.onMessage.addListener((msg, _s, reply) => {
+  if (msg?.type === "api") { api(msg.path, msg.body).then(reply); return true; }
+});
+
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 chrome.runtime.onInstalled.addListener(() => chrome.alarms.create("flush", { periodInMinutes: 5 }));
 chrome.runtime.onStartup.addListener(flushOld);
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === "flush") flushOld(); });

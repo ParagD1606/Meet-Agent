@@ -4,7 +4,7 @@ import { id as newId } from "../crypto";
 import { db } from "../db";
 import { channelMembers, channels, meetings } from "../db/schema";
 import { log } from "../log";
-import { completeJson } from "../memory/llm";
+import { completeJson, completeText } from "../memory/llm";
 import { slackClient } from "../slack/client";
 
 export type MeetingTask = {
@@ -209,4 +209,35 @@ export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> 
   }
   log.info("meeting sync completed", { found: candidates.length, imported, failed });
   return { found: candidates.length, imported, failed };
+}
+
+const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript so far.
+Be brief and concrete, name speakers when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
+
+const LIVE_ANALYZE_SYSTEM = `You track a live meeting. From the transcript so far, list the decisions that were actually made and the tasks someone explicitly took on or was asked to take.
+For each task set "assignee" to one of the provided speaker names only when the transcript makes the owner clear, otherwise null. Never invent an owner or due date; "due" is only what was said, as text.
+Return JSON only: {"decisions":["..."],"tasks":[{"title":"...","assignee":null,"due":null}]}.`;
+
+const liveAnalysisSchema = z.object({
+  decisions: z.array(z.string().trim().min(1).max(500)).max(30),
+  tasks: z.array(z.object({
+    title: z.string().trim().min(1).max(240),
+    assignee: z.string().trim().min(1).max(120).nullable().default(null),
+    due: z.string().trim().min(1).max(60).nullable().default(null),
+  })).max(40),
+});
+
+const tail = (text: string) => text.slice(-50_000);
+
+/** Answers a question about an in-progress call. Nothing is stored. */
+export async function askLiveMeeting(transcript: string, question: string, history: { role: "user" | "assistant"; text: string }[] = []): Promise<string> {
+  const convo = history.slice(-6).map((h) => `${h.role === "user" ? "Q" : "A"}: ${h.text}`).join("\n");
+  const prompt = `Transcript so far:\n${tail(transcript)}\n\n${convo ? `Earlier in this chat:\n${convo}\n\n` : ""}Question: ${question}`;
+  return (await completeText({ system: LIVE_ASK_SYSTEM, prompt, role: "main", maxOutputTokens: 700 })).trim();
+}
+
+/** Extracts decisions and tasks from an in-progress call. Nothing is stored. */
+export async function analyzeLiveMeeting(transcript: string, speakers: string[]) {
+  const prompt = `Speakers: ${speakers.join(", ") || "unknown"}\n\nTranscript so far:\n${tail(transcript)}`;
+  return completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "summarize", maxOutputTokens: 1_200 }, liveAnalysisSchema);
 }
