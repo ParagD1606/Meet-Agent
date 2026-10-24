@@ -10,7 +10,7 @@ import { meetingItems, setItemExternalRef, type Actor, type ExternalRef } from "
 
 export type Target = "trello" | "github";
 const PROVIDER: Record<Target, string> = { trello: "trello", github: "github" };
-export type PushResult = { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string };
+export type PushResult = { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string; warning?: string };
 type User = { id: string; role: Actor["role"] };
 const isAdmin = (u: User) => u.role === "admin" || u.role === "owner";
 
@@ -45,9 +45,9 @@ function run(target: Target, job: Job): Promise<PushResult> {
     if (have) return { ...base, status: "existing", url: have.url };
     try {
       const made = await create(target, job.payload);
-      await db.insert(integrationPushes).values({ id: newId("ip_"), userId: job.user.id, target, taskRef: job.taskRef, externalId: made.id, externalUrl: made.url, status: "ok" });
+      await db.insert(integrationPushes).values({ id: newId("ip_"), userId: job.user.id, target, taskRef: job.taskRef, externalId: made.id, externalUrl: made.url, status: "ok", error: made.warning ?? null, ...(target === "github" ? { lastState: "open" as const } : {}) });
       await job.onSaved({ provider: PROVIDER[target], id: made.id, url: made.url }).catch(() => {}); // the audit row already guards against duplicates
-      return { ...base, status: "created", url: made.url };
+      return { ...base, status: "created", url: made.url, ...(made.warning ? { warning: made.warning } : {}) };
     } catch (e) {
       const msg = e instanceof IntegrationError ? e.message : "Unexpected error while pushing";
       await db.insert(integrationPushes).values({ id: newId("ip_"), userId: job.user.id, target, taskRef: job.taskRef, status: "failed", error: msg });
@@ -84,7 +84,7 @@ async function commitmentJob(row: Loaded, user: User): Promise<Job | PushResult>
   const [o] = row.ownerId ? await db.select({ name: users.name }).from(users).where(eq(users.id, row.ownerId)) : [];
   return {
     taskRef: base.ref, title: row.text, user,
-    payload: { title: row.text, description: row.priority === "urgent" ? "Priority: urgent" : "", sourceUrl: row.permalink ?? "", quote: "", due: row.dueAt, ownerId: row.ownerId, ownerName: o?.name ?? row.ownerName, origin: row.sourceType === "meeting" ? "a meeting" : "Slack" },
+    payload: { title: row.text, description: row.priority === "urgent" ? "Priority: urgent" : "", sourceUrl: row.permalink ?? "", quote: "", due: row.dueAt, ownerId: row.ownerId, ownerName: o?.name ?? row.ownerName, origin: row.sourceType === "meeting" ? "a meeting" : "Slack", taskId: row.id, urgent: row.priority === "urgent" },
     onSaved: async (ref) => { await db.update(commitments).set({ externalRefs: [...row.externalRefs.filter((r) => r.provider !== ref.provider), ref] }).where(eq(commitments.id, row.id)); },
   };
 }
@@ -116,7 +116,7 @@ export async function pushMeetingItems(meetingId: string, target: Target, user: 
     if (!(isAdmin(user) || m.meeting.ownerId === user.id || r.assigneeId === user.id)) return void jobs.push({ ref, title: r.title, status: "skipped", reason: "Only an admin, the organizer or the assignee can send this item" });
     jobs.push({
       taskRef: ref, title: r.title, user,
-      payload: { title: r.title, description: r.description ?? "", sourceUrl: m.meeting.url, quote: r.quote, due: r.due && !Number.isNaN(Date.parse(r.due)) ? new Date(r.due) : null, ownerId: r.assigneeId ?? null, ownerName: r.assignee, origin: `meeting "${m.meeting.title}"` },
+      payload: { title: r.title, description: r.description ?? "", sourceUrl: m.meeting.url, quote: r.quote, due: r.due && !Number.isNaN(Date.parse(r.due)) ? new Date(r.due) : null, ownerId: r.assigneeId ?? null, ownerName: r.assignee, origin: `meeting "${m.meeting.title}"`, taskId: ref, urgent: r.priority === "urgent" },
       onSaved: async (x) => { await setItemExternalRef(meetingId, itemId, x); },
     });
   });
@@ -124,7 +124,7 @@ export async function pushMeetingItems(meetingId: string, target: Target, user: 
   // an approved item that already became a commitment (source_ref = the same key) shares its push record
   for (const j of jobs) if (!("status" in j)) {
     const [c] = await db.select({ id: commitments.id, refs: commitments.externalRefs }).from(commitments).where(eq(commitments.sourceRef, j.taskRef));
-    if (c) { j.aliases = [`commitment:${c.id}`]; const prev = j.onSaved; j.onSaved = async (x) => { await prev(x); await db.update(commitments).set({ externalRefs: [...c.refs.filter((r) => r.provider !== x.provider), x] }).where(eq(commitments.id, c.id)); }; }
+    if (c) { j.aliases = [`commitment:${c.id}`]; j.payload.taskId = c.id; const prev = j.onSaved; j.onSaved = async (x) => { await prev(x); await db.update(commitments).set({ externalRefs: [...c.refs.filter((r) => r.provider !== x.provider), x] }).where(eq(commitments.id, c.id)); }; }
   }
   return runAll(target, jobs);
 }

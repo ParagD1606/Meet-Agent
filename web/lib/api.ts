@@ -234,6 +234,7 @@ export interface Task {
   assignerId: string | null; assignerName: string | null; assignerAvatar: string | null
   permalink: string | null; channelId: string | null; channelName: string | null; sourceType: string; createdAt: string; completedAt: string | null
   canEdit: boolean; canReassign: boolean
+  externalRefs?: { provider: "trello" | "github" | "jira"; id: string; url: string }[]
 }
 export interface Person { id: string; name: string | null; avatarUrl: string | null; title: string | null }
 export interface TaskPatch { status?: "open" | "in_progress" | "done" | "dropped"; ownerId?: string; due?: string | null; priority?: "normal" | "urgent" }
@@ -246,8 +247,16 @@ export interface Commitment {
 
 export type BoardTarget = "trello" | "github"
 export interface TrelloSettings { configured: boolean; keyLast4: string; boardId: string; listId: string; memberMap: Record<string, string> }
-export interface GithubIssuesSettings { configured: boolean; repo: string; assigneeMap: Record<string, string>; labels: string[] }
-export interface PushResult { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string }
+export interface GithubCredential { kind: "app" | "pat" | "none"; appConfigured: boolean; installations: number; hasPat: boolean; preferPat: boolean; appSlug: string | null }
+export interface GithubIssuesSettings { configured: boolean; repo: string; assigneeMap: Record<string, string>; labels: string[]; milestone: number | null; projectOwner: string; projectNumber: number | null; credential: GithubCredential }
+export interface GithubRepo { fullName: string; private: boolean; hasIssues: boolean }
+export interface GithubRepoPage { credential: "app" | "pat" | null; total: number; repos: GithubRepo[]; page: number; hasMore: boolean }
+export interface GithubSuggestion { userId: string; userName: string | null; login: string; confidence: "high" | "medium" | "low"; reason: string }
+export interface GithubSuggestions { candidates: { login: string; name?: string | null }[]; suggestions: GithubSuggestion[] }
+export interface GithubCheck { name: string; ok: boolean; message: string }
+export interface GithubTest extends BoardTest { credential?: "app" | "pat" | null; checks?: GithubCheck[] }
+export interface ExternalRef { provider: string; id: string; url: string }
+export interface PushResult { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string; warning?: string }
 export interface PushSummary { results: PushResult[]; created: number; existing: number; skipped: number; failed: number }
 export interface NamedId { id: string; name: string }
 export interface BoardTest { ok: boolean; message?: string; username?: string; repo?: string }
@@ -261,8 +270,10 @@ export const api = {
   trelloLists: (board: string) => get<{ lists: NamedId[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/lists`).then((d) => d.lists),
   trelloMembers: (board: string) => get<{ members: (NamedId & { username: string })[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/members`).then((d) => d.members),
   githubSettings: () => get<GithubIssuesSettings>("/api/settings/integrations/github-issues"),
-  saveGithub: (b: { repo: string; token?: string; assigneeMap: Record<string, string>; labels: string[] }) => send<GithubIssuesSettings>("PUT", "/api/settings/integrations/github-issues", b),
-  testGithub: (b: { repo?: string; token?: string }) => send<BoardTest>("POST", "/api/settings/integrations/github-issues/test", b),
+  saveGithub: (b: { repo: string; token?: string; usePat?: boolean; assigneeMap: Record<string, string>; labels: string[]; milestone?: number | null; projectOwner?: string; projectNumber?: number | null }) => send<GithubIssuesSettings>("PUT", "/api/settings/integrations/github-issues", b),
+  testGithub: (b: { repo?: string; token?: string; projectOwner?: string; projectNumber?: number | null }) => send<GithubTest>("POST", "/api/settings/integrations/github-issues/test", b),
+  githubRepos: (q: string, page: number) => get<GithubRepoPage>(`/api/integrations/github/repos?${new URLSearchParams({ q, page: String(page) })}`),
+  githubSuggestions: (repo: string) => get<GithubSuggestions>(`/api/integrations/github/suggestions?${new URLSearchParams({ repo })}`),
   pushTasks: (target: BoardTarget, ids: string[]) => send<PushSummary>("POST", "/api/tasks/push", { target, ids }),
   pushMeeting: (meetingId: string, target: BoardTarget, which: { itemIds: string[] } | { all: "approved" }) => send<PushSummary>("POST", `/api/meetings/${encodeURIComponent(meetingId)}/push`, { target, ...which }),  me: () => get<Me | { user: Me }>("/api/me").then((m) => ("user" in m ? m.user : m)),
   users: () => get<unknown>("/api/users").then((d) => list<UserRow>(d, "users")),

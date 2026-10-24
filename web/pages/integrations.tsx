@@ -17,6 +17,7 @@ import { useToast } from "@/ui/toast"
 import { Async, ErrorState, PageHeader, Panel } from "@/ui/page"
 import { SkeletonRows } from "@/ui/skeleton"
 import { Tabs } from "@/ui/tabs"
+import { GithubPanel } from "./github-board"
 import { Table } from "@/ui/table"
 
 const TONE = { connected: "ok", pending: "warn", error: "danger", needs_reauth: "danger" } as const
@@ -107,7 +108,7 @@ function WriteSetting() {
   )
 }
 
-// ---------- Task boards: where approved tasks are sent (Trello cards / GitHub issues) ----------
+// ---------- Task boards: where approved tasks are sent (GitHub issues; Trello is optional and tucked away) ----------
 const mapRows = (people: { id: string; name: string | null }[] | undefined, map: Record<string, string>, set: (m: Record<string, string>) => void, input: (id: string, v: string) => React.ReactNode) => (
   <div className="mt-2 max-h-64 overflow-auto rounded-md border border-line">
     <table className="w-full text-sm"><tbody>{(people ?? []).map((p) => (
@@ -152,44 +153,18 @@ function TrelloPanel() {
   )
 }
 
-function GithubPanel() {
-  const toast = useToast()
-  const s = useQuery({ queryKey: ["github-issues-settings"], queryFn: api.githubSettings })
-  const people = useQuery({ queryKey: ["people"], queryFn: api.people })
-  const [f, setF] = useState({ repo: "", token: "", labels: "pixel", map: {} as Record<string, string> })
-  const [seeded, setSeeded] = useState(false)
-  if (s.data && !seeded) { setSeeded(true); setF({ repo: s.data.repo, token: "", labels: s.data.labels.join(", "), map: s.data.assigneeMap }) }
-  const ready = !!s.data?.configured
-  const labels = f.labels.split(",").map((l) => l.trim()).filter(Boolean)
-  const save = useAction(() => api.saveGithub({ repo: f.repo.trim(), token: f.token || undefined, assigneeMap: f.map, labels }), {
-    invalidate: [["github-issues-settings"], ["board-targets"]], ok: "GitHub Issues settings saved", inline: true, onSuccess: () => setF((v) => ({ ...v, token: "" })),
-  })
-  const test = useAction(() => api.testGithub({ repo: f.repo.trim() || undefined, token: f.token || undefined }), {
-    inline: true, onSuccess: (r) => toast.push(r.ok ? { kind: "success", title: `GitHub works (${r.repo})`, body: "Nothing was created." } : { kind: "error", title: "GitHub check failed", body: r.message }),
-  })
-  const can = !!f.repo.trim() && (ready || !!f.token)
-  return (
-    <Panel className="mb-4 p-4">
-      <div className="mb-3 flex items-center gap-2"><h2 className="text-sm font-semibold">GitHub Issues</h2><Badge tone={ready ? "ok" : "neutral"} dot>{ready ? "Ready" : "Not set up"}</Badge></div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Repository" hint="owner/name">{(p) => <Input {...p} placeholder="acme/web" value={f.repo} onChange={(e) => setF({ ...f, repo: e.target.value })} />}</FormField>
-        <FormField label="Personal access token" hint={ready ? "Saved encrypted. Leave empty to keep it." : "Needs Issues: read and write on that repository."}>{(p) => <Input {...p} type="password" autoComplete="off" value={f.token} onChange={(e) => setF({ ...f, token: e.target.value })} />}</FormField>
-        <FormField label="Labels" hint="Comma separated. A due:YYYY-MM-DD label is added automatically.">{(p) => <Input {...p} value={f.labels} onChange={(e) => setF({ ...f, labels: e.target.value })} />}</FormField>
-      </div>
-      <div className="mt-4"><div className="text-sm font-medium">GitHub login mapping</div><p className="text-xs text-muted">Issues are assigned only when the owner has a login here.</p>
-        {mapRows(people.data, f.map, (m) => setF({ ...f, map: m }), (id, v) => <Input aria-label="GitHub login" placeholder="login" value={v} onChange={(e) => setF({ ...f, map: withMapped(f.map, id, e.target.value.trim()) })} />)}</div>
-      {(save.error || test.error) && <p role="alert" className="mt-3 text-sm text-danger">{(save.error ?? test.error)!.message}</p>}
-      <div className="mt-4 flex gap-2"><Button variant="primary" loading={save.isPending} disabled={!can} onClick={() => save.mutate()}>Save</Button><Button loading={test.isPending} disabled={!can} onClick={() => test.mutate()}>Test</Button></div>
-    </Panel>
-  )
-}
-
 function TaskBoards() {
+  const trello = useQuery({ queryKey: ["trello-settings"], queryFn: api.trelloSettings })
+  const [addTrello, setAddTrello] = useState(false)
   return (
     <>
-      <p className="mb-3 text-sm text-muted">Approved tasks can be sent to a board from the Tasks and Meetings pages. Each task is sent once; sending it again returns the existing link. Test only checks the credentials and creates nothing.</p>
-      <TrelloPanel />
+      <p className="mb-3 text-sm text-muted">Approved tasks can be sent to GitHub from the Tasks and Meetings pages. Each task is sent once; sending it again returns the existing link. Test only checks the connection and creates nothing.</p>
       <GithubPanel />
+      {trello.data?.configured ? (
+        <details className="mb-4"><summary className="cursor-pointer text-sm text-muted">Other boards (Trello is set up)</summary><div className="mt-3"><TrelloPanel /></div></details>
+      ) : addTrello ? <TrelloPanel /> : (
+        <button type="button" className="text-xs text-accent-text hover:underline" onClick={() => setAddTrello(true)}>Add Trello (optional)</button>
+      )}
     </>
   )
 }

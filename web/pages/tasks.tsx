@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useId, useMemo, useState } from "react"
-import { ExportMenu, PushMenu } from "@/ui/task-export"
+import { ExportMenu, ExternalLinks, PushMenu } from "@/ui/task-export"
 import { api, errMsg, type NewTask, type Person, type Task, type TaskCounts, type TaskFlag, type TaskStatus } from "@/lib/api"
 import { useAction } from "@/lib/action"
 import { useMe } from "@/lib/auth"
@@ -184,7 +184,7 @@ export default function Tasks() {
       const act = (k: "owner" | "due") => setEditing({ id: t.id, kind: k })
       return (
         <span className="flex min-w-[220px] max-w-[440px] flex-col items-start whitespace-normal">
-          <span className="line-clamp-2 break-words">{t.title}</span>
+          <span className="line-clamp-2 break-words">{t.title}</span><ExternalLinks refs={t.externalRefs} />
           {f.length > 0 && (
             <span className="mt-1 flex flex-wrap items-center gap-1.5">
               {f.includes("overdue") && <Badge tone="danger">Overdue</Badge>}

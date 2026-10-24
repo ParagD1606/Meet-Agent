@@ -101,7 +101,7 @@ describe("settings", () => {
     expect(bad.status).toBe(400);
     await configureGithub();
     const got = await (await call("GET", "/api/settings/integrations/github-issues", { cookie: admin })).json();
-    expect(got).toEqual({ configured: true, repo: "acme/web", assigneeMap: { UBOB: "bobgh" }, labels: ["pixel"] });
+    expect(got).toMatchObject({ configured: true, repo: "acme/web", assigneeMap: { UBOB: "bobgh" }, labels: ["pixel"], credential: { kind: "pat" } });
     expect(JSON.stringify(got)).not.toContain(PAT);
   });
   test("helper endpoints and Test buttons create nothing", async () => {
@@ -112,7 +112,7 @@ describe("settings", () => {
     expect((await call("GET", "/api/integrations/trello/boards", { cookie: bob })).status).toBe(403);
     expect(await (await call("POST", "/api/settings/integrations/trello/test", { cookie: admin, body: {} })).json()).toEqual({ ok: true, username: "pixelbot" });
     await configureGithub();
-    expect(await (await call("POST", "/api/settings/integrations/github-issues/test", { cookie: admin, body: {} })).json()).toEqual({ ok: true, repo: "acme/web" });
+    expect(await (await call("POST", "/api/settings/integrations/github-issues/test", { cookie: admin, body: {} })).json()).toMatchObject({ ok: true, repo: "acme/web", credential: "pat" });
     expect(trello.posts().length + github.posts().length).toBe(0);
     trello.reply = () => new Response("invalid token", { status: 401 });
     const bad = await (await call("POST", "/api/settings/integrations/trello/test", { cookie: admin, body: { key: KEY, token: "tok_wrongwrong" } })).json() as any;

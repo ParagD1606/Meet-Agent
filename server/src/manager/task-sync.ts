@@ -79,13 +79,13 @@ export async function notifyTaskOwner(c: Commitment, o: { assignerId?: string | 
 }
 
 /** "X completed: title" DM to whoever assigned it. */
-export async function notifyAssignerDone(c: Commitment, doneBy: string | null): Promise<boolean> {
+export async function notifyAssignerDone(c: Commitment, doneBy: string | null, note?: string): Promise<boolean> {
   if (!c.assignerId || c.assignerId === doneBy) return false;
   try {
     const channel = await openDm(c.assignerId);
     if (!channel) return false;
     const who = (await userName(doneBy ?? c.ownerId)) ?? "A teammate";
-    await postMessage({ channel, text: sanitizeForSlack(`:white_check_mark: ${who} completed: ${c.text}${c.permalink ? ` (<${c.permalink}|source>)` : ""}`) });
+    await postMessage({ channel, text: sanitizeForSlack(`:white_check_mark: ${who} completed: ${c.text}${note ? ` (${note})` : ""}${c.permalink ? ` (<${c.permalink}|source>)` : ""}`) });
     return true;
   } catch (e) {
     log.warn("assigner notify failed", { id: c.id, err: String(e).slice(0, 200) });
@@ -130,7 +130,7 @@ export type ChangeResult = { ok: true; row: Commitment; before: Commitment } | {
  * The one place task state changes (tool, API, buttons share the rules): the owner, assigner or an admin may change status/due/priority; only the
  * assigner or an admin may reassign. The asker must also be able to read the task's scope. Syncs the memory fact and notifies as needed.
  */
-export async function changeTask(id: string, p: TaskPatch, by: Actor, o: { skipScope?: boolean } = {}): Promise<ChangeResult> {
+export async function changeTask(id: string, p: TaskPatch, by: Actor, o: { skipScope?: boolean; note?: string } = {}): Promise<ChangeResult> {
   const [before] = await db.select().from(commitments).where(eq(commitments.id, id));
   if (!before) return { ok: false, error: "not_found" };
   const involved = before.ownerId === by.id || before.assignerId === by.id;
@@ -152,7 +152,9 @@ export async function changeTask(id: string, p: TaskPatch, by: Actor, o: { skipS
   if (!Object.keys(set).length) return { ok: true, row: before, before };
   const [row] = await db.update(commitments).set(set).where(eq(commitments.id, id)).returning();
   await syncTaskFact(row!);
-  if (set.status === "done" && before.status !== "done") await notifyAssignerDone(row!, by.id);
+  if (set.status === "done" && before.status !== "done") await notifyAssignerDone(row!, o.note ? null : by.id, o.note);
+  // keep a linked GitHub issue in step (best effort); a change that came FROM GitHub (note set) must not echo back
+  if (set.status && !o.note) void import("../integrations/github-reconcile").then((m) => m.githubTaskChanged(id)).catch(() => {});
   if (set.ownerId && set.ownerId !== by.id) await notifyTaskOwner(row!, { assignerId: by.id, reassigned: true });
   return { ok: true, row: row!, before };
 }

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { api, type BoardTarget, type PushSummary } from "@/lib/api"
+import { api, type BoardTarget, type ExternalRef, type PushSummary } from "@/lib/api"
 import { useAction } from "@/lib/action"
 import { Button } from "./button"
 import { Menu, MenuItem, MenuLabel } from "./menu"
@@ -27,16 +27,30 @@ export function ExportMenu({ scope, id, filters, size = "md" }: { scope: "tasks"
   )
 }
 
-const NAME: Record<BoardTarget, string> = { trello: "Trello", github: "GitHub Issues" }
+const NAME: Record<BoardTarget, string> = { trello: "Trello", github: "GitHub" }
 
 export function summarize(s: PushSummary, target: BoardTarget): { kind: "success" | "error" | "info"; title: string; body: string } {
   const parts = [s.created && `${s.created} created`, s.existing && `${s.existing} already sent`, s.skipped && `${s.skipped} skipped`, s.failed && `${s.failed} failed`].filter(Boolean)
-  const lines = s.results.map((r) => (r.url ? `${r.title}: ${r.url}` : `${r.title}: ${r.status === "skipped" ? "skipped" : "failed"} (${r.reason === "not_found" ? "not found" : r.reason ?? "unknown"})`))
-  return { kind: s.failed ? "error" : s.created || s.existing ? "success" : "info", title: `${NAME[target]}: ${parts.join(", ") || "nothing to send"}`, body: lines.slice(0, 8).join(" | ") + (lines.length > 8 ? ` | ...and ${lines.length - 8} more` : "") }
+  const lines = s.results.map((r) => (r.url ? `${r.title}: ${r.url}${r.warning ? ` (${r.warning})` : ""}` : `${r.title}: ${r.status === "skipped" ? "skipped" : "failed"} (${r.reason === "not_found" ? "not found" : r.reason ?? "unknown"})`))
+  return { kind: s.failed ? "error" : s.results.some((r) => r.warning) ? "info" : s.created || s.existing ? "success" : "info", title: `${NAME[target]}: ${parts.join(", ") || "nothing to send"}`, body: lines.slice(0, 8).join(" | ") + (lines.length > 8 ? ` | ...and ${lines.length - 8} more` : "") }
+}
+
+/** Small links to the cards / issues a task was sent to (`externalRefs` from GET /api/tasks). Renders nothing without refs. */
+export function ExternalLinks({ refs, className }: { refs?: ExternalRef[] | null; className?: string }) {
+  if (!refs?.length) return null
+  return (
+    <span className={className ?? "inline-flex flex-wrap items-center gap-1.5"}>
+      {refs.map((r) => (
+        <a key={`${r.provider}:${r.id}`} href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs text-muted hover:bg-hover" title={`Open on ${r.provider === "github" ? "GitHub" : r.provider === "trello" ? "Trello" : r.provider}`} onClick={(e) => e.stopPropagation()}>
+          {r.provider === "github" ? `GitHub #${r.id}` : r.provider === "trello" ? "Trello card" : r.provider}
+        </a>
+      ))}
+    </span>
+  )
 }
 
 /**
- * Send to Trello / GitHub. `scope='tasks'`: `ids` are task ids. `scope='meeting'`: `id` is the meeting and `ids` are item ids
+ * Send to GitHub (or Trello when it is set up). `scope='tasks'`: `ids` are task ids. `scope='meeting'`: `id` is the meeting and `ids` are item ids
  * (omit to send every approved task). Only configured boards are listed; nothing renders when none is set up.
  */
 export function PushMenu({ scope, id, ids, size = "md", label = "Send to" }: { scope: "tasks" | "meeting"; id?: string; ids?: string[]; size?: "md" | "sm"; label?: string }) {
@@ -46,7 +60,7 @@ export function PushMenu({ scope, id, ids, size = "md", label = "Send to" }: { s
     (target: BoardTarget) => scope === "meeting" ? api.pushMeeting(id ?? "", target, ids?.length ? { itemIds: ids } : { all: "approved" }) : api.pushTasks(target, ids ?? []),
     { onSuccess: (r, target) => { const s = summarize(r, target); toast.push({ ...s, ms: 12_000 }) } },
   )
-  const on = (["trello", "github"] as const).filter((t) => targets.data?.[t])
+  const on = (["github", "trello"] as const).filter((t) => targets.data?.[t])
   if (!on.length) return null
   const none = scope === "tasks" && !ids?.length
   return (

@@ -218,7 +218,7 @@ export async function resolveCommitment(id: string, status: "done" | "dropped", 
   const [row] = await db.update(commitments).set({ status, completedAt: new Date() })
     .where(and(eq(commitments.id, id), inArray(commitments.status, [...ACTIVE]), by.admin ? undefined : or(eq(commitments.ownerId, by.id), eq(commitments.assignerId, by.id))))
     .returning();
-  if (row) await syncTaskFact(row);
+  if (row) { await syncTaskFact(row); void import("../integrations/github-reconcile").then((m) => m.githubTaskChanged(row.id)).catch(() => {}); }
   return row ?? null;
 }
 
