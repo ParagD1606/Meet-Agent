@@ -40,15 +40,15 @@
     return { externalId, platform: adapter.platform, title: adapter.title(), lines: lines.map((l) => ({ ...l })), startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
   }
 
-  function upload() {
+  function upload(manual = false) {
     const p = payload();
     if (!p.lines.length || p.lines.length === sent) return;
     sent = p.lines.length;
-    chrome.runtime.sendMessage({ type: "upload", payload: p }).catch(() => { sent = 0; });
+    chrome.runtime.sendMessage({ type: "upload", payload: p, manual }).catch(() => { sent = 0; });
   }
 
   // Summarizing costs a model call, so upload once when the call ends, not continuously.
-  addEventListener("pagehide", upload);
+  addEventListener("pagehide", () => upload());
   // A local backup so a crash or closed laptop doesn't lose the transcript; flushed by the worker later.
   setInterval(() => { const p = payload(); if (p.lines.length) chrome.runtime.sendMessage({ type: "backup", payload: p }).catch(() => {}); }, 30_000);
 
@@ -58,6 +58,6 @@
       const p = payload();
       reply({ key: `${p.platform}:${p.externalId}`, platform: p.platform, title: p.title, startedAt: p.startedAt, lines: p.lines });
     }
-    if (msg?.type === "send") { sent = 0; upload(); reply({ ok: true }); }
+    if (msg?.type === "send") { sent = 0; upload(true); reply({ ok: true }); }
   });
 })();

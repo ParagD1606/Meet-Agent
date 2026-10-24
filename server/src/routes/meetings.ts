@@ -29,6 +29,11 @@ const extSchema = z.object({
   lines: z.array(z.object({ speaker: z.string().trim().max(120).default(""), text: z.string().trim().min(1).max(4_000) })).min(1).max(20_000),
   startedAt: z.coerce.date().optional(),
   endedAt: z.coerce.date().optional(),
+  decisions: z.array(z.string().trim().min(1).max(500)).max(50).optional(),
+  tasks: z.array(z.object({
+    title: z.string().trim().min(1).max(240), assignee: z.string().trim().max(120).optional(),
+    due: z.string().trim().max(60).optional(), done: z.boolean().optional(),
+  })).max(100).optional(),
 });
 
 /**

@@ -24,7 +24,12 @@ async function setPending(p) { await chrome.storage.local.set({ [BACKUP]: p }); 
 async function upload(payload) {
   const key = `${payload.platform}:${payload.externalId}`;
   try {
-    await post(payload);
+    // Decisions and tasks the user recorded in the side panel travel with the transcript.
+    const notes = (await chrome.storage.local.get(`meeting:${key}`))[`meeting:${key}`];
+    const body = { ...payload };
+    if (notes?.decisions?.length) body.decisions = notes.decisions.map((d) => d.text);
+    if (notes?.tasks?.length) body.tasks = notes.tasks.map((t) => ({ title: t.title, assignee: t.assignee || undefined, due: t.due || undefined, done: !!t.done }));
+    await post(body);
     const p = await pending(); delete p[key]; await setPending(p);
     await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: true } });
   } catch (err) {

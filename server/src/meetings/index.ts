@@ -131,6 +131,22 @@ async function analyze(sourceFileId: string, text: string): Promise<void> {
   }
 }
 
+/** Adds the user's own decisions and tasks to the AI result; their entries win over duplicate AI ones. */
+async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
+  const [row] = await db.select({ summary: meetings.summary, tasks: meetings.tasks, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
+  if (!row) return;
+  const mine: MeetingTask[] = (t.tasks ?? []).map((k) => ({
+    title: k.title, description: k.done ? "Marked done during the call." : "",
+    assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
+  }));
+  const seen = new Set(mine.map((k) => k.title.toLowerCase()));
+  const tasks = [...mine, ...asTasks(row.tasks).filter((k) => !seen.has(k.title.toLowerCase()))];
+  const decisions = (t.decisions ?? []).map((d) => `- ${d}`).join("\n");
+  const section = decisions ? `## Decisions recorded in the call\n${decisions}` : "";
+  const summary = [section, row.summary ?? ""].filter(Boolean).join("\n\n") || null;
+  await db.update(meetings).set({ tasks, summary, status: summary ? "ready" : row.status, updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+}
+
 export type ExtensionTranscript = {
   /** Stable per-call id from the extension; re-sending the same id replaces the earlier upload. */
   externalId: string;
@@ -139,6 +155,9 @@ export type ExtensionTranscript = {
   lines: { speaker: string; text: string }[];
   startedAt?: Date;
   endedAt?: Date;
+  /** Decisions and tasks the user recorded in the side panel; kept alongside the AI summary. */
+  decisions?: string[];
+  tasks?: { title: string; assignee?: string; due?: string; done?: boolean }[];
 };
 
 /** Stores a transcript captured by the browser extension and summarizes it. Private to its uploader (and admins). */
@@ -154,6 +173,7 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
     .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } })
     .returning({ id: meetings.id });
   await analyze(sourceFileId, text);
+  if (t.decisions?.length || t.tasks?.length) await mergeUserNotes(sourceFileId, t);
   return { id: row!.id };
 }
 

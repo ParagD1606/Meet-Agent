@@ -147,6 +147,20 @@ $("taskList").addEventListener("change", async (e) => {
   await saveStore();
 });
 
+$("sendNotes").onclick = async () => {
+  const block = needReady();
+  if (block) { $("sendMsg").textContent = block; return; }
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  $("sendNotes").disabled = true; $("sendMsg").textContent = "Sending…";
+  try { await chrome.tabs.sendMessage(tab.id, { type: "send" }); } catch { $("sendMsg").textContent = "Couldn't reach the call tab."; $("sendNotes").disabled = false; return; }
+  // The worker uploads and records the outcome; read it back.
+  setTimeout(async () => {
+    const { lastUpload } = await chrome.storage.local.get("lastUpload");
+    $("sendNotes").disabled = false;
+    $("sendMsg").textContent = lastUpload?.ok ? "Sent. Open Meeting notes in the web app." : `Failed: ${lastUpload?.error ?? "unknown error"}`;
+  }, 1500);
+};
+
 // ---------- onboarding ----------
 function render() {
   if (!state.cfg.token && !sessionStorage.getItem("skipSetup")) show("settings");

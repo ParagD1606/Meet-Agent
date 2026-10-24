@@ -183,4 +183,18 @@ describe("extension upload", () => {
     expect(mine.filter((m: any) => m.platform === "meet")).toHaveLength(1);
     expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
   });
+
+  test("keeps the decisions and tasks recorded in the side panel", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const res = await app.request("/ext/meetings", {
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ externalId: "n1", platform: "meet", title: "Planning", lines: [{ speaker: "Ana", text: "Bob sends the deck." }],
+        decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
+    });
+    expect(res.status).toBe(201);
+    const { id } = await json(res);
+    const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
+    expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
+    expect(m.summary).toContain("Launch on Friday");
+  });
 });

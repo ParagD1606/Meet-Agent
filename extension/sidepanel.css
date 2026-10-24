@@ -47,3 +47,5 @@ label.check { font-weight: 400; display: flex; gap: 8px; align-items: center; ma
 .row { display: flex; gap: 6px; }
 .conn { margin-top: 10px; font-weight: 600; }
 .conn.ok { color: var(--ok); } .conn.bad { color: var(--bad); }
+
+.bar.send { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
