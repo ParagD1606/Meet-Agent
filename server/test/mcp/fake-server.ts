@@ -6,6 +6,8 @@ import { connectSession, setMcpFactory } from "../../src/mcp/client";
 import { readAuth } from "../../src/mcp/oauth";
 
 export type FakeCall = { tool: string; args: Record<string, unknown>; auth: string };
+/** Bearer token that makes the fake speak GitHub instead of Notion (always accepted, regardless of `state.token`). */
+export const GH_AUTH = "Bearer gh-good";
 export type FakeMode = "ok" | "reauth" | "down";
 
 /** In-process HTTP MCP server that mimics Notion's tool surface (reads, writes, destructive, calendar) over the real protocol. */
@@ -14,13 +16,18 @@ export async function startFakeMcp() {
   const state = { mode: "ok" as FakeMode, boom: false, token: "good" };
   const text = (t: string, isError = false) => ({ content: [{ type: "text" as const, text: t }], ...(isError ? { isError } : {}) });
   const build = (auth: string) => {
-    const s = new McpServer({ name: "fake-notion", version: "1.0.0" });
+    const s = new McpServer({ name: auth === GH_AUTH ? "fake-github" : "fake-notion", version: "1.0.0" });
     const def = (name: string, description: string, shape: z.ZodRawShape, annotations: Record<string, boolean>, fn: (a: any) => string) =>
       s.registerTool(name, { description, inputSchema: shape, annotations }, async (a: any) => {
         calls.push({ tool: name, args: a, auth });
         if (state.boom && name === "notion-create-pages") return text("validation_error: parent.page_id is required", true);
         return text(fn(a));
       });
+    if (auth === GH_AUTH) { // a GitHub-shaped surface for the token gh-good: small, so it is listed directly (not lazy)
+      def("list-repositories", "List the repositories the authenticated user can access.", {}, { readOnlyHint: true }, () => "repositories: acme/web, acme/api, acme/infra");
+      def("get-repository", "Get one repository by full name.", { name: z.string() }, { readOnlyHint: true }, (a) => `repository ${a.name}: private, default branch main`);
+      return s;
+    }
     def("notion-search", "Search Notion pages and databases by query.", { query: z.string() }, { readOnlyHint: true }, (a) => `results for ${a.query}: [Roadmap](page_1)`);
     def("notion-fetch", "Fetch a Notion page by id.", { id: z.string() }, { readOnlyHint: true }, (a) => `page ${a.id}: hello`);
     def("notion-create-pages", "Create one or more Notion pages.", { pages: z.array(z.object({ title: z.string() })), parent: z.string().optional() }, { readOnlyHint: false, destructiveHint: false }, (a) => `created ${a.pages.length} page(s): https://notion.so/new`);
@@ -37,7 +44,7 @@ export async function startFakeMcp() {
     async fetch(req) {
       const auth = req.headers.get("authorization") ?? "";
       if (state.mode === "down") return new Response("bad gateway", { status: 502 });
-      if (state.mode === "reauth" || auth !== `Bearer ${state.token}`) return new Response("unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="fake"' } });
+      if (state.mode === "reauth" || auth !== `Bearer ${state.token}` && auth !== GH_AUTH) return new Response("unauthorized", { status: 401, headers: { "www-authenticate": 'Bearer realm="fake"' } });
       const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
       const mcp = build(auth);
       await mcp.connect(transport);

@@ -30,6 +30,8 @@ export async function connectionNotes(ctx: { userId: string | null; orgConnectio
   const notes: string[] = [];
   let othersOnly = false;
   if (usable.length) notes.push(`you can use ${usable.join(", ")}`);
+  if (usable.some((u) => u.endsWith("an admin has not allowed writes)")))
+    notes.push("writes are disabled for workspace connections: if asked to create, edit or post in such an app, say exactly that (writes are disabled for workspace connections), that an admin can enable them in Integrations settings, or that the asker can connect their own account; never say the tools are \"not exposed\", missing or that you lack the app");
   if (uid) {
     const others = rows.filter((c) => c.scope === "user" && c.ownerUserId !== uid && c.status === "connected" && !seen.has(groupKey(c)));
     const names = new Map((await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, [...new Set(others.map((c) => c.ownerUserId!))]))).map((u) => [u.id, u.name ?? u.id]));

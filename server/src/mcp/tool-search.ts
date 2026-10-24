@@ -122,7 +122,7 @@ const MAX_SEARCHES = 3;
 const INLINE_SCHEMAS = 3;
 
 /** `search_tools` + `call_tool` over the lazy (unlisted) tools of this turn. Empty set when nothing is lazy. */
-export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
+export function lazyToolSet(entries: LazyEntry[], apps: string[], blocked: Map<string, string> = new Map()): ToolSet {
   if (!entries.length) return {};
   const byName = new Map(entries.map((e) => [e.name, e]));
   // Names alone are cheap (about 5 tokens each) and let the model call the right tool without a search round trip.
@@ -137,13 +137,16 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
       execute: async ({ query, limit }) => {
         if (++searches > MAX_SEARCHES) return `Search limit reached. Pick from: ${lastNames.join(", ") || names}, call it with call_tool now, or tell the user what you could not find.`;
         const hits = rankTools(query, entries, limit ?? 8);
-        if (!hits.length) return "No matching tools. Try other keywords (verbs like list, create, search and nouns like issue, page).";
+        const q = new Set(tokenize(query));
+        const hidden = [...blocked].filter(([n]) => tokenize(n).some((w) => q.has(w)));
+        const why = hidden.length ? `\nNOT USABLE: matching write tools exist but cannot run now. ${hidden[0]![1]}` : ""; // names withheld: a blocked tool is never offered
+        if (!hits.length) return why ? why.trim() : "No matching tools. Try other keywords (verbs like list, create, search and nouns like issue, page).";
         lastNames = hits.map((h) => h.name);
         return hits.map((h, i) => {
           const head = `${signature(h.info, h.name)}${writeMark(h)} - ${shortDesc(h.info.description)}`;
           const schema = i < INLINE_SCHEMAS ? schemaText(h.info) : null;
           return schema ? `${head}\n  schema: ${schema}` : head;
-        }).join("\n");
+        }).join("\n") + why;
       },
     }),
     call_tool: tool({
@@ -152,6 +155,7 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
       inputSchema: z.object({ name: z.string(), args: z.string().optional(), fields: z.array(z.string()).max(20).optional() }),
       execute: async ({ name, args, fields }) => {
         const e = byName.get(name);
+        if (!e && blocked.has(name)) return toolError(name, blocked.get(name)!, "not_found");
         if (!e) return toolError(name, "unknown tool: use search_tools to find the exact name", "not_found");
         const a = parseArgs(args);
         if (!a) return toolError(name, "args must be a JSON object string", "invalid_input");

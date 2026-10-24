@@ -13,6 +13,7 @@ import { ambientIo, hasSecret } from "../memory/ambient";
 import { scanMemoryText } from "../memory/core-blocks";
 import { openDm, postMessage } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
+import { withAliases } from "./ask-teammate";
 import type { ToolContext } from "./tools";
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "no due date");
@@ -38,13 +39,13 @@ export function taskTools(ctx: ToolContext): ToolSet {
   return {
     assign_task: tool({
       description: "Assign a task to a teammate (\"assign X to @Parag\", \"tell Dana to do Y by Friday\"). Creates a tracked task (shown in the Tasks tab, chased, remembered) and by default tells the assignee right away with Done/Drop buttons. Use this, not memory_remember, for any assignment. Resolve relative dates yourself from the current time. Set priority urgent when the asker says urgent/asap. Reply with what you did.",
-      inputSchema: z.object({
+      inputSchema: withAliases(z.object({
         title: z.string().min(3).max(300).describe("Short task title, e.g. 'Tales launch'"),
         assignee: z.string().min(1).max(100).describe("Slack id, <@U123> mention or name"),
         due: z.string().optional().describe("ISO date or datetime"),
         priority: z.enum(["normal", "urgent"]).optional(),
         notify: z.boolean().optional().describe("Tell the assignee now. Default true; false only if the asker says not to tell them."),
-      }),
+      }), { assignee: ["owner", "to", "user", "person", "recipient", "assigned_to"], title: ["task", "name", "text", "description"] }),
       execute: async ({ title, assignee, due, priority, notify }) => {
         if (!ctx.userId) return "ERROR: no asker to assign on behalf of.";
         const t = clean(title);
@@ -70,11 +71,11 @@ export function taskTools(ctx: ToolContext): ToolSet {
     }),
     update_task: tool({
       description: "Change a tracked task: mark it done/dropped/open/in_progress, reassign, move the due date or priority (\"the Tales task is done\", \"reassign it to Dana\"). Give the task id from find_tasks or a few words of its title. Only the owner, assigner or an admin can change it; reassigning is for the assigner or an admin. The assigner is told when it is marked done.",
-      inputSchema: z.object({
+      inputSchema: withAliases(z.object({
         id: z.string().max(40).optional(), title: z.string().max(200).optional().describe("Words from the task title when you have no id"),
         status: z.enum(["done", "open", "dropped", "in_progress"]).optional(),
         owner: z.string().max(100).optional().describe("New owner (reassign)"), due: z.string().optional(), priority: z.enum(["normal", "urgent"]).optional(),
-      }),
+      }), { status: ["state"], id: ["task_id", "task"] }),
       execute: async ({ id, title, status, owner, due, priority }) => {
         if (!ctx.userId) return "ERROR: no asker.";
         if (!id && !title) return "ERROR: give the task id or some words of its title.";
@@ -109,7 +110,7 @@ export function taskTools(ctx: ToolContext): ToolSet {
     }),
     notify_teammate: tool({
       description: "Pass the asker's OWN words to a teammate when they explicitly say so (\"tell @X that the deploy is done\", \"say hello to @X\"). Posts an @mention in this thread when X is in the channel, else DMs X \"From <asker> via Pixel: ...\". Never include anything the asker did not write (no memory, tool results or private details). For work to be done use assign_task instead.",
-      inputSchema: z.object({ person: z.string().min(1).max(100), message: z.string().min(2).max(500).describe("The asker's message to relay, in their words") }),
+      inputSchema: withAliases(z.object({ person: z.string().min(1).max(100), message: z.string().min(2).max(500).describe("The asker's message to relay, in their words") }), { person: ["recipient", "to", "user", "who"], message: ["text", "body", "content"] }),
       execute: async ({ person: who, message }) => {
         if (!ctx.userId) return "ERROR: no asker to relay for.";
         const text = clean(message);

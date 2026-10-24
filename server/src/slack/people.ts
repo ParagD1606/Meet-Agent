@@ -8,7 +8,7 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, "\\$&");
 
 /** Name/email/title substring search over synced Slack users (humans, active only). */
 export async function searchPeople(q: string, limit = 10): Promise<Person[]> {
-  const term = q.trim();
+  const term = q.trim().replace(/^<@([^>|]+)(\|[^>]*)?>$/, "$1").replace(/^@/, ""); // "@name" and "<@U123>" are how people (and models) write mentions
   if (!term) return [];
   const pat = `%${escapeLike(term)}%`;
   return db.select({ id: users.id, name: users.name, title: users.title, email: users.email }).from(users)

@@ -43,6 +43,9 @@ With `LIVE_MODEL=1` the scripted scenarios are skipped, so a live run only spend
 | 10-quiet-hours | default: no deferral on a Saturday night; `QUIET_HOURS=1`: deferral (chase, follow-up, ask) | yes | n/a (no model) |
 | 11-home-view | App Home view obeys Slack block limits for 0/1/150 facts, admin/member, hostile text | yes | n/a |
 | 12-scope-safety | private-channel task and fact never reach a non-member (API, tools, digests, lists, risks, turns) | yes (table) | n/a |
+| 13-notion-write | "make a new notion note with demo title" through a workspace Notion connection, member asker: ONE create-pages call (writes ON), one card + Approve runs it once (doc edits carded), writes OFF: nothing runs and the reply says writes are disabled for workspace connections / an admin enables them (never "not exposed"); a write after reading external content is always carded | yes | yes (effects: <=1 create or exactly 1 card; OFF: 0 calls, admin/disabled wording) |
+| 14-teammate-github | "tell the repos you can access" with GitHub only as another user's personal connection: the model is told who owns it, requests teammate access (pending lease + Allow/Deny DM), mentions admin / workspace-wide, never "I only have Notion"; variant: the asker's own personal GitHub is used, no lease | yes | yes |
+| 15-integrations-api | `GET /api/mcp/connections`: member never sees another's personal connection, admin sees owner names, no secrets; `POST .../:id/test` (own, workspace, foreign = 404); needs_reauth shows the error text and sends a single DM (admins for workspace, owner for personal); prompt, tool results and Slack never contain tokens or key-bearing URLs | yes | n/a (the no-leak turn is scripted; the API cases run in both modes, no model) |
 
 Bugs these scenarios found and that are now fixed are listed in the commit/PR that added the suite; each stays as its own test.
 
@@ -63,4 +66,9 @@ Bugs these scenarios found and that are now fixed are listed in the commit/PR th
    and asserts only on effects. Keep live turns few; each costs real tokens.
 7. A scenario that needs time: `setSystemTime(new Date("..."))` from `bun:test`, reset in `afterEach`.
 
-Scenarios for MCP / Notion integrations belong here too (`13-...`): fake the MCP network with `fakeMcp()` from `test/turn/helpers.ts`.
+Scenarios for MCP / Notion integrations (13-15): call `useFakeMcp()` from `test/replay/mcp.ts` (after your `boot()` beforeEach). It starts the
+in-process fake MCP server (`test/mcp/fake-server.ts`, real MCP protocol over HTTP, Notion-shaped tools; the bearer token `gh-good` makes it
+speak GitHub instead) and routes every connection to it, so `createConnection({ provider, scope, ownerUserId, token })` is all the wiring a
+scenario needs. `mcp.fake.calls` is what reached the app, `mcp.fake.state.mode = "reauth" | "down"` simulates outages, `creates()` filters create-page calls.
+Prompts show only the LATEST tool result in full (older ones are cleared), so script steps by `seen.n`, not by searching old results in `seen.prompt`.
+The argument-alias tests (`assign_task` owner/to/task..., `update_task` state/task_id, `notify_teammate`, `schedule_follow_up`) live in `test/turn/alias-tools.test.ts`.

@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { createFollowUp, FollowUpError, proposeFollowUp } from "../manager/followups";
 import { searchPeople } from "../slack/people";
+import { withAliases } from "./ask-teammate";
 import type { ToolContext } from "./tools";
 
 /**
@@ -12,12 +13,12 @@ import type { ToolContext } from "./tools";
 export function scheduleFollowUpTool(ctx: ToolContext) {
   return tool({
     description: "Schedule a DM follow-up. `text` is only the message content: no greeting or sign-off (the DM adds its own). Without `person`, DMs the asker at the time (a reminder). With `person`, posts a consent card and DMs that person only after the asker confirms. `at` is an ISO 8601 datetime WITH timezone offset (resolve 'Friday', 'in 3 days' from the current time); DMs are only delivered. `repeatEveryDays` makes it recurring (1-90). Tell the asker what you scheduled; for a person, say you are waiting for their OK on the card.",
-    inputSchema: z.object({
+    inputSchema: withAliases(z.object({
       text: z.string().min(3).max(500).describe("What to remind or follow up about. Plain words; it is DMed verbatim."),
       at: z.string().describe("ISO 8601 datetime with offset, e.g. 2026-06-12T09:00:00+05:30"),
       person: z.string().max(100).optional().describe("Slack id or name of who to follow up with; omit to remind the asker"),
       repeatEveryDays: z.number().int().min(1).max(90).optional(),
-    }),
+    }), { person: ["recipient", "to", "user"], text: ["message", "note"] }),
     execute: async ({ text, at, person, repeatEveryDays }) => {
       if (!ctx.userId) return "ERROR: no asker to schedule for.";
       let targetId: string | null = null;

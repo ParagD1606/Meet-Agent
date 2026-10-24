@@ -89,6 +89,7 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
   const used = new Set<string>();
   const lazy: LazyEntry[] = [];
   const lazyApps: string[] = [];
+  const blocked = new Map<string, string>(); // write tools that exist but cannot run this turn -> why (so the model never says "not exposed")
 
   for (const slot of groups.values()) {
     const readConn = slot.own ?? slot.org ?? slot.leased?.conn;
@@ -105,7 +106,10 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
     let exposed = 0;
     for (const t of listed) {
       const kind = classifyTool(t.name, t.description, t.annotations, { trustAnnotations: trust });
-      if (kind === "write" && !(writeConn && ctx.userId)) continue;
+      if (kind === "write" && !(writeConn && ctx.userId)) {
+        blocked.set(toolKey(readConn, t.name, new Set()), writeBlockedReason(ctx, slot.org?.label ?? readConn.label));
+        continue;
+      }
       const name = toolKey(readConn, t.name, used);
       const cls = actionClass(t.name, readConn.provider, t.annotations);
       const gated = kind === "write" && needsApproval(cls, cards);
@@ -134,10 +138,17 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
     if (isLazy && exposed) lazyApps.push(`${appPrefix(readConn)}:${exposed}`);
   }
 
-  Object.assign(tools, lazyToolSet(lazy, lazyApps));
+  Object.assign(tools, lazyToolSet(lazy, lazyApps, blocked));
   const info = await connectionNotes(ctx).catch(() => ({ notes: [] as string[], othersOnly: false }));
   if (info.othersOnly && !tools.request_teammate_access) Object.assign(tools, teammateAccessTools(ctx, "I don't have access"));
   return { tools, notes: [...notes, ...info.notes] };
+}
+
+/** Why a write tool cannot run now, in words the model can relay. */
+function writeBlockedReason(ctx: McpToolCtx, app: string): string {
+  if (ctx.readOnly) return "This turn is read-only, so nothing can be changed. Say so.";
+  if (ctx.orgConnectionsOnly) return "Unattended runs cannot write through apps. Say so.";
+  return `Writes are disabled for workspace connections (${app}) by an admin, so this action is not allowed right now. Tell the asker exactly that: an admin can enable writes in Integrations settings (Workspace writes), or they can connect their own ${app} account. Do NOT say the tool is missing or not exposed.`;
 }
 
 /** One approved-by-policy write: serialized per connection, never retried (a retry could double-write), output capped. */
