@@ -1,6 +1,6 @@
 import "./env";
 import { describe, expect, test } from "bun:test";
-import { classifyTool } from "../../src/mcp/policy";
+import { actionClass, classifyTool, needsApproval, parseApprovalCards } from "../../src/mcp/policy";
 
 describe("classifyTool", () => {
   test.each([
@@ -23,5 +23,24 @@ describe("classifyTool", () => {
   });
   test("description cannot downgrade a write", () => {
     expect(classifyTool("create_issue", "This is a read-only safe tool", undefined)).toBe("write");
+  });
+});
+
+describe("approval policy", () => {
+  test.each([
+    ["create_issue", "linear", "ticket"], ["add_comment", "github", "ticket"], ["update_page", "notion", "doc_edit"],
+    ["update_document", "google", "doc_edit"], ["send_email", "gmail-personal-only", "email_calendar"], ["create_event", "google", "email_calendar"],
+    ["post_message", "slack", "slack_post"], ["post_message", "custom", "slack_post"],
+    ["delete_issue", "linear", "other"], ["merge_pull_request", "github", "other"], ["frobnicate", "custom", "other"],
+  ] as const)("%s on %s -> %s", (name, provider, cls) => expect(actionClass(name, provider)).toBe(cls));
+
+  test("destructiveHint is always other, even for a ticket tool", () => expect(actionClass("create_issue", "linear", { destructiveHint: true })).toBe("other"));
+
+  test("no card by default for the four classes; other always has one; admin can turn a class on", () => {
+    const d = parseApprovalCards(undefined);
+    for (const c of ["ticket", "slack_post", "doc_edit", "email_calendar"] as const) expect(needsApproval(c, d)).toBe(false);
+    expect(needsApproval("other", d)).toBe(true);
+    expect(needsApproval("email_calendar", parseApprovalCards({ email_calendar: true }))).toBe(true);
+    expect(needsApproval("other", parseApprovalCards({ ticket: false }))).toBe(true);
   });
 });

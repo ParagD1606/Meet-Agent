@@ -11,7 +11,7 @@ import { callConnectionTool, listConnectionTools, type ConnectionRow, type McpTo
 import { isTransientError, toolError } from "./errors";
 import { capResult, minifyResult } from "./minify";
 import { runForConnection } from "./operation-queue";
-import { classifyTool } from "./policy";
+import { actionClass, classifyTool, getApprovalCards, needsApproval } from "./policy";
 import { withResetRetry } from "./reset-retry";
 import { lazyToolSet, shortDesc, type LazyEntry } from "./tool-search";
 
@@ -95,6 +95,7 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
     }
   }
 
+  const cards = await getApprovalCards().catch(() => ({}));
   const used = new Set<string>();
   const lazy: LazyEntry[] = [];
   const lazyApps: string[] = [];
@@ -115,12 +116,15 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
       const kind = classifyTool(t.name, t.description, t.annotations, { trustAnnotations: trust });
       if (kind === "write" && !(writeConn && ctx.userId)) continue;
       const name = toolKey(readConn, t.name, used);
+      const gated = kind === "write" && needsApproval(actionClass(t.name, readConn.provider, t.annotations), cards);
       const run = kind === "read"
         ? async (input: Record<string, unknown>, fields?: string[]) => {
             if (leased && !(await consumeLease(leased.leaseId, ctx.userId!))) return "ERROR: the teammate's one-time access has already been used or has expired. Ask them again with request_teammate_access.";
             return runRead(readConn, t.name, name, input, ctx, fields);
           }
         : async (input: Record<string, unknown>) => {
+            // No card for ticket/slack/doc/email-calendar writes unless an admin turned that class on; destructive or unclassified always gets one.
+            if (!gated) return runWrite(writeConn!, t.name, name, input, ctx);
             try {
               const { approvalId } = await requestApproval({
                 turnId: ctx.turnId, requesterId: ctx.userId!, channelId: ctx.channelId, threadTs: ctx.threadTs,
@@ -130,8 +134,8 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
             } catch (e) { return `ERROR: ${e instanceof Error ? e.message : String(e)}`; }
           };
       exposed++;
-      if (isLazy) { lazy.push({ name, info: t, kind, run }); continue; }
-      const desc = shortDesc(t.description ?? t.name) + (kind === "write" ? " [WRITE: needs user approval]" : leased ? " [one-time lease]" : "");
+      if (isLazy) { lazy.push({ name, info: t, kind, run, gated }); continue; }
+      const desc = shortDesc(t.description ?? t.name) + (kind === "write" ? (gated ? " [WRITE: needs user approval]" : " [WRITE: runs immediately, be sure]") : leased ? " [one-time lease]" : "");
       tools[name] = dynamicTool({ description: desc, inputSchema: schemaOf(t), execute: async (input) => run((input ?? {}) as Record<string, unknown>) });
     }
     if (isLazy && exposed) lazyApps.push(`${appPrefix(readConn)}:${exposed}`);
@@ -139,6 +143,15 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
 
   Object.assign(tools, lazyToolSet(lazy, lazyApps));
   return { tools, notes };
+}
+
+/** One approved-by-policy write: serialized per connection, never retried (a retry could double-write), output capped. */
+async function runWrite(conn: ConnectionRow, mcpTool: string, name: string, input: Record<string, unknown>, ctx: McpToolCtx): Promise<unknown> {
+  let raw: string;
+  try { raw = await runForConnection(conn.id, () => callConnectionTool(conn, mcpTool, input)); }
+  catch (e) { return toolError(name, e); }
+  if (raw.startsWith("ERROR: ")) return toolError(name, raw);
+  return capResult(minifyResult(raw, {}), { turnId: ctx.turnId, toolName: name });
 }
 
 /** One read: serialized per connection, retried once on a transport reset, errors structured, output minified + capped. */

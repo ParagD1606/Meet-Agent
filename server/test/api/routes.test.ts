@@ -49,6 +49,13 @@ describe("settings", () => {
     expect((await json(await call("GET", "/api/settings/workspace-prompt", { cookie: member }))).prompt).toBe("be brief");
   });
 
+  test("approval cards: default off per class, admin can switch a class on", async () => {
+    expect((await json(await call("GET", "/api/settings/approvals", { cookie: admin }))).cards).toEqual({ ticket: false, slack_post: false, doc_edit: false, email_calendar: false });
+    const res = await json(await call("PUT", "/api/settings/approvals", { cookie: admin, body: { cards: { email_calendar: true } } }));
+    expect(res.cards).toEqual({ ticket: false, slack_post: false, doc_edit: false, email_calendar: true });
+    expect((await call("PUT", "/api/settings/approvals", { cookie: admin, body: { cards: { ticket: "yes" } } })).status).toBe(400);
+  });
+
   test("proactivity default + per-channel overrides", async () => {
     await db.insert(channels).values([{ id: "C1", name: "general" }, { id: "D1", isIm: true }]);
     const res = await json(await call("PUT", "/api/settings/proactivity", { cookie: admin, body: { default: "own", channels: [{ id: "C1", mode: "quiet" }] } }));

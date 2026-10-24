@@ -5,6 +5,7 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { config } from "../config";
 import { db } from "../db";
 import { channels, settings } from "../db/schema";
+import { ACTION_CLASSES, getApprovalCards, setApprovalCards } from "../mcp/policy";
 import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
 import { httpError, readBody, codedError } from "./util";
@@ -22,6 +23,13 @@ settingsRoutes.put("/settings/workspace-prompt", requireAuth("admin"), async (c)
   try {
     return c.json({ prompt: await setWorkspacePrompt(prompt) });
   } catch (e) { throw codedError(e); }
+});
+
+// ---------- approval cards per action class (default: none; deletes and unclassified actions always get one) ----------
+settingsRoutes.get("/settings/approvals", requireAuth("admin"), async (c) => c.json({ cards: await getApprovalCards(), classes: ACTION_CLASSES }));
+settingsRoutes.put("/settings/approvals", requireAuth("admin"), async (c) => {
+  const body = await readBody(c, z.object({ cards: z.object(Object.fromEntries(ACTION_CLASSES.map((k) => [k, z.boolean().optional()]))) }));
+  return c.json({ cards: await setApprovalCards(body.cards), classes: ACTION_CLASSES });
 });
 
 // ---------- proactivity ----------

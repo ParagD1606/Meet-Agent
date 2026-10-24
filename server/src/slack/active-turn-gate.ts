@@ -6,18 +6,34 @@
  */
 export type InboxMessage = { userId: string | null; ts: string; text: string; files?: { name: string; mimeType: string; text: string }[] };
 
-type Slot = { inbox: InboxMessage[]; noticed: boolean };
+type Slot = { inbox: InboxMessage[]; noticed: boolean; userId: string | null; text: string; ctl: AbortController };
 const active = new Map<string, Slot>();
 
 export const gateKey = (channelId: string, threadTs: string) => `${channelId}:${threadTs}`;
 export const isActive = (key: string) => active.has(key);
 
 /** Mark a turn active. Returns false when one already is (caller should `offer` instead). */
-export function begin(key: string): boolean {
+export function begin(key: string, who: { userId: string | null; text: string } = { userId: null, text: "" }): boolean {
   if (active.has(key)) return false;
-  active.set(key, { inbox: [], noticed: false });
+  active.set(key, { inbox: [], noticed: false, ...who, ctl: new AbortController() });
   return true;
 }
+
+/** Who started the running turn and what they asked (steering decisions are theirs alone). */
+export const ownerOf = (key: string) => { const s = active.get(key); return s ? { userId: s.userId, text: s.text } : undefined; };
+/** Abort signal for the turn about to run in this slot; its `reason` is "stop" or "replace" when steered. */
+export const signalOf = (key: string): AbortSignal | undefined => active.get(key)?.ctl.signal;
+/** Abort the running turn and arm a fresh signal for the next one. */
+export function cancel(key: string, reason: "stop" | "replace"): void {
+  const s = active.get(key);
+  if (!s) return;
+  s.ctl.abort(reason);
+  s.ctl = new AbortController();
+}
+/** Forget queued messages (a stop or replacement supersedes them). */
+export function clearInbox(key: string): void { const s = active.get(key); if (s) { s.inbox = []; s.noticed = false; } }
+/** Set which request the slot is now working on (merged follow-ups change it). */
+export function setActiveText(key: string, who: { userId: string | null; text: string }): void { const s = active.get(key); if (s) Object.assign(s, who); }
 
 export const MAX_INBOX = 10;
 

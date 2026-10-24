@@ -1,6 +1,7 @@
 import type { WebClient } from "@slack/web-api";
 import { log } from "../log";
 import { chunkText, toMrkdwn } from "./format";
+import { clientMsgId, once } from "./idempotent";
 import { sanitizeForSlack } from "./sanitize";
 
 /** What a reply looks like once it is safe to post: broadcast pings stripped, markdown -> mrkdwn, split under Slack's limits. */
@@ -19,6 +20,8 @@ export type SinkOpts = {
   /** Post a "Thinking" placeholder up front (update mode). */
   placeholder?: boolean;
   minGapMs?: number;
+  /** Stable id of the triggering message. When set, final-reply posts are idempotent: a retried turn never posts the same reply twice. */
+  idemKey?: string;
 };
 
 export type ReplySink = {
@@ -120,9 +123,24 @@ export function createReplySink(o: SinkOpts): ReplySink {
       if (o.assistant) await setAssistantStatus("");
       const [first, ...rest] = prepareReply(text);
       if (first === undefined) return;
-      if (ts) await o.slack.chat.update({ channel: o.channel, ts, text: first });
-      else { const r = await o.slack.chat.postMessage({ channel: o.channel, thread_ts: thread, text: first }); ts = (r as { ts?: string }).ts; }
-      for (const c of rest) await o.slack.chat.postMessage({ channel: o.channel, thread_ts: thread, text: c });
+      const keyOf = (i: number) => o.idemKey && `${o.channel}:${thread ?? ""}:${o.idemKey}:${i}`;
+      // client_msg_id is sent too (Slack may ignore it); the claim in `events` is what guarantees at-most-once
+      const post = async (c: string, i: number) => {
+        const key = keyOf(i);
+        const send = () => o.slack.chat.postMessage({ channel: o.channel, thread_ts: thread, text: c, ...(key ? { client_msg_id: clientMsgId(key) } : {}) } as never);
+        return key ? once(key, send) : { replayed: false as const, value: await send() };
+      };
+      if (ts) {
+        // a placeholder exists: a replayed first chunk means the real reply is already out, so drop the placeholder
+        const edit = () => o.slack.chat.update({ channel: o.channel, ts: ts!, text: first });
+        const key = keyOf(0);
+        const r = key ? await once(key, edit) : (await edit(), { replayed: false });
+        if (r.replayed) { await o.slack.chat.delete({ channel: o.channel, ts }).catch(() => undefined); log.info("reply replay suppressed", { channel: o.channel }); }
+      } else {
+        const r = await post(first, 0);
+        if (!r.replayed) ts = (r.value as { ts?: string }).ts;
+      }
+      for (const [i, c] of rest.entries()) await post(c, i + 1);
     },
     async fail(text) {
       await chain;

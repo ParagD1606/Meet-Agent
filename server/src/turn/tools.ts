@@ -42,6 +42,8 @@ export type ToolContext = {
   /** The user's own message text: URLs typed there are the only ones web_extract may read (plus search results). */
   userText?: string;
   allowedUrlSet?: Set<string>;
+  /** Slack Real-time Search token from the asker's event; absent on unattended/follow-up turns. */
+  actionToken?: string | null;
 };
 
 const MAX_EXTRACT_URLS = 3;
@@ -118,7 +120,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
       }))).join("\n\n---\n\n");
     },
   });
-  Object.assign(fam.slack_search, slackSearchTools({ userId: ctx.userId }));
+  Object.assign(fam.slack_search, slackSearchTools({ userId: ctx.userId, actionToken: ctx.actionToken }));
   if (writable) {
     Object.assign(fam.automations, await automationTools(ctx as never));
     Object.assign(fam.research, await researchTools(ctx as never));

@@ -3,6 +3,8 @@ export const SLACK_BOT_SCOPES = [
   "app_mentions:read", "assistant:write", "channels:history", "channels:join", "channels:manage", "channels:read",
   "chat:write", "chat:write.public", "canvases:read", "commands", "files:read", "groups:history", "groups:read", "im:history", "im:read", "im:write",
   "mpim:history", "mpim:read", "reactions:read", "reactions:write", "users:read", "users:read.email", "team:read",
+  // Real-time Search (assistant.search.context): user-scoped through the event action_token, read-only
+  "search:read.public", "search:read.private", "search:read.mpim", "search:read.im",
 ] as const;
 
 export const SLACK_USER_SCOPES_SIGNIN = ["openid", "profile", "email"] as const;

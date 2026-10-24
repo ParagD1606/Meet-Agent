@@ -22,7 +22,7 @@ export type LoopResult = {
   toolCalls: ToolCallRecord[];
   waitingApproval: boolean;
   /** Why the loop stopped early, if it did. */
-  stopped?: "ceiling" | "timeout" | "step_cap";
+  stopped?: "ceiling" | "timeout" | "step_cap" | "cancelled";
 };
 
 let modelOverride: LanguageModel | undefined;
@@ -211,7 +211,8 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   } catch (e) { streamError ??= e; }
 
   if (budget.exceeded) stopped = "ceiling";
-  else if (abortSignal.aborted && !a.abortSignal?.aborted) stopped = "timeout";
+  else if (a.abortSignal?.aborted) stopped = "cancelled";
+  else if (abortSignal.aborted) stopped = "timeout";
   const text = (step.trim() ? step : last).trim();
   if (streamError && !stopped && !text) throw streamError instanceof Error ? streamError : new Error(String(streamError));
   if (streamError) log.warn("stream error after output", { error: String(streamError) });

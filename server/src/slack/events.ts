@@ -11,7 +11,8 @@ import { ratingFor, recordFeedback, ack, done } from "./reactions";
 import { readSlackFiles } from "./attachments";
 import { resolvePrivacy, routeMessage, stripMention, type SlackMessageEvent } from "./routing";
 import { onAssistantThreadStarted, noteAssistantMessage, isAssistantThread } from "./assistant";
-import { begin, drain, end, gateKey, mergeInbox, offer } from "./active-turn-gate";
+import { begin, drain, end, gateKey, mergeInbox, setActiveText, signalOf } from "./active-turn-gate";
+import { steerActive } from "../turn/steering";
 import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 import { ingestHuddleFile } from "../meetings";
@@ -89,10 +90,11 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
   const assistant = isIm && isAssistantThread(ev.channel, threadTs);
   if (assistant) void noteAssistantMessage(ev.channel, threadTs, text);
 
-  // A turn is already running in this thread: queue this message for one merged follow-up instead of racing it.
-  if (!begin(key)) {
-    const q = offer(key, { userId: ev.user ?? null, ts: ev.ts, text, files });
-    if (q.notice) {
+  // A turn is already running in this thread: steer it (stop / replace / ignore) or queue this message for one merged follow-up.
+  while (!begin(key, { userId: ev.user ?? null, text })) {
+    const s = await steerActive(key, { userId: ev.user ?? null, ts: ev.ts, text, files });
+    if (!s.handled) continue; // the turn ended while we were deciding: try to start ours
+    if (s.action === "APPEND" && s.notice) {
       await postMessage({ channel: ev.channel, thread_ts: threadTs ?? ev.thread_ts, text: "_Got your message. I'll pick it up as soon as I finish this one._" })
         .catch((e) => log.warn("queue notice failed", { error: (e as Error).message }));
     }
@@ -100,10 +102,11 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
   }
   try {
     await ack(ev.channel, ev.ts);
-    let ok = await runOne({ trigger, channelId: ev.channel, threadTs, ts: ev.ts, userId: ev.user ?? null, text, isPrivate, isIm, assistant, ...(files.length ? { files } : {}) });
+    let ok = await runOne({ trigger, channelId: ev.channel, threadTs, ts: ev.ts, userId: ev.user ?? null, text, isPrivate, isIm, assistant, actionToken: ev.action_token, abortSignal: signalOf(key), ...(files.length ? { files } : {}) });
     for (let batch = drain(key); batch.length; batch = drain(key)) {
       const m = mergeInbox(batch);
-      ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, ...(m.files.length ? { files: m.files } : {}) })) && ok;
+      setActiveText(key, { userId: m.userId, text: m.text });
+      ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, abortSignal: signalOf(key), ...(m.files.length ? { files: m.files } : {}) })) && ok;
     }
     await done(ev.channel, ev.ts, ok);
   } finally { end(key); }

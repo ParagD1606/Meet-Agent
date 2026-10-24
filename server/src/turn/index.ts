@@ -39,6 +39,10 @@ export type TurnInput = {
   agentContext?: AgentContext;
   /** Slack assistant-pane thread: progress goes through assistant.threads.setStatus. */
   assistant?: boolean;
+  /** Slack Real-time Search action token from the triggering event (live user-scoped search). */
+  actionToken?: string;
+  /** Aborted when the user steers the running turn ("stop" or a replacing message); reason says which. */
+  abortSignal?: AbortSignal;
 };
 
 const NO_REPLY = /^\s*NO_REPLY\s*$/;
@@ -100,6 +104,7 @@ async function execute(input: TurnInput): Promise<void> {
       native: interactive && input.isIm && (depth === "direct" || depth === "memory"),
       assistant: !!input.assistant && input.isIm,
       placeholder: interactive && depth !== "direct",
+      idemKey: interactive ? input.ts : undefined,
     });
     stage = "reply_begin";
     if (interactive) await sink.begin();
@@ -107,6 +112,7 @@ async function execute(input: TurnInput): Promise<void> {
     const ctx: ToolContext = {
       turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope,
       readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth, userText: input.text,
+      actionToken: input.actionToken,
     };
     const narrate = interactive ? sink.narrate : undefined;
     stage = "tools";
@@ -136,7 +142,7 @@ async function execute(input: TurnInput): Promise<void> {
     stage = "model";
     const result = await runLoop({
       system, messages, tools, turnId, role: plan.role, depth, maxSteps, maxOutputTokens: plan.maxOutputTokens,
-      activeTools: assembled?.active,
+      activeTools: assembled?.active, abortSignal: input.abortSignal,
       onStatus: (name) => { if (interactive) sink!.status(`Working: ${name.replace(/_+/g, " ")}...`); },
       onText: (t) => { if (interactive && (depth === "direct" || depth === "memory")) sink!.text(t); },
     });
@@ -145,10 +151,12 @@ async function execute(input: TurnInput): Promise<void> {
     let reply = result.text;
     const silent = !reply || NO_REPLY.test(reply);
     let out = reply;
-    if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
+    if (result.stopped === "cancelled") out = input.abortSignal?.reason === "replace" ? "_Dropped that; picking up your newer message._" : "_Stopped._";
+    else if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
     else if (result.stopped === "timeout") out = reply && !silent ? reply : TIMEOUT_MSG;
     else if (result.stopped === "step_cap" && !silent) out = reply + STEP_CAP_HINT;
     else if (silent) out = "I couldn't generate a reply just now. Please try again in a moment.";
+    const cancelled = result.stopped === "cancelled";
     const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
     stage = "reply_finish";
     if (!quiet) await sink.finish(out);
@@ -168,7 +176,7 @@ async function execute(input: TurnInput): Promise<void> {
     if (input.userId) await recordUsage({ userId: input.userId, inputTokens: result.inputTokens, outputTokens: result.outputTokens }).catch((e) => log.warn("recordUsage failed", { error: String(e) }));
 
     // ---- learn: only primary turns on shared-safe data; never from personal/leased tool use ----
-    const canLearn = agentContext === "primary" && !readOnly && !silent && !ctx.touchedPrivateData && depth !== "direct";
+    const canLearn = agentContext === "primary" && !readOnly && !silent && !cancelled && !ctx.touchedPrivateData && depth !== "direct";
     const threadKey = replyThread ?? input.ts;
     if (canLearn) {
       const transcript = `${input.text}\n\nAssistant: ${reply}`;
