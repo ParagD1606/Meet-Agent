@@ -1,5 +1,6 @@
 import { log } from "../log";
 import { handleCommitmentAction } from "../manager/chase";
+import { handleFollowUpAction } from "../manager/followups";
 import { handleBrainAction } from "./commands";
 import { deps } from "./deps";
 import { setJourneyQuiet } from "./journey/engine";
@@ -27,7 +28,7 @@ export async function handleInteraction(payload: BlockActions): Promise<void> {
     const actions = payload.actions ?? [];
     const own = actions.filter((a) => a.action_id?.startsWith("journey_") || a.action_id?.startsWith("brain_"));
     for (const a of own) {
-      if (await handleCommitmentAction(payload, a)) continue;
+      if (await handleCommitmentAction(payload, a) || await handleFollowUpAction(payload, a)) continue;
       if (await handleBrainAction(payload as never, a)) continue;
       if (await handleResolveAction(payload, a) || await handleAskAction(payload, a)) continue;
       if (a.action_id === "journey_quiet" && payload.user?.id) {

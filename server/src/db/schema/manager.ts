@@ -20,11 +20,32 @@ export const commitments = pgTable("commitments", {
   nudgeCount: integer("nudge_count").notNull().default(0),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: ts("created_at"),
+  assignerId: text("assigner_id"), // Slack user id of whoever gave the task (message author)
+  sourceTs: text("source_ts"), // Slack ts of the originating message (edit/delete sync)
+  sourceHash: text("source_hash"), // hash of that message's raw text (skips no-op message_changed events)
 }, (t) => [
+  index("commitments_source_ts_idx").on(t.channelId, t.sourceTs),
+  index("commitments_thread_idx").on(t.channelId, t.threadTs),
   uniqueIndex("commitments_source_uniq").on(t.sourceRef),
   index("commitments_owner_idx").on(t.ownerId, t.status),
   index("commitments_scope_idx").on(t.scopeTag, t.status),
 ]);
+
+/** "Remind me / follow up with @X" DMs. target null = remind the owner; otherwise DMs target only after the owner consented (status proposed -> pending). */
+export const followUps = pgTable("follow_ups", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  targetId: text("target_id"),
+  text: text("text").notNull(),
+  dueAt: timestamp("due_at", { withTimezone: true }).notNull(),
+  repeatDays: integer("repeat_days"),
+  status: text("status", { enum: ["proposed", "pending", "sent", "cancelled", "failed"] }).notNull().default("pending"),
+  originChannelId: text("origin_channel_id"),
+  originThreadTs: text("origin_thread_ts"),
+  sendCount: integer("send_count").notNull().default(0),
+  lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+}, (t) => [index("follow_ups_due_idx").on(t.status, t.dueAt), index("follow_ups_owner_idx").on(t.ownerId, t.status)]);
 
 /** Risks already posted (one row per risk key), so the daily scan never repeats itself. */
 export const managerRisks = pgTable("manager_risks", {

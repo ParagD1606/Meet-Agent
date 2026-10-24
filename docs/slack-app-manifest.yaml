@@ -36,6 +36,15 @@ features:
       description: "Review pending memory changes (admins)"
       should_escape: true
     -
+      command: "/brain-tasks"
+      description: "Your open tasks and the ones you assigned"
+      should_escape: true
+    -
+      command: "/brain-followups"
+      description: "List, cancel and set up follow-up and digest DMs"
+      usage_hint: "[list | cancel <id> | digest on 09:00 | weekly on]"
+      should_escape: true
+    -
       command: "/brain-pause"
       description: "Stop learning from this channel (admins, channel creator)"
       should_escape: true

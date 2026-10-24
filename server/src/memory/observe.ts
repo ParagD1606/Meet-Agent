@@ -8,6 +8,7 @@ import { registerBootstrapJobs } from "./bootstrap";
 import { alreadySeen, flushIdleAmbient, markPolled } from "./ambient";
 import { applyMemorySchedules, bindBoss, loadFreshness } from "./freshness";
 import { consolidate } from "./consolidate";
+import { backfillAll, backfillChannel } from "./backfill";
 import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
 import { writeTag } from "./scope";
@@ -118,7 +119,7 @@ export async function observeAll(): Promise<{ channels: number; messages: number
   return total;
 }
 
-export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect", backfill: "memory-backfill" } as const;
+export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect", backfill: "memory-backfill", backfillHistory: "memory-backfill-history" } as const;
 
 /** Observe poll (backstop for ambient events), consolidate nightly, flush idle captures; observe/reflect cadence follows the freshness mode. */
 export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
@@ -141,7 +142,15 @@ export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
     const n = await backfillContextPrefixes();
     if (n) log.info("context prefixes backfilled", { n });
   });
+  await boss.work<{ channelId?: string }>(MEMORY_QUEUES.backfillHistory, async (jobs) => {
+    const channelId = jobs[0]?.data?.channelId;
+    const r = channelId ? await backfillChannel(channelId) : await backfillAll();
+    const more = channelId ? !(r as { done: boolean }).done : (r as { remaining: number }).remaining > 0;
+    log.info("history backfill", { channelId, ...r });
+    if (more) await boss.sendAfter(MEMORY_QUEUES.backfillHistory, channelId ? { channelId } : {}, { singletonKey: `${channelId ?? "all"}:${Date.now()}` }, 90); // continue where the budget stopped
+  });
   await registerBootstrapJobs(boss);
+  await boss.schedule(MEMORY_QUEUES.backfillHistory, "23 * * * *"); // safety net: channels that joined while jobs were down
   await boss.schedule(MEMORY_QUEUES.backfill, "*/20 * * * *");
   await boss.schedule(MEMORY_QUEUES.consolidate, "17 3 * * *");
   await applyMemorySchedules(); // observe + reflect crons follow the freshness mode (30 min / 10 min in normal)

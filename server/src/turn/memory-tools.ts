@@ -9,6 +9,7 @@ import { entityLookup } from "../memory/entities";
 import { searchThreads } from "../memory/episodes";
 import { readTags, writeTag, type SlackScope } from "../memory/scope";
 import { searchMemory } from "../memory/search";
+import { findTasks, formatTasks } from "../manager/find";
 
 type MemoryToolContext = {
   turnId: string;
@@ -82,6 +83,19 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
           ? rows.map((r) => `- ${r.endedAt.toISOString().slice(0, 10)} in <#${r.channelId}>${r.permalink ? ` (${r.permalink})` : ""}: ${r.summary}`).join("\n")
           : "No matching past threads found.";
       },
+    }),
+    find_tasks: tool({
+      description: "Look up tracked tasks and commitments: who was given a task, who owns X, what is due or overdue, what someone assigned. Filter by text, owner, assigner, channel, status or due range. Read-only; only returns tasks the asker may read. Each row has the owner, assigner, due date, status and a Source link to the original message.",
+      inputSchema: z.object({
+        query: z.string().max(300).optional().describe("What the task is about"),
+        owner: z.string().max(100).optional().describe("Person doing it: Slack id, name, or 'me'"),
+        assigner: z.string().max(100).optional().describe("Person who gave it: Slack id, name, or 'me'"),
+        channel: z.string().max(100).optional().describe("Channel id"),
+        status: z.enum(["open", "overdue", "done", "dropped", "all"]).optional().describe("Default open (open + overdue)"),
+        dueAfter: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(), dueBefore: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(),
+        limit: z.number().int().min(1).max(25).optional(),
+      }),
+      execute: async (i) => formatTasks(await findTasks({ ...i, scope: ctx.scope, asker: ctx.userId })),
     }),
     forget_memories: tool({
       description: "Find facts to forget. Use dryRun=true first; forget (soft-delete, history is kept) only when the user explicitly asks.",

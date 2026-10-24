@@ -7,6 +7,7 @@ import { deleteMemory, listMemories } from "../memory/graph";
 import { decideReview, listReviews, sharedReviews, type Review } from "../memory/review";
 import { readTags, SHARED_TAG, writeTag, type SlackScope } from "../memory/scope";
 import { ambientCommand } from "./ambient-commands";
+import { taskCommand } from "./task-commands";
 import { slackClient } from "./client";
 import { button, section } from "./cards";
 import { escapeSlackText } from "./format";
@@ -118,6 +119,7 @@ export async function runSlashCommand(p: SlashPayload): Promise<Msg | null> {
   const userId = p.user_id;
   if (!userId) return null;
   const amb = await ambientCommand(p); if (amb) return amb; // /brain-pause, /brain-resume
+  const tsk = await taskCommand(p); if (tsk) return tsk; // /brain-tasks, /brain-followups
   switch (p.command) {
     case "/remember": return remember(p, userId);
     case "/forget": return forget(p, userId);

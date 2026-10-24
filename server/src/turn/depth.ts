@@ -20,6 +20,8 @@ const SMALL_TALK = /^(hi|hey|hello|yo|sup|thanks?|thank you|thx|ty|cheers|ok(ay)
 const ACTION_RE = /\b(create|open|file|close|assign|reassign|schedule|remind|send|post|update|merge|deploy|rerun|re-run|review|comment|list|show me|pull up|find|check|look up|look at|what'?s (the )?(status|latest)|status of|how many|count|issues?|tickets?|prs?|pull requests?|repos?|sprint|deploys?|incidents?|alerts?|errors?|dashboard|linear|github|notion|jira|sentry|posthog|gmail|calendar|drive|doc|every (day|week|monday|tuesday|wednesday|thursday|friday)|cron|automation|search the web|google|news|slack|channel|thread)\b/i;
 const DEEP_RE = /\b(research|investigate|investigation|analy[sz]e|analysis|deep[- ]dive|compare|comparison|audit|root cause|post-?mortem|write (a |the )?(report|summary|brief|spec|plan)|everything (we|you) (know|have)|comprehensive|end[- ]to[- ]end|step[- ]by[- ]step plan|across (all|every))\b/i;
 const MEMORY_RE = /\b(who|what|when|where|why|how|which|did we|do we|have we|are we|is there|was there|remember|recall|decid|agreed|owner|owns|deadline|due|policy|last time|previously|history|background|context)\b/i;
+/** "who was given X", "who owns Y", "what's due", "my open tasks": answered from tracked tasks (find_tasks), no live app tools needed. */
+const TASK_Q_RE = /\b(who('s| is| was| were| has| had| got| gets)?( been)? (given|assigned|responsible|handling|taking|working on|supposed|tasked|on)|who (owns|owned|took|takes|will|should|is doing|was doing)|assigned to|(task|work|ticket)s? (was|were|is|are) (given|assigned)|who'?s (the )?(owner|assignee)|(what|which) (tasks?|items?) .{0,30}(due|overdue|open|assigned)|what'?s (due|overdue|open)|(my|our|his|her|their) (open |pending )?(tasks|to-?dos|action items)|due (this|next|today|tomorrow))\b/i;
 const SAVE_MEMORY_RE = /\b(please )?(remember|save|store) (this|that|it)\b/i;
 const COMPANY_PROFILE_RE = /\b(our company|our startup|our product|company profile|this is what (our|the) company is all about)\b/i;
 const QUESTION_START = /^(what|who|when|where|why|how|which|is|are|does|do|did|can|could)\b/i; // a question about the company is a read, not a profile to save
@@ -49,6 +51,7 @@ export function heuristicDepth(i: DepthInput): Depth | null {
   // saving/correcting needs memory_remember / core_memory, which only exist at depth tools
   if ((SAVE_MEMORY_RE.test(t) || (COMPANY_PROFILE_RE.test(t) && !QUESTION_START.test(t)) || (i.hasHistory && !t.includes("?") && CORRECTION_RE.test(t))) && !DEEP_RE.test(t) && !ACTION_RE.test(t) && !URL_RE.test(t)) return "tools";
   if (t.length > 700 || questions >= 3 || DEEP_RE.test(t)) return "deep";
+  if (TASK_Q_RE.test(t) && !URL_RE.test(t) && !i.hasFiles && !/\b(create|file|open|close|reassign|schedule|remind|update|send|post)\b/i.test(t)) return "memory";
   if (URL_RE.test(t) || ACTION_RE.test(t) || i.hasFiles) return "tools";
   if (t.includes("?") || MEMORY_RE.test(t)) return "memory";
   // short follow-ups in a thread ("and the second one?" / "do that") depend on context: ambiguous

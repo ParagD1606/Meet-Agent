@@ -122,9 +122,9 @@ async function execute(input: TurnInput): Promise<void> {
     const narrate = interactive ? sink.narrate : undefined;
     stage = "tools";
     const assembled = plan.tools ? await assembleTools(ctx, { depth, text: input.text, narrate }) : undefined;
-    // memory depth: no live tools, but the read-only memory_search so the model can dig past the auto-recalled block
+    // memory depth: no live tools, but the read-only memory_search + find_tasks so the model can dig past the auto-recalled block
     const tools = assembled?.tools ?? (plan.memorySearch
-      ? { memory_search: memoryTools(ctx as never).memory_search!, ...(interactive && !readOnly && input.userId ? { ask_teammate: askTeammateTool(ctx) } : {}) }
+      ? { ...(({ memory_search, find_tasks }) => ({ memory_search: memory_search!, find_tasks: find_tasks! }))(memoryTools(ctx as never)), ...(interactive && !readOnly && input.userId ? { ask_teammate: askTeammateTool(ctx) } : {}) }
       : {});
 
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----

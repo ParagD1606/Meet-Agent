@@ -5,7 +5,8 @@ import { checkRate } from "../limits";
 import { log } from "../log";
 import { slackClient } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
-import { ACTIVE, getSetting, markOverdue, resolveCommitment, type Commitment } from "./commitments";
+import { refreshTaskList } from "./tasks";
+import { ACTIVE, canRead, getSetting, markOverdue, resolveCommitment, type Commitment } from "./commitments";
 
 const DAY = 86_400_000;
 export const MAX_NUDGES = 3;
@@ -76,14 +77,7 @@ async function sendNudge(c: Commitment, now: Date): Promise<void> {
   await slack.chat.postMessage({ channel, text, blocks: nudgeBlocks(c, text) });
 }
 
-/** A nudge repeats the commitment text, so only an owner who can read its scope gets one (never a DM / private-channel item to an outsider). */
-async function ownerCanRead(c: Commitment): Promise<boolean> {
-  if (c.scopeTag === "shared") return true;
-  if (c.scopeTag.startsWith("user_")) return c.scopeTag === `user_${c.ownerId}`;
-  if (!c.scopeTag.startsWith("channel_")) return false;
-  const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.scopeTag.slice(8)), eq(channelMembers.userId, c.ownerId!)));
-  return !!m;
-}
+const ownerCanRead = (c: Commitment) => canRead(c, c.ownerId!);
 
 /** Marks overdue, then nudges every owner whose commitment is due for it. Respects quiet hours and the per-person chase bucket. */
 export async function chaseTick(now = new Date()): Promise<number> {
@@ -110,16 +104,18 @@ export async function chaseTick(now = new Date()): Promise<number> {
 }
 
 // ---------- Done / Drop buttons ----------
-type Payload = { user?: { id?: string }; container?: { channel_id?: string; message_ts?: string }; channel?: { id?: string }; message?: { ts?: string } };
+type Payload = { response_url?: string; user?: { id?: string }; container?: { channel_id?: string; message_ts?: string }; channel?: { id?: string }; message?: { ts?: string } };
 
 /** brain_commit_done / brain_commit_drop. Only the owner or an admin may close a commitment. */
 export async function handleCommitmentAction(payload: Payload, a: { action_id?: string; value?: string }): Promise<boolean> {
-  const status = a.action_id === "brain_commit_done" ? "done" : a.action_id === "brain_commit_drop" ? "dropped" : null;
+  const list = a.action_id === "brain_task_done" || a.action_id === "brain_task_drop"; // buttons inside /brain-tasks and the digest list
+  const status = a.action_id === "brain_commit_done" || a.action_id === "brain_task_done" ? "done" : a.action_id === "brain_commit_drop" || a.action_id === "brain_task_drop" ? "dropped" : null;
   if (!status) return false;
   const uid = payload.user?.id;
   if (!uid || !a.value) return true;
   const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, uid));
   const row = await resolveCommitment(a.value, status, { id: uid, admin: u?.role === "admin" || u?.role === "owner" });
+  if (list) { await refreshTaskList(payload.response_url, uid); return true; }
   const channel = payload.container?.channel_id ?? payload.channel?.id;
   const ts = payload.container?.message_ts ?? payload.message?.ts;
   if (row && channel && ts) {

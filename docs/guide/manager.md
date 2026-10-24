@@ -14,7 +14,21 @@ Hourly job `manager-chase` marks overdue items and nudges owners when a commitme
 
 Limits: per-person bucket `chase` in `limits/rate.ts` (3 burst, 3/day). Quiet hours: nothing is sent outside the working window, default 09-18 Mon-Fri. Timezone comes from `settings.timezone` (IANA, default UTC); override the window with `settings.manager_hours = {"start":9,"end":18}`.
 
-Not wired yet: replying "done" or reacting with a checkmark (needs hooks in `slack/events.ts`; the close logic is `resolveCommitment`).
+Replying "done" in the task thread closes it (see Real-time capture). Not wired: a checkmark reaction.
+
+## Real-time capture, edits and history
+
+- Every message in a channel the bot is in is cue-checked (`manager/capture.ts`); only task-sounding ones reach the cheap model. "@Priya please send the report by Friday" becomes a commitment at once: owner from the mention id, assigner = author, due date resolved against the message time, `permalink` of that exact message, scope by the same fail-closed channel rule (public -> shared, private -> channel_X), idempotent by (channel, ts) via `source_ref = msg:<channel>:<ts>:<i>`.
+- Thread replies on a task ("I'll take this", "Dana took this instead", "done") reassign or close it (a cheap classifier runs only when a status cue matches; only the owner or assigner can close) and write a status-change fact in the same scope.
+- `message_changed`: the still-active commitments from the old text are replaced by a re-extraction (same text = no-op); buffered text is updated; a fact batch that came from that single message is retired and re-extracted. `message_deleted`: its commitments become `dropped` and facts from that single message are deleted. Gaps: a fact distilled from several messages, or from the polling observe job, cannot be attributed to one message and stays; a re-extraction that fails after the old rows were removed loses the task until the next edit.
+- History backfill (`memory/backfill.ts`): when the bot joins a channel (pg-boss `memory-backfill-history`), hourly as a safety net, or via `POST /api/memory/run {"job":"backfill-history"}`. Reads `conversations.history` and thread replies back `settings.memory_backfill_days` (default 30, max 90) through the same ambient buffering, paced at about 50 Slack calls a minute with Retry-After handling and a per-run call budget (`MEMORY_BACKFILL_CALLS_PER_RUN`, default 20). Progress is a cursor in `settings` (`backfill:<channel>`), so a run resumes where the budget stopped. Backfilled tasks that are already past due are listed but never chased.
+- `find_tasks` (read-only; also at memory depth and on read-only turns) answers "who was given X / who owns Y / what is due" with owner, assigner, due, status and the message permalink, limited to what the asker can read.
+
+## Follow-ups and digests (DMs)
+
+- `schedule_follow_up` tool: "remind me Friday to check with Dana" DMs only the requester (no approval card). "Follow up with @Bob on the invoice" posts a consent card to the requester with the exact text; Bob is DMed only after the click. One-shot or every N days (1-90), at most 20 active per person, table `follow_ups`.
+- Delivery (pg-boss `manager-followups`, every minute) happens only in working hours (workspace timezone), is charged to the recipient's `followup` bucket (5 burst, 20/day), and carries only the text the requester wrote.
+- `/brain-tasks`: ephemeral list of tasks assigned to you and ones you assigned, with Done / Drop buttons (owner, assigner or admin). `/brain-followups`: list, `cancel <id>`, `digest on [HH:MM] [mon-fri|daily|mon,wed]` / `digest off` (daily task digest DM, default off), `weekly on|off` (Friday 16:00 summary). Prefs live in `settings` (`followprefs:<user>`). Digests only list tasks the recipient can read.
 
 ## Standups and risks
 

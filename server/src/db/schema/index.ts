@@ -412,7 +412,9 @@ export const ambientMessages = pgTable("ambient_messages", {
   text: text("text").notNull().default(""),
   flushedAt: timestamp("flushed_at", { withTimezone: true }),
   createdAt: ts("created_at"),
-}, (t) => [primaryKey({ columns: [t.channelId, t.ts] }), index("ambient_pending_idx").on(t.channelId, t.flushedAt)]);
+  batchRef: text("batch_ref"), // memories.source_ref of the extraction batch this message went into (edit/delete sync)
+  textHash: text("text_hash"), // hash of the raw message text (a message_changed with the same text is a no-op)
+}, (t) => [primaryKey({ columns: [t.channelId, t.ts] }), index("ambient_pending_idx").on(t.channelId, t.flushedAt), index("ambient_batch_idx").on(t.channelId, t.batchRef)]);
 
 // ---------- consolidation audit ----------
 export const consolidationLog = pgTable("consolidation_log", {

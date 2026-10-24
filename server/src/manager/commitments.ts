@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { id as newId } from "../crypto";
 import { db } from "../db";
@@ -51,17 +51,28 @@ async function channelOfRef(ref: string | null): Promise<{ channelId: string | n
   return t ? { channelId: t.c, threadTs: ref } : { channelId: null, threadTs: null };
 }
 
-const channelScope = async (channelId: string) => {
+export const channelScope = async (channelId: string) => {
   const [c] = await db.select({ p: channels.isPrivate, im: channels.isIm }).from(channels).where(eq(channels.id, channelId));
   // fail closed: only a known public channel is shared; DMs / unknown channels get a tag nobody can read
   return c && !c.p && !c.im ? SHARED_TAG : `channel_${channelId}`;
 };
 
+/** Anything that repeats a commitment's text (nudge, digest, /brain-tasks) only goes to a person who can read its scope (never a DM / private-channel item to an outsider). */
+export async function canRead(c: Pick<Commitment, "scopeTag">, userId: string): Promise<boolean> {
+  if (c.scopeTag === "shared") return true;
+  if (c.scopeTag.startsWith("user_")) return c.scopeTag === `user_${userId}`;
+  if (!c.scopeTag.startsWith("channel_")) return false;
+  const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.scopeTag.slice(8)), eq(channelMembers.userId, userId)));
+  return !!m;
+}
 // ---------- writing ----------
 export type NewCommitment = {
   ownerId?: string | null; ownerName?: string | null; text: string; dueAt?: Date | null;
   sourceType: Commitment["sourceType"]; sourceRef: string; permalink?: string | null;
   channelId?: string | null; threadTs?: string | null; scopeTag: string;
+  assignerId?: string | null; sourceTs?: string | null; sourceHash?: string | null;
+  /** Backfilled history: a task that is already past due is listed but never chased. */
+  noChase?: boolean;
 };
 
 /** Idempotent on sourceRef. Returns true when a new row was written. */
@@ -70,6 +81,8 @@ export async function addCommitment(c: NewCommitment): Promise<boolean> {
     id: newId("cm_"), ownerId: c.ownerId ?? null, ownerName: c.ownerName ?? null, text: c.text.slice(0, 500),
     dueAt: c.dueAt ?? null, sourceType: c.sourceType, sourceRef: c.sourceRef, permalink: c.permalink ?? null,
     channelId: c.channelId ?? null, threadTs: c.threadTs ?? null, scopeTag: c.scopeTag,
+    assignerId: c.assignerId ?? null, sourceTs: c.sourceTs ?? null, sourceHash: c.sourceHash ?? null,
+    nudgeCount: c.noChase && c.dueAt && c.dueAt.getTime() < Date.now() ? 99 : 0,
   }).onConflictDoNothing().returning({ id: commitments.id });
   return r.length > 0;
 }
@@ -86,6 +99,7 @@ const extracted = z.object({
 });
 const SYSTEM = `You extract explicit commitments (someone promised or was assigned to do something) from workplace text.
 Only include items where a specific person or team owns a concrete action. Never invent an owner or a due date; use null when unknown.
+When "Message author" is given: "I", "I'll", "me" mean the author (owner = the author's id); "<@U1> please do X" or "assign X to <@U1>" makes <@U1> the owner.
 "owner" is a Slack user id (<@U123> or U123) if shown, else the name as written. "due" is an ISO date (YYYY-MM-DD) resolved against today's date, else null.
 Return JSON only: {"commitments":[{"owner":null,"text":"...","due":null}]}. Return {"commitments":[]} when there are none.`;
 /** Cheap pre-filter so the model only sees text that sounds like a promise. */
@@ -94,17 +108,21 @@ export const COMMIT_CUE = /\b(will|i'll|we'll|going to|gonna|by (mon|tue|wed|thu
 export type ExtractCtx = {
   sourceRef: string; sourceType: Commitment["sourceType"]; scopeTag: string;
   channelId?: string | null; threadTs?: string | null; permalink?: string | null; now?: Date;
+  /** Slack id of the message author: resolves "I'll ..." and is stored as the assigner. */
+  author?: string | null; sourceTs?: string | null; sourceHash?: string | null; noChase?: boolean;
+  /** Caller already ran its own cue check (e.g. an @mention request): skip COMMIT_CUE. */
+  anyCue?: boolean;
 };
 
 /** Extracts commitments from free text (a message, thread summary, decision) and stores them. Exported so a writeback hook can call it. */
 export async function extractFromText(text: string, ctx: ExtractCtx): Promise<number> {
-  if (!COMMIT_CUE.test(text)) return 0;
+  if (!ctx.anyCue && !COMMIT_CUE.test(text)) return 0;
   const today = (ctx.now ?? new Date()).toISOString().slice(0, 10);
-  const out = await completeJson({ system: SYSTEM, prompt: `Today: ${today}\n\nTEXT:\n${text.slice(0, 4000)}`, role: "extract", maxOutputTokens: 600 }, extracted);
+  const out = await completeJson({ system: SYSTEM, prompt: `Today: ${today}\n${ctx.author ? `Message author: <@${ctx.author}>\n` : ""}\nTEXT:\n${text.slice(0, 4000)}`, role: "extract", maxOutputTokens: 600 }, extracted);
   let n = 0;
   for (const [i, c] of out.commitments.entries()) {
     const owner = await resolveOwner(c.owner, ctx.channelId);
-    if (await addCommitment({ ...ctx, ownerId: owner.id, ownerName: owner.name, text: c.text, dueAt: parseDue(c.due), sourceRef: `${ctx.sourceRef}:${i}` })) n++;
+    if (await addCommitment({ ...ctx, assignerId: ctx.author, ownerId: owner.id, ownerName: owner.name, text: c.text, dueAt: parseDue(c.due), sourceRef: `${ctx.sourceRef}:${i}` })) n++;
   }
   return n;
 }
@@ -159,20 +177,29 @@ export async function markOverdue(now = new Date()): Promise<number> {
   return r.length;
 }
 
-/** Owner (or admin) closes a commitment. Returns the row, or null when missing / not allowed / already closed. */
+/** Owner, assigner (or admin) closes a commitment. Returns the row, or null when missing / not allowed / already closed. */
 export async function resolveCommitment(id: string, status: "done" | "dropped", by: { id: string; admin?: boolean }): Promise<Commitment | null> {
   const [row] = await db.update(commitments).set({ status, completedAt: new Date() })
-    .where(and(eq(commitments.id, id), inArray(commitments.status, [...ACTIVE]), by.admin ? undefined : eq(commitments.ownerId, by.id)))
+    .where(and(eq(commitments.id, id), inArray(commitments.status, [...ACTIVE]), by.admin ? undefined : or(eq(commitments.ownerId, by.id), eq(commitments.assignerId, by.id))))
     .returning();
   return row ?? null;
 }
 
+export type ListFilter = {
+  tags: string[]; status?: Commitment["status"][]; ownerId?: string; assignerId?: string; channelId?: string;
+  dueAfter?: Date; dueBefore?: Date; limit?: number;
+};
+
 /** Commitments the holder of `tags` may read (readTags of the asker). Never widens past the scope model. */
-export async function listCommitments(a: { tags: string[]; status?: Commitment["status"][]; ownerId?: string; limit?: number }): Promise<Commitment[]> {
+export async function listCommitments(a: ListFilter): Promise<Commitment[]> {
   if (!a.tags.length) return [];
   return db.select().from(commitments).where(and(
     inArray(commitments.scopeTag, a.tags),
     a.status?.length ? inArray(commitments.status, a.status) : undefined,
     a.ownerId ? eq(commitments.ownerId, a.ownerId) : undefined,
+    a.assignerId ? eq(commitments.assignerId, a.assignerId) : undefined,
+    a.channelId ? eq(commitments.channelId, a.channelId) : undefined,
+    a.dueAfter ? gte(commitments.dueAt, a.dueAfter) : undefined,
+    a.dueBefore ? lte(commitments.dueAt, a.dueBefore) : undefined,
   )).orderBy(sql`${commitments.dueAt} asc nulls last`, desc(commitments.createdAt)).limit(Math.min(a.limit ?? 100, 500));
 }

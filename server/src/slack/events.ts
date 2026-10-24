@@ -21,6 +21,7 @@ import { ingestHuddleFile } from "../meetings";
 import { captureOwnerReply } from "./teammate";
 import { ambientHook } from "./ambient-hook";
 import { announceAmbient } from "../memory/ambient";
+import { requestBackfill } from "../memory/backfill";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
@@ -150,6 +151,7 @@ async function handleMemberJoined(ev: Record<string, any>): Promise<void> {
     await introduceInChannel(ev.channel);
     void bootstrapIfEmpty(`channel:${ev.channel}`);
     await announceAmbient(ev.channel).catch(() => {});
+    void requestBackfill(ev.channel).catch((e) => log.warn("backfill request failed", { error: String(e) })); // read the channel's recent history
     return;
   }
   await ensureUser(ev.user);

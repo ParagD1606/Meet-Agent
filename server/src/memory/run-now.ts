@@ -3,12 +3,13 @@ import { db } from "../db";
 import { syncSources } from "../db/schema";
 import { syncRecentHuddles } from "../meetings";
 import { flushIdleAmbient } from "./ambient";
+import { backfillAll } from "./backfill";
 import { consolidate } from "./consolidate";
 import { backfillContextPrefixes } from "./context-prefix";
 import { observeAll } from "./observe";
 import { flushIdleCaptures } from "./writeback";
 
-export const RUN_JOBS = ["observe", "consolidate", "capture-flush", "sync", "backfill-prefix"] as const;
+export const RUN_JOBS = ["observe", "consolidate", "capture-flush", "sync", "backfill-prefix", "backfill-history"] as const;
 export type RunJob = (typeof RUN_JOBS)[number];
 
 /** Reuses the scheduled job bodies; each returns plain counts. */
@@ -22,6 +23,7 @@ export const runners: Record<RunJob, () => Promise<Record<string, unknown>>> = {
     return { huddles, sources: (await db.select({ id: syncSources.id }).from(syncSources)).length };
   },
   "backfill-prefix": async () => ({ prefixed: await backfillContextPrefixes() }),
+  "backfill-history": async () => ({ ...(await backfillAll({ calls: 40 })) }),
 };
 
 export const RATE_MAX = 6; // starts per job per RATE_WINDOW_MS

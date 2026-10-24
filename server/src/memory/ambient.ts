@@ -1,11 +1,13 @@
+import { createHash } from "node:crypto";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
-import { ambientMessages, channels, users } from "../db/schema";
+import { ambientMessages, channels, memories, users } from "../db/schema";
 import { log } from "../log";
 import { postMessage, slackClient } from "../slack/client";
 import { isTrivialMessage } from "./budget";
 import { scanMemoryText } from "./core-blocks";
 import { tuning } from "./freshness";
+import { deleteMemory } from "./graph";
 import { plain } from "./observe";
 import { writeTag } from "./scope";
 import { captureTurn } from "./writeback";
@@ -62,16 +64,25 @@ function takeBudget(now: number): boolean {
   return true;
 }
 
+/** Names for the <@U..> mentions in a message, so "@Priya please ..." keeps WHO was addressed (never a raw id). */
+async function mentionNames(raw: string): Promise<Map<string, string>> {
+  const ids = [...new Set([...raw.matchAll(/<@([UW][A-Z0-9]+)/g)].map((m) => m[1]!))];
+  if (!ids.length) return new Map();
+  const rows = await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids));
+  return new Map(rows.map((r) => [r.id, r.name ?? r.id]));
+}
+
 type Ev = { channel: string; ts: string; thread_ts?: string; user: string; text: string };
+export const textHash = (raw: string) => createHash("sha1").update(raw).digest("hex").slice(0, 16);
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** Buffers one message for an observed channel. Returns true when it was stored. */
 export async function recordAmbient(ev: Ev, now = Date.now()): Promise<boolean> {
   const [ch] = await db.select().from(channels).where(eq(channels.id, ev.channel));
   if (!ch || ch.isIm || !ch.botIsMember || ch.observe === false || ch.proactivity === "quiet") return false;
-  const text = ambientText(ev.text);
+  const text = ambientText(ev.text, await mentionNames(ev.text));
   if (!text) return false;
-  const ins = await db.insert(ambientMessages).values({ channelId: ev.channel, ts: ev.ts, threadTs: ev.thread_ts ?? null, userId: ev.user, text })
+  const ins = await db.insert(ambientMessages).values({ channelId: ev.channel, ts: ev.ts, threadTs: ev.thread_ts ?? null, userId: ev.user, text, textHash: textHash(ev.text) })
     .onConflictDoNothing().returning({ ts: ambientMessages.ts });
   if (!ins.length) return false;
   void announceAmbient(ev.channel);
@@ -85,12 +96,48 @@ export async function recordAmbient(ev: Ev, now = Date.now()): Promise<boolean> 
   return true;
 }
 
-/** message_changed: only a still-buffered message can be edited. message_deleted: drops it if still buffered (already-extracted facts stay: gap). */
+/**
+ * Facts extracted from exactly this message. Only a single-message extraction batch can be attributed to one message
+ * (`exclusive`); a fact distilled from several messages stays (gap: it cannot be un-mixed after the fact).
+ */
+export async function factsBySourceTs(channelId: string, ts: string): Promise<{ ids: number[]; ref: string | null; exclusive: boolean; userId: string | null }> {
+  const [row] = await db.select().from(ambientMessages).where(and(eq(ambientMessages.channelId, channelId), eq(ambientMessages.ts, ts)));
+  if (!row?.batchRef) return { ids: [], ref: null, exclusive: false, userId: row?.userId ?? null };
+  const [{ n } = { n: 0 }] = await db.select({ n: sql<number>`count(*)::int` }).from(ambientMessages).where(and(eq(ambientMessages.channelId, channelId), eq(ambientMessages.batchRef, row.batchRef)));
+  const facts = await db.select({ id: memories.id }).from(memories).where(and(eq(memories.sourceRef, row.batchRef), eq(memories.createdBy, "observe"), eq(memories.status, "active")));
+  return { ids: facts.map((f) => f.id), ref: row.batchRef, exclusive: n === 1, userId: row.userId };
+}
+
+/**
+ * message_changed: a still-buffered message is updated in place; an already-extracted single-message batch has its facts retired
+ * and is re-extracted from the new text. message_deleted (raw=""): drops it from the buffer and retires the facts it alone produced.
+ */
 export async function editAmbient(channelId: string, ts: string, raw: string): Promise<void> {
-  const text = ambientText(raw);
+  const [seen] = await db.select({ h: ambientMessages.textHash }).from(ambientMessages).where(and(eq(ambientMessages.channelId, channelId), eq(ambientMessages.ts, ts)));
+  if (raw && seen?.h && seen.h === textHash(raw)) return; // unfurl / reply-count update: same text
+  const text = ambientText(raw, await mentionNames(raw));
   const where = and(eq(ambientMessages.channelId, channelId), eq(ambientMessages.ts, ts), isNull(ambientMessages.flushedAt));
-  if (text) await db.update(ambientMessages).set({ text }).where(where);
-  else await db.delete(ambientMessages).where(where);
+  const buffered = await db.select({ ts: ambientMessages.ts }).from(ambientMessages).where(where);
+  if (buffered.length) {
+    if (text) await db.update(ambientMessages).set({ text }).where(where);
+    else await db.delete(ambientMessages).where(where);
+    return;
+  }
+  const f = await factsBySourceTs(channelId, ts);
+  if (!f.exclusive || !f.ids.length) return;
+  for (const id of f.ids) await deleteMemory(id);
+  if (raw) await db.update(ambientMessages).set({ textHash: textHash(raw) }).where(and(eq(ambientMessages.channelId, channelId), eq(ambientMessages.ts, ts)));
+  if (!text || !f.userId) return;
+  const [ch] = await db.select().from(channels).where(eq(channels.id, channelId));
+  const scope = ch && { channelId, isPrivate: ch.isPrivate, isIm: false, userId: null };
+  if (!ch || ch.observe === false || !scope || !writeTag(scope)) return;
+  const names = await mentionNames(raw);
+  const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, f.userId));
+  const permalink = await ambientIo.permalink(channelId, ts).catch(() => null);
+  await captureTurn({
+    scope, transcript: `${u?.name ?? f.userId}: ${plain(raw, names).slice(0, 1500)}`, sourceRef: f.ref!, permalink, createdBy: "observe",
+    confidence: 0.8, importance: 0.4, at: new Date(Number(ts) * 1000),
+  });
 }
 export const dropAmbient = (channelId: string, ts: string) => editAmbient(channelId, ts, "");
 
@@ -140,11 +187,13 @@ export async function flushAmbient(channelId: string, now = Date.now()): Promise
       continue;
     }
     const transcript = b.map((r) => `${names.get(r.userId ?? "") ?? r.userId ?? "someone"}: ${r.text.slice(0, 1500)}`).join("\n");
-    const permalink = await ambientIo.permalink(channelId, b[0]!.threadTs ?? b[0]!.ts).catch(() => null);
+    const ref = `${channelId}/${b[0]!.ts}`; // unique per batch: lets a deleted/edited message find the facts it produced
+    const permalink = await ambientIo.permalink(channelId, b[0]!.ts).catch(() => null); // exact message (a reply's link carries its thread)
     out.facts += await captureTurn({
-      scope, transcript, sourceRef: `${channelId}/${b[0]!.threadTs ?? b[0]!.ts}`, permalink, createdBy: "observe", confidence: 0.8, importance: 0.4,
+      scope, transcript, sourceRef: ref, permalink, createdBy: "observe", confidence: 0.8, importance: 0.4,
       at: new Date(Number(b.at(-1)!.ts) * 1000),
     });
+    await db.update(ambientMessages).set({ batchRef: ref }).where(and(eq(ambientMessages.channelId, channelId), inArray(ambientMessages.ts, b.map((r) => r.ts))));
     out.messages += b.length;
   }
   // text is only needed until extracted; keep the (channel, ts) rows as the dedupe ledger

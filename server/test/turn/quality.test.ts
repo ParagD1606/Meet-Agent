@@ -81,7 +81,7 @@ describe("prompt", () => {
   test("static prompt has no volatile data and the system messages are identical across calls", () => {
     expect(STATIC_SYSTEM).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
     expect(JSON.stringify(buildSystemMessages(["a"]))).toBe(JSON.stringify(buildSystemMessages(["a"])));
-    expect(STATIC_SYSTEM.length / 4).toBeLessThan(1450); // compact: token budget (was 1400 before citation + routing rules)
+    expect(STATIC_SYSTEM.length / 4).toBeLessThan(1500); // compact: token budget (was 1400 before citation + routing rules, 1450 before find_tasks / schedule_follow_up lines)
   });
 });
 

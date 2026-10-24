@@ -64,6 +64,13 @@
       "when": 1792953606000,
       "tag": "0008_ambient_capture",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792953607000,
+      "tag": "0009_follow_ups",
+      "breakpoints": true
     }
   ]
 }

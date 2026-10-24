@@ -22,6 +22,7 @@ import { allowedUrls, registerUrls } from "../tools/web";
 import { askTeammateTool } from "./ask-teammate";
 import { grantedLeases } from "./lease";
 import { memoryTools } from "./memory-tools";
+import { scheduleFollowUpTool } from "./follow-up-tool";
 import { readToolResultTool } from "./spill";
 import { allowedFamilies, likelyFamilies, type Depth, type ToolFamily } from "./depth";
 import { createProgressTools } from "./progress";
@@ -75,7 +76,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
 
   // memory: reads always; writes (core_memory, memory_remember, forget_memories) never on readOnly
   const mem = memoryTools(ctx as never);
-  for (const [k, t] of Object.entries(mem)) if (writable || k === "memory_search" || k === "search_threads" || k === "entity_lookup") core[k] = t;
+  for (const [k, t] of Object.entries(mem)) if (writable || k === "memory_search" || k === "search_threads" || k === "entity_lookup" || k === "find_tasks") core[k] = t;
   Object.assign(core, readToolResultTool(ctx));
 
   core.people_search = tool({
@@ -90,6 +91,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
 
   if (writable) Object.assign(core, teammateAccessTools(ctx, o.text));
   if (writable && ctx.userId) core.ask_teammate = askTeammateTool(ctx);
+  if (writable && ctx.userId) core.schedule_follow_up = scheduleFollowUpTool(ctx);
   if (writable && !ctx.orgConnectionsOnly) {
     core.request_connection = tool({
       description: "Ask the user to connect an app (github, linear, notion...).",
