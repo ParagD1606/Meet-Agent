@@ -20,3 +20,7 @@ This shows that downloading works for huddle canvases. General canvas ingestion 
 2. Keep the manual huddle sync as the fallback. Meeting summaries and tasks now flow into memory (`rememberMeeting`: facts plus an episode, in the channel's write scope; an unknown channel counts as private).
 3. Cheap validation before any canvas work: in a real workspace, run `files.info` on one huddle-notes canvas and one user canvas with the bot token and record which fields come back. That takes five minutes and settles the question.
 4. Slack-uploaded files are a separate, documented path (`files.info` plus `url_private_download` with `files:read`) and can reuse `ingestDocument` with the channel tag. They were not part of this change.
+
+
+## Update (after merge)
+A teammate found `canvases.getContent` (scope `canvases:read`, `content_type: markdown`), which the docs pages above do not list. `huddleCanvasText` in `server/src/meetings/index.ts` uses it first; the url_private download path remains the fallback. `canvases:read` is in the manifest, so the Slack app must be reinstalled after pasting the new manifest.

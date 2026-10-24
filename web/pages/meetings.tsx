@@ -28,13 +28,13 @@ function Detail({ meeting }: { meeting: Meeting }) {
       <div><h2 className="text-lg font-semibold">{meeting.title}</h2><p className="mt-1 text-sm text-muted">Completed {dateTime(date)} · {meeting.participantIds.length} participant{meeting.participantIds.length === 1 ? "" : "s"}</p></div>
       <Badge tone={tone[meeting.status]}>{statusLabel[meeting.status]}</Badge>
     </div>
-    <Tabs label="Meeting content" value={tab} onChange={setTab} items={[{ id: "summary", label: `Summary & tasks (${meeting.tasks.length})` }, { id: "transcript", label: "Transcript" }]} />
+    <Tabs label="Meeting content" value={tab} onChange={setTab} items={[{ id: "summary", label: `Summary & tasks (${meeting.tasks.length})` }, { id: "transcript", label: "Source notes" }]} />
     {tab === "transcript" ? (
       <div className="mt-4 rounded-lg border border-line bg-sunken p-4"><pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6">{meeting.transcript || "The transcript is loading."}</pre></div>
     ) : (
       <div className="mt-4 space-y-6">
         {meeting.status === "processing" && <p className="rounded-lg bg-sunken p-4 text-sm text-muted">Company Brain is reading the saved Huddle transcript and preparing notes.</p>}
-        {meeting.status === "failed" && <p className="rounded-lg bg-danger-soft p-4 text-sm text-danger">The transcript was saved, but the summary could not be generated. You can still read it in the Transcript tab.</p>}
+        {meeting.status === "failed" && <p className="rounded-lg bg-danger-soft p-4 text-sm text-danger">The source notes were saved, but the summary could not be generated. You can still read them in the Source notes tab.</p>}
         {meeting.summary && <section><h3 className="text-sm font-semibold">Meeting summary</h3><div className="mt-2 whitespace-pre-wrap rounded-lg border border-line bg-sunken p-4 text-sm leading-6">{meeting.summary}</div></section>}
         <section><h3 className="text-sm font-semibold">Action items</h3>{meeting.tasks.length ? <ul className="mt-2 space-y-2">{meeting.tasks.map((task, i) => <Task key={`${task.title}-${i}`} task={task} />)}</ul> : <p className="mt-2 text-sm text-muted">No explicit action items were found.</p>}</section>
       </div>

@@ -1,7 +1,7 @@
 /** Single source of truth for what the Slack app needs (used by OAuth install and any manifest generator). */
 export const SLACK_BOT_SCOPES = [
   "app_mentions:read", "assistant:write", "channels:history", "channels:join", "channels:manage", "channels:read",
-  "chat:write", "chat:write.public", "commands", "files:read", "groups:history", "groups:read", "im:history", "im:read", "im:write",
+  "chat:write", "chat:write.public", "canvases:read", "commands", "files:read", "groups:history", "groups:read", "im:history", "im:read", "im:write",
   "mpim:history", "mpim:read", "reactions:read", "reactions:write", "users:read", "users:read.email", "team:read",
 ] as const;
 
