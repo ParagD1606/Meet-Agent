@@ -9,7 +9,7 @@ export type ToolFamily = "web" | "slack_search" | "automations" | "research";
 /** Per-depth knobs: step cap, output cap, which model role answers. */
 export const DEPTH_CONFIG: Record<Depth, { maxSteps: number; maxOutputTokens: number; role: "main" | "triage"; recall: boolean; tools: boolean; /** read-only memory_search without the full tool set */ memorySearch?: boolean }> = {
   direct: { maxSteps: 1, maxOutputTokens: 400, role: "triage", recall: false, tools: false },
-  memory: { maxSteps: 3, maxOutputTokens: 800, role: "main", recall: true, tools: false, memorySearch: true },
+  memory: { maxSteps: 5, maxOutputTokens: 800, role: "main", recall: true, tools: false, memorySearch: true },
   tools: { maxSteps: 20, maxOutputTokens: 2000, role: "main", recall: true, tools: true },
   deep: { maxSteps: 60, maxOutputTokens: 2000, role: "main", recall: true, tools: true },
 };
@@ -27,6 +27,12 @@ const COMPANY_PROFILE_RE = /\b(our company|our startup|our product|company profi
 const QUESTION_START = /^(what|who|when|where|why|how|which|is|are|does|do|did|can|could)\b/i; // a question about the company is a read, not a profile to save
 const CORRECTION_RE = /^(actually|correction)\b|\bthat'?s (wrong|incorrect|not (right|correct))\b/i;
 
+/** An imperative about another person or an action: needs tools (a model with none can only pretend). */
+const DO_RE = /\b(tell(?! me\b)|inform|notify|message|dm|ping|ask|remind|assign|reassign|say (hi|hello|hey)|let \S+ know|follow[- ]?up|done|completed?|schedule|send|forward|create|make|add)\b/i;
+/** A short reply that continues an action thread ("ok", "yes", "do it", "tell him ..."). */
+const REPLY_RE = /^(ok(ay)?|yes|yep|yeah|sure|please( do)?|do it|go ahead|yes please|tell (him|her|them)\b.*|continue|keep going|go on)[\s!.,]*$|^(ok(ay)?|yes|sure)[,. ]+\S/i;
+const MENTION_RE = /<@[A-Z0-9]+>/g;
+
 export type DepthInput = {
   trigger: Trigger;
   text: string;
@@ -34,6 +40,8 @@ export type DepthInput = {
   /** true when the thread already has earlier messages (follow-ups are ambiguous when short). */
   hasHistory?: boolean;
   readOnly?: boolean;
+  /** Previous bot turn in this thread/DM: replies like "ok" or "continue" inherit its depth (floor tools) when it acted or an ask is open. */
+  prev?: { depth: Depth; usedTools: boolean; openAsk: boolean };
 };
 
 const strip = (t: string) => t.replace(/<@[A-Z0-9]+>/g, " ").replace(/<(https?:[^>|]+)(\|[^>]*)?>/g, "$1").replace(/\s+/g, " ").trim();
@@ -44,7 +52,12 @@ export function heuristicDepth(i: DepthInput): Depth | null {
   if (i.trigger === "automation") return DEEP_RE.test(i.text) ? "deep" : "tools";
   if (i.trigger === "chime") return ACTION_RE.test(i.text) && URL_RE.test(i.text) ? "tools" : "memory";
   const t = strip(i.text);
+  const p = i.prev;
+  if (p && CONTINUE.test(t)) return p.depth === "direct" || p.depth === "memory" ? "tools" : p.depth;
+  if (p && (p.usedTools || p.openAsk) && t.length <= 80 && REPLY_RE.test(t)) return p.depth === "deep" ? "deep" : "tools";
   if (i.hasHistory && CONTINUE.test(t)) return "deep";
+  const others = (i.text.match(MENTION_RE)?.length ?? 0) - (i.trigger === "mention" ? 1 : 0);
+  if (!i.hasFiles && (DO_RE.test(t) || others > 0) && !DEEP_RE.test(t) && t.length <= 700 && (t.match(/\?/g) ?? []).length < 3) return "tools";
   if (!i.hasFiles && t.length <= 60 && SMALL_TALK.test(t)) return "direct";
   if (!t && !i.hasFiles) return "direct";
   const questions = (t.match(/\?/g) ?? []).length;
@@ -78,7 +91,8 @@ export async function routeDepth(i: DepthInput): Promise<{ depth: Depth; by: "he
   if (h) return { depth: h, by: "heuristic" };
   try {
     const word = (await classifier(strip(i.text), AbortSignal.timeout(8_000))).trim().toLowerCase().match(/direct|memory|tools|deep/)?.[0] as Depth | undefined;
-    if (word) return { depth: word, by: "model" };
+    // only pure greetings/thanks may be "direct" (those are caught by the heuristics above)
+    if (word) return { depth: word === "direct" ? "memory" : word, by: "model" };
   } catch (e) { log.warn("depth classifier failed", { error: String(e) }); }
   return { depth: "memory", by: "fallback" };
 }

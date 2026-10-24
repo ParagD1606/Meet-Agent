@@ -23,15 +23,25 @@ export async function findOwner(a: { ctx: Pick<ToolContext, "scope" | "userId">;
   return live.map((u) => u.id).sort((x, y) => score.get(y)! - score.get(x)!)[0] ?? null;
 }
 
+/** Near-miss argument names the model tends to emit; the first present alias fills the canonical field. */
+export const withAliases = <T extends z.ZodType>(schema: T, aliases: Record<string, string[]>) =>
+  z.preprocess((v) => {
+    if (!v || typeof v !== "object") return v;
+    const o = { ...(v as Record<string, unknown>) };
+    for (const [k, alts] of Object.entries(aliases)) if (o[k] === undefined) { const a = alts.find((x) => o[x] !== undefined); if (a) o[k] = o[a]; }
+    return o;
+  }, schema);
+export const askTeammateAliases = <T extends z.ZodType>(schema: T) => withAliases(schema, { person: ["recipient", "to", "user"], question: ["message", "text"] });
+
 export function askTeammateTool(ctx: ToolContext) {
   return tool({
     description: "Use when memory and tools cannot answer: ask a teammate the question. This only shows the asker a consent card; nothing is sent until they confirm. Give `person` (a Slack id from people_search/entity_lookup) when you know the owner, otherwise the likely owner is inferred from who wrote the related facts. The question must stand alone and contain no private details.",
-    inputSchema: z.object({ question: z.string().min(8).max(500), person: z.string().max(100).optional().describe("Slack user id or a name") }),
+    inputSchema: askTeammateAliases(z.object({ question: z.string().min(8).max(500), person: z.string().max(100).optional().describe("Slack user id or a name") })),
     execute: async ({ question, person }) => {
       if (!ctx.userId) return "ERROR: no asker to get consent from.";
       let owner: string | null = null;
       if (person) {
-        const found = await searchPeople(person, 5);
+        const found = await searchPeople(person.replace(/^@/, ""), 5);
         if (found.length > 1) return `Several people match "${person}": ${found.map((p) => `${p.name} <@${p.id}>`).join(", ")}. Ask the asker which one, or retry with an id.`;
         owner = found[0]?.id ?? null;
       } else owner = await findOwner({ ctx, question });

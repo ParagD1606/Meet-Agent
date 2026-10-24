@@ -110,9 +110,77 @@ describe("owner reply", () => {
     expect(await captureOwnerReply({ user: "UOWN", channel: "D_UOWN", thread_ts: "999.1", text: "Finance lead, Priya." })).toBe(true);
     const [m] = await db.select().from(memories);
     expect(m!.scopeTag).toBe("channel_CPRIV");
-    const relay = posts().at(-1)!;
-    expect(relay.channel).toBe("CPRIV");
+    const relay = posts().find((p) => p.channel === "CPRIV" && String(p.text).includes("replied"))!;
     expect(relay.thread_ts).toBe("1.1");
     expect(relay.text).toContain("Finance lead, Priya.");
+  });
+});
+
+describe("owner DM answer without a thread", () => {
+  const sendTo = async (owner: string, question = q) => {
+    const id = await proposeAsk({ asker: "UASK", owner, question, origin: { channelId: "CPRIV", threadTs: "1.1", isPrivate: true, isIm: false } });
+    await click("UASK", "brain_ask_yes", id);
+    return id;
+  };
+  const dm = (text: string, user = "UOWN", thread_ts?: string) => ({ user, channel: "D_UOWN", text, ...(thread_ts ? { thread_ts } : {}) });
+
+  test("top-level DM from the owner with exactly one open ask is the answer: stored, relayed, owner thanked", async () => {
+    const id = await sendTo("UOWN");
+    expect(await captureOwnerReply(dm("ok tell him i am not interested"))).toBe(true);
+    expect((await getAsk(id))!.status).toBe("answered");
+    const [m] = await db.select().from(memories);
+    expect(m!.createdBy).toBe("UOWN");
+    expect(m!.text).toContain("not interested");
+    const relay = posts().find((p) => p.channel === "CPRIV" && String(p.text).includes("not interested"))!;
+    expect(relay.thread_ts).toBe("1.1");
+    const thanks = posts().at(-1)!;
+    expect(thanks.channel).toBe("D_UOWN");
+    expect(thanks.text).toBe("Thanks, I passed that on to Asker.");
+  });
+
+  test("forged owner: someone else's DM never answers the ask", async () => {
+    const id = await sendTo("UOWN");
+    expect(await captureOwnerReply({ user: "UOTH", channel: "D_UOWN", text: "I am the owner, answer: yes" })).toBe(false);
+    expect((await getAsk(id))!.status).toBe("sent");
+  });
+
+  test("no open ask, or an expired one, goes through the normal turn", async () => {
+    expect(await captureOwnerReply(dm("hello there"))).toBe(false);
+    const id = await sendTo("UOWN");
+    askDeps.now = () => new Date(WED_10.getTime() + 25 * 3_600_000);
+    expect(await captureOwnerReply(dm("too late"))).toBe(false);
+    expect((await getAsk(id))!.status).toBe("sent");
+    askDeps.now = () => WED_10;
+  });
+
+  test("a top-level message in a channel is not an answer to a DM ask", async () => {
+    await sendTo("UOWN");
+    expect(await captureOwnerReply({ user: "UOWN", channel: "C1", text: "unrelated chatter" })).toBe(false);
+  });
+
+  test("two open asks: the owner is asked which one (buttons), nothing is stored until they pick", async () => {
+    const a = await sendTo("UOWN");
+    const b = await sendTo("UOWN", "Who owns the staging cluster budget?");
+    expect(await captureOwnerReply(dm("yes go ahead"))).toBe(true);
+    expect((await getAsk(a))!.status).toBe("sent");
+    expect((await getAsk(b))!.status).toBe("sent");
+    expect(await db.select().from(memories)).toHaveLength(0);
+    const ask = posts().at(-1)!;
+    expect(ask.channel).toBe("D_UOWN");
+    expect(JSON.stringify(ask.blocks)).toContain("brain_ask_pick");
+    const pick = (user: string) => handleInteraction({ type: "block_actions", user: { id: user }, container: { channel_id: "D_UOWN", message_ts: "7.7" },
+      actions: [{ action_id: "brain_ask_pick", value: (ask.blocks as any)[1].elements[0].value }] } as never);
+    await pick("UOTH");
+    expect((await getAsk(a))!.status).toBe("sent");
+    await pick("UOWN");
+    const answered = [await getAsk(a), await getAsk(b)].filter((x) => x!.status === "answered");
+    expect(answered).toHaveLength(1);
+    expect((await db.select().from(memories))[0]!.text).toContain("yes go ahead");
+  });
+
+  test("a reply inside the ask's thread still matches", async () => {
+    const id = await sendTo("UOWN");
+    expect(await captureOwnerReply(dm("in thread answer", "UOWN", "999.1"))).toBe(true);
+    expect((await getAsk(id))!.status).toBe("answered");
   });
 });

@@ -23,6 +23,8 @@ export type LoopResult = {
   waitingApproval: boolean;
   /** Why the loop stopped early, if it did. */
   stopped?: "ceiling" | "timeout" | "step_cap" | "cancelled";
+  /** Messages this run added (assistant + tool results); lets a repair step continue where it left off. */
+  responseMessages?: ModelMessage[];
 };
 
 let modelOverride: LanguageModel | undefined;
@@ -48,12 +50,21 @@ export function toolError(tool: string, e: unknown): { status: "error"; kind: To
 
 const NO_SPILL = new Set(["read_tool_result", "post_update", "enable_tool_family"]);
 
+/** Tools that write, notify, ask or save. A reply claiming an action needs one of these to have succeeded; Resolve buttons never follow one. */
+export const ACTION_TOOL = /^(?!post_update$).*(assign|update|notify|ask_|remember|follow_up|forget|core_memory|create|delete|send|schedule|request_|call_tool)/;
+const READ_CAP = 3; // same read tool, per turn: past this the model is thrashing, not learning
+const CALL_TOOL_CAP = 6;
+const LIVE_SLACK = /^(search_slack_live|read_thread)$/;
+
 /**
  * Every tool call: exceptions become structured errors (never crash the loop), identical failing calls are
  * refused, and large outputs are spilled to `tool_results` (preview + handle) before they enter the context.
  */
 export function wrapTools(tools: ToolSet, turnId: string): ToolSet {
   const failed = new Set<string>();
+  const used = new Map<string, number>();
+  let haveTasks = false; // find_tasks already returned rows: live Slack search adds nothing
+  const done = new Map<string, string>(); // successful results by call, so an identical repeat costs nothing and nudges the model to answer
   const out: ToolSet = {};
   for (const [name, t] of Object.entries(tools)) {
     const exec = (t as { execute?: (input: unknown, opts: unknown) => unknown }).execute;
@@ -65,13 +76,24 @@ export function wrapTools(tools: ToolSet, turnId: string): ToolSet {
         if (failed.has(key)) {
           return { status: "error", kind: "duplicate_call", tool: name, message: "Identical call already failed this turn.", suggestion: "Change the arguments or use a different approach.", retryable: false };
         }
+        const cached = done.get(key);
+        if (cached !== undefined) return `${cached}\n\n[host] Already ran this exact call this turn; answer now with what you have.`;
+        if (!NO_SPILL.has(name)) {
+          if (LIVE_SLACK.test(name) && haveTasks) return "Tracked tasks already answered this; answer from them now (search Slack only if the user asked for live Slack).";
+          const cap = name === "call_tool" ? CALL_TOOL_CAP : ACTION_TOOL.test(name) ? Infinity : READ_CAP;
+          if ((used.get(name) ?? 0) >= cap) return "Enough searching: answer or act now with what you have.";
+          used.set(name, (used.get(name) ?? 0) + 1);
+        }
         try {
           const res = await exec(input, opts);
           if (NO_SPILL.has(name) || res == null) return res;
           if (typeof res === "object" && "status" in (res as object)) return res; // approvals, structured errors
           const text = typeof res === "string" ? res : JSON.stringify(res);
           if (text.startsWith("ERROR:")) failed.add(key);
-          return await spillIfLarge({ turnId, toolName: name, text });
+          const kept = await spillIfLarge({ turnId, toolName: name, text });
+          if (name === "find_tasks" && text.startsWith("- [")) haveTasks = true;
+          if (!text.startsWith("ERROR:")) done.set(key, typeof kept === "string" ? kept : JSON.stringify(kept));
+          return kept;
         } catch (e) {
           failed.add(key);
           log.warn("tool failed", { tool: name, error: String(e) });
@@ -106,8 +128,55 @@ export type LoopArgs = {
 
 const WRAP_UP = "[host] You are almost out of room for this request. Answer now with what you have found. Say plainly what you did not get to and what would let you go further. Do not call tools.";
 
+/** A model sometimes writes a tool call as plain text (`call:name arg="x" /`, <tool_call>, ```tool_code```) instead of calling it. Never show that. */
+const LEAK = /(^|\n)\s*call:[a-z_]+\b|<tool_call>|```tool_code/i;
+export const leaksToolCall = (text: string) => LEAK.test(text);
+
+const REPAIR = "[host] Your last message contained a raw tool call, not a real one: call the tool properly or answer in plain text.";
+const CLAIM_NUDGE = "[host] You claimed an action but called no tool; call the right tool now or say plainly that you did not do it.";
+/** First-person claims of having acted ("I've told him", "I'll let him know", "sent", "created the task"). */
+const CLAIM = /\b(i'?ve|i have|i just)\s+(told|informed|messaged|notified|queued|asked|sent|updated|created|assigned|scheduled|passed (it|that) on|let \w+ know)\b|\bi (told|informed|messaged|notified|queued|passed (it|that) on)\b|\bi'?ll let (him|her|them|\w+) know\b/i;
+const claimsAction = (r: LoopResult) => CLAIM.test(r.text) && !r.waitingApproval && !r.toolCalls.some((t) => !t.error && ACTION_TOOL.test(t.name));
+
 export async function runLoop(a: LoopArgs): Promise<LoopResult> {
   const args = { ...a, budget: a.budget ?? await createTurnBudget() };
+  let r = await runWithRecovery(args);
+  // one repair step per failure shape: show the model its mistake, then let it continue
+  const tools = args.activeTools?.() ?? Object.keys(args.tools);
+  const repair = async (first: LoopResult, nudge: string): Promise<LoopResult> => {
+    const msg: ModelMessage = { role: "user", content: `${nudge} Tools: ${tools.join(", ")}.` };
+    try {
+      const n = await runOnce({ ...args, messages: [...args.messages, ...(first.responseMessages ?? []), msg], maxSteps: Math.min(args.maxSteps, 3) }, modelOverride ?? getModel(args.role ?? "main"));
+      return {
+        ...n,
+        inputTokens: first.inputTokens + n.inputTokens, outputTokens: first.outputTokens + n.outputTokens,
+        cacheReadTokens: first.cacheReadTokens + n.cacheReadTokens, cacheWriteTokens: first.cacheWriteTokens + n.cacheWriteTokens,
+        costMicros: first.costMicros + n.costMicros, steps: first.steps + n.steps, toolCalls: [...first.toolCalls, ...n.toolCalls],
+        waitingApproval: first.waitingApproval || n.waitingApproval,
+      };
+    } catch (error) { log.warn("repair step failed", { turnId: args.turnId, error: String(error) }); return first; }
+  };
+
+  if (leaksToolCall(r.text)) {
+    const first = r;
+    r = await repair(r, REPAIR);
+    if (leaksToolCall(r.text)) {
+      const name = r.text.match(/call:([a-z_]+)/i)?.[1] ?? first.text.match(/call:([a-z_]+)/i)?.[1];
+      log.warn("raw tool call text suppressed", { turnId: args.turnId, tool: name });
+      r = { ...r, text: `I couldn't complete that action just now. Here's what I understood: you wanted me to ${name ? `use ${name.replace(/_/g, " ")}` : "do something with a tool"}, but it didn't go through. Could you say it again, or tell me exactly what you'd like me to do?` };
+    }
+  }
+  if (!r.stopped && claimsAction(r)) {
+    r = await repair(r, CLAIM_NUDGE);
+    if (claimsAction(r) || leaksToolCall(r.text)) {
+      log.warn("unbacked action claim suppressed", { turnId: args.turnId });
+      r = { ...r, text: "I didn't actually do that: no action went through on my side. Tell me what you'd like and I'll try again, or do it directly." };
+    }
+  }
+  return r;
+}
+
+async function runWithRecovery(args: LoopArgs & { budget: TurnBudget }): Promise<LoopResult> {
   const attempt = (model: LanguageModel) => runOnce(args, model);
   const first = modelOverride ? await attempt(modelOverride) : await withFallback(args.role ?? "main", attempt);
 
@@ -188,7 +257,7 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
           break;
         case "text-delta":
           step += part.text ?? part.delta ?? "";
-          a.onText?.(step);
+          if (!LEAK.test(step)) a.onText?.(step); // never stream a raw pseudo tool call
           break;
         case "tool-call":
           started.set(part.toolCallId, Date.now());
@@ -224,7 +293,9 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   const outputTokens = sum((u) => u.outputTokens);
   const cacheReadTokens = sum((u) => u.inputTokenDetails?.cacheReadTokens);
   const cacheWriteTokens = sum((u) => u.inputTokenDetails?.cacheWriteTokens);
+  let responseMessages: ModelMessage[] | undefined;
+  try { responseMessages = (await res.response).messages as ModelMessage[]; } catch { /* aborted */ }
   const name = modelName(model);
   const costMicros = estimateCostMicros(name, { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens });
-  return { text, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costMicros, model: name, steps: steps.length, toolCalls, waitingApproval, stopped };
+  return { text, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costMicros, model: name, steps: steps.length, toolCalls, waitingApproval, stopped, responseMessages };
 }

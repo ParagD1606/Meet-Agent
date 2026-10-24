@@ -22,7 +22,7 @@ export const DEFAULT_LIMITS: Limits = {
   perTurnTokenCeiling: 400_000,
   perUserDailyTokens: 2_000_000,
   orgDailyTokens: 20_000_000,
-  maxStepsByDepth: { direct: 2, memory: 4, tools: 12, deep: 30 },
+  maxStepsByDepth: { direct: 2, memory: 5, tools: 12, deep: 30 },
   concurrentTurns: 8,
 };
 

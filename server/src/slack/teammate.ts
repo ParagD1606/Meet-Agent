@@ -7,7 +7,7 @@ import { log } from "../log";
 import { scanMemoryText } from "../memory/core-blocks";
 import { addFact } from "../memory/facts";
 import { writeTag } from "../memory/scope";
-import { askConfirmCard } from "./cards";
+import { askConfirmCard, button, section } from "./cards";
 import { openDm, postMessage, slackClient } from "./client";
 import { sanitizeForSlack } from "./sanitize";
 
@@ -119,6 +119,7 @@ type Payload = { user?: { id?: string }; channel?: { id?: string }; container?: 
 
 /** `brain_ask_yes` / `brain_ask_no`: only the asker's click counts. */
 export async function handleAskAction(payload: Payload, a: { action_id?: string; value?: string }): Promise<boolean> {
+  if (a.action_id === "brain_ask_pick") return handlePick(payload, a.value);
   if (a.action_id !== "brain_ask_yes" && a.action_id !== "brain_ask_no") return false;
   const ask = a.value ? await getAsk(a.value) : null;
   if (!ask || ask.status !== "proposed" || payload.user?.id !== ask.asker) return true;
@@ -141,31 +142,72 @@ export async function expireStaleAsks(now = askDeps.now()): Promise<number> {
 
 type Msg = { user?: string; text?: string; channel: string; thread_ts?: string };
 
-/**
- * Called for every human Slack message. If it is the owner answering a sent ask (in the asked thread, or in our DM),
- * store the answer (source tagged to the owner) in the asker's write scope and relay it. Returns true when consumed.
- */
-export async function captureOwnerReply(m: Msg): Promise<boolean> {
-  if (!m.user || !m.text?.trim()) return false;
-  const rows = await db.select().from(settings).where(sql`${settings.key} like 'ask:%' and ${settings.value}->>'status' = 'sent' and ${settings.value}->>'owner' = ${m.user}`);
-  const ask = rows.map((r) => r.value as Ask).find((a) => a.target && a.target.channelId === m.channel
-    && m.thread_ts === a.target.threadTs // in the asked thread (channel) or as a reply to our DM; a stray DM is not an answer
-    && !!a.createdAt && askDeps.now().getTime() - Date.parse(a.createdAt) < ASK_TTL_MS);
-  if (!ask) return false;
-  if (!(await advance(ask.id, "sent", "answered"))) return true;
-  const answer = clean(m.text).slice(0, 700);
-  const [owner] = await db.select({ name: users.name }).from(users).where(eq(users.id, m.user));
-  const who = owner?.name ?? "a teammate";
+const fresh = (a: Ask) => !!a.createdAt && askDeps.now().getTime() - Date.parse(a.createdAt) < ASK_TTL_MS;
+
+/** Asks delivered to `owner` that are still waiting (sent, under 24h old). */
+export async function openAsksFor(owner: string): Promise<Ask[]> {
+  const rows = await db.select().from(settings).where(sql`${settings.key} like 'ask:%' and ${settings.value}->>'status' = 'sent' and ${settings.value}->>'owner' = ${owner}`);
+  return rows.map((r) => r.value as Ask).filter((a) => a.target && fresh(a));
+}
+
+/** Marks the ask answered, stores the Q/A (created_by = owner) in the asker's write scope and relays the owner's words to the asker. */
+async function answerAsk(ask: Ask, owner: string, text: string): Promise<void> {
+  if (!(await advance(ask.id, "sent", "answered"))) return;
+  const answer = clean(text).slice(0, 700);
+  const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, owner));
+  const who = row?.name ?? "a teammate";
   const tag = writeTag({ channelId: ask.origin.channelId, isPrivate: ask.origin.isPrivate, isIm: ask.origin.isIm, userId: ask.asker });
-  const text = `Q: ${ask.question} A: ${answer} (answered by ${who})`;
-  if (tag && !scanMemoryText(text)) {
-    await addFact({ tag, text, source: "slack", sourceRef: `${ask.origin.channelId}:${ask.origin.threadTs ?? ""}`, createdBy: m.user, factType: "fact", confidence: 0.8, agentContext: "primary" })
+  const fact = `Q: ${ask.question} A: ${answer} (answered by ${who})`;
+  if (tag && !scanMemoryText(fact)) {
+    await addFact({ tag, text: fact, source: "slack", sourceRef: `${ask.origin.channelId}:${ask.origin.threadTs ?? ""}`, createdBy: owner, factType: "fact", confidence: 0.8, agentContext: "primary" })
       .catch((e) => log.warn("owner reply save failed", { error: String(e) }));
   }
   const same = ask.target!.channelId === ask.origin.channelId;
   await postMessage({
     channel: ask.origin.channelId, thread_ts: ask.origin.threadTs,
-    text: same ? `Thanks <@${m.user}>. <@${ask.asker}>, that's your answer, and I saved it for next time.` : `<@${ask.asker}> ${who} replied: "${sanitizeForSlack(answer)}". I saved it for next time.`,
+    text: same ? `Thanks <@${owner}>. <@${ask.asker}>, that's your answer, and I saved it for next time.` : `<@${ask.asker}> ${who} replied: "${sanitizeForSlack(answer)}". I saved it for next time.`,
   }).catch((e: Error) => log.warn("ask relay failed", { error: e.message }));
+}
+
+const thank = async (ask: Ask, channel: string, thread_ts?: string) => {
+  const [a] = await db.select({ name: users.name }).from(users).where(eq(users.id, ask.asker));
+  await postMessage({ channel, thread_ts, text: `Thanks, I passed that on to ${a?.name ?? `<@${ask.asker}>`}.` }).catch((e: Error) => log.warn("ask thanks failed", { error: e.message }));
+};
+
+/** `brain_ask_pick`: the owner chose which open question their DM answered. Only the owner's click counts. */
+async function handlePick(payload: Payload, value?: string): Promise<boolean> {
+  let v: { a?: string; t?: string } = {};
+  try { v = JSON.parse(value ?? "{}"); } catch { return true; }
+  const ask = v.a ? await getAsk(v.a) : null;
+  if (!ask || !v.t || ask.status !== "sent" || payload.user?.id !== ask.owner || !fresh(ask)) return true;
+  const channel = payload.container?.channel_id ?? payload.channel?.id;
+  const ts = payload.container?.message_ts ?? payload.message?.ts;
+  await answerAsk(ask, ask.owner, v.t);
+  if (channel && ts) await (await slackClient()).chat.update({ channel, ts, text: "Got it.", blocks: [] }).catch(() => undefined);
+  if (channel) await thank(ask, channel);
+  return true;
+}
+
+/**
+ * Called for every human Slack message. If it is the owner answering a sent ask, store the answer (source tagged to the
+ * owner) in the asker's write scope and relay it. Matches: a reply in the asked thread; or a top-level DM when exactly
+ * one ask to this owner is open (two or more: the owner picks with buttons). Returns true when consumed.
+ */
+export async function captureOwnerReply(m: Msg): Promise<boolean> {
+  if (!m.user || !m.text?.trim()) return false;
+  const open = await openAsksFor(m.user);
+  const inThread = open.find((a) => a.target!.channelId === m.channel && m.thread_ts === a.target!.threadTs);
+  const dms = m.thread_ts || /\?\s*$/.test(m.text) ? [] : // a question back ("lunch at 1?") is not an answer
+     open.filter((a) => a.target!.channelId === m.channel && a.target!.channelId !== a.origin.channelId);
+  const ask = inThread ?? (dms.length === 1 ? dms[0] : undefined);
+  if (ask) {
+    await answerAsk(ask, m.user, m.text);
+    if (ask.target!.channelId !== ask.origin.channelId) await thank(ask, m.channel, m.thread_ts);
+    return true;
+  }
+  if (dms.length < 2) return false;
+  const t = clean(m.text).slice(0, 700);
+  const text = "Thanks. Which question is that answering?";
+  await postMessage({ channel: m.channel, text, blocks: [section(text), { type: "actions", elements: dms.slice(0, 5).map((a) => button(a.question.slice(0, 70), "brain_ask_pick", { value: JSON.stringify({ a: a.id, t }) })) }] });
   return true;
 }

@@ -1,5 +1,5 @@
 import type { ModelMessage } from "ai";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
 import { channels, turns, users } from "../db/schema";
@@ -17,12 +17,14 @@ import { maybeCompact } from "./compact";
 import { DEPTH_CONFIG, routeDepth, type Depth } from "./depth";
 import { memoryTools } from "./memory-tools";
 import { setFollowUp } from "./followup";
-import { runLoop } from "./loop";
+import { ACTION_TOOL, runLoop } from "./loop";
 import { getPersona } from "../persona";
 import { buildDynamicContext, buildSystemMessages, type Trigger } from "./prompt";
 import { serialize } from "./queue";
 import { getSlack } from "./slack";
 import { askTeammateTool } from "./ask-teammate";
+import { openAsksFor } from "../slack/teammate";
+import { isActionAck } from "../slack/resolve";
 import { assembleTools, type ToolContext } from "./tools";
 
 export { handleBlockAction, resumePending, expireStale } from "./approval";
@@ -53,6 +55,9 @@ export type TurnInput = {
 const NO_REPLY = /^\s*NO_REPLY\s*$/;
 const STEP_CAP_HINT = "\n\n_I ran out of working room on this one. Say \"continue\" and I'll pick up from here._";
 const TIMEOUT_MSG = "That took longer than I'm allowed to spend on one request, so I stopped. Try narrowing it down, or say \"continue\" to have me pick it up.";
+/** Resolve buttons belong under factual answers only: never after a turn that wrote, notified, asked or saved something. */
+const RECALL_TOOL = /^(memory_search|find_tasks|entity_lookup|search_threads)$/;
+const QUESTION = /\?|^\s*(what|who|when|where|why|how|which|is|are|does|do|did|can|could|tell me|explain)\b/i;
 const FAIL_MSG = ":warning: Something went wrong while working on that. Please try again.";
 
 /** One turn at a time per (channel, thread): in-process FIFO plus a pg advisory lock for multi-process safety. */
@@ -98,7 +103,13 @@ async function execute(input: TurnInput): Promise<void> {
 
     // ---- depth router: decide how much work this turn deserves before spending anything ----
     stage = "depth";
-    const { depth, by } = await routeDepth({ trigger: input.trigger, text: input.text, hasFiles: !!input.files?.length, hasHistory: !!input.threadTs, readOnly });
+    // previous turn in this thread/DM: a bare "ok" or "continue" must not drop to a tool-less depth after an action
+    const [last] = interactive ? await db.select({ depth: turns.depth, toolCalls: turns.toolCalls }).from(turns)
+      .where(and(eq(turns.channelId, input.channelId), input.threadTs ? eq(turns.threadTs, input.threadTs) : isNull(turns.threadTs), ne(turns.id, turnId)))
+      .orderBy(desc(turns.startedAt)).limit(1) : [];
+    const openAsk = input.userId && interactive ? (await openAsksFor(input.userId).catch(() => [])).length > 0 : false;
+    const prev = last?.depth ? { depth: last.depth as Depth, usedTools: Array.isArray(last.toolCalls) && last.toolCalls.length > 0, openAsk } : undefined;
+    const { depth, by } = await routeDepth({ trigger: input.trigger, text: input.text, hasFiles: !!input.files?.length, hasHistory: !!input.threadTs, readOnly, prev });
     const plan = DEPTH_CONFIG[depth];
     const limits = await getLimits();
     const maxSteps = depth === "direct" ? 1 : Math.min(60, limits.maxStepsByDepth[depth]);
@@ -140,10 +151,12 @@ async function execute(input: TurnInput): Promise<void> {
       now: new Date(), botUserId: self, asker, channelName: chan?.name, trigger: input.trigger, isIm: input.isIm, isPrivate: input.isPrivate,
       readOnly, depth, connectionNotes: assembled?.notes ?? [],
     });
+    const open = input.userId && interactive ? await openAsksFor(input.userId).catch(() => []) : [];
+    const pending = open.map((a) => `\nYou asked this user a question for <@${a.asker}>: "${a.question}". Their message may be the answer, but you cannot relay it from here, so never say you passed anything on.`).join("");
     const recall = plan.recall ? [bc.recallText, bc.recentChannelText].filter(Boolean).join("\n") : "";
     const files = (input.files ?? []).map((f) => `\n\n[attachment: ${f.name} (${f.mimeType})]\n${f.text.slice(0, 20_000)}`).join("");
     const speaker = input.userId && interactive ? `<@${input.userId}>: ` : "";
-    const userContent = `${dynamic}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
+    const userContent = `${dynamic}${pending}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
     const history: ModelMessage[] = depth === "direct" ? bc.history.slice(-4) : bc.history;
     const messages: ModelMessage[] = [...history, { role: "user", content: userContent }];
     const system = buildSystemMessages(bc.frozenPrefixBlocks, await getPersona());
@@ -163,13 +176,15 @@ async function execute(input: TurnInput): Promise<void> {
     if (result.stopped === "cancelled") out = input.abortSignal?.reason === "replace" ? "_Dropped that; picking up your newer message._" : "_Stopped._";
     else if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
     else if (result.stopped === "timeout") out = reply && !silent ? reply : TIMEOUT_MSG;
-    else if (result.stopped === "step_cap" && !silent) out = reply + STEP_CAP_HINT;
+    else if (result.stopped === "step_cap" && !silent && (depth === "tools" || depth === "deep")) out = reply + STEP_CAP_HINT;
     else if (silent) out = "I couldn't generate a reply just now. Please try again in a moment.";
     const cancelled = result.stopped === "cancelled";
     const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
     stage = "reply_finish";
     // "Resolved / Not quite" under a real answer (not small talk, errors, cut-off or approval-pending runs)
-    const answered = interactive && !!input.userId && !silent && !result.stopped && !result.waitingApproval && depth !== "direct";
+    const answered = interactive && !!input.userId && !silent && (!result.stopped || (result.stopped === "step_cap" && depth === "memory")) && !result.waitingApproval && depth !== "direct"
+      && !result.toolCalls.some((t) => ACTION_TOOL.test(t.name)) && !isActionAck(reply)
+      && (QUESTION.test(input.text.replace(/<@[A-Z0-9]+>/g, "").trim()) || result.toolCalls.some((t) => RECALL_TOOL.test(t.name)));
     if (!quiet) await sink.finish(out, answered ? { actions: resolveActions({ u: input.userId!, q: input.text, t: replyThread }) } : undefined);
     reply = silent ? "" : reply;
 

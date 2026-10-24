@@ -37,6 +37,9 @@ export async function recordResolution(a: { channelId: string; userId: string; q
   return true;
 }
 
+/** An answer that only acknowledges an action ("Got it, I'll let him know", "I asked Parag") is not a fact worth storing. */
+export const isActionAck = (t: string) => /^\s*(got it|done|ok(ay)?|sure|noted|will do|i('| a)?ll|i('| ha)ve (asked|sent|passed|assigned|updated|created|noted|added|set|scheduled)|i (asked|sent|passed|assigned|updated|created|noted|added)|asked|sent|waiting for|posted|task (created|updated|assigned)|reminder set)\b/i.test(t);
+
 /** `brain_resolve_yes` / `brain_resolve_no` clicks. Only the asker's click counts. */
 export async function handleResolveAction(payload: Payload, a: { action_id?: string; value?: string }): Promise<boolean> {
   if (a.action_id !== "brain_resolve_yes" && a.action_id !== "brain_resolve_no") return false;
@@ -51,7 +54,7 @@ export async function handleResolveAction(payload: Payload, a: { action_id?: str
   const threadTs = v.t ?? payload.message?.thread_ts ?? payload.container?.thread_ts ?? null;
   if (a.action_id === "brain_resolve_yes") {
     const answer = flat(payload.message?.text ?? "").replace(/\s*Sources?:.*$/i, "");
-    const ok = answer ? await recordResolution({ channelId: channel, userId: clicker, question: v.q, answer, threadTs, messageTs: ts }).catch((e) => { log.warn("resolution save failed", { error: String(e) }); return false; }) : false;
+    const ok = answer && !isActionAck(answer) ? await recordResolution({ channelId: channel, userId: clicker, question: v.q, answer, threadTs, messageTs: ts }).catch((e) => { log.warn("resolution save failed", { error: String(e) }); return false; }) : false;
     await done(`${sanitizeForSlack(payload.message?.text ?? "")}\n\n_Marked resolved${ok ? ". I'll answer this instantly next time" : ""}._`);
     return true;
   }

@@ -19,7 +19,7 @@ import { slackSearchTools } from "../slack/search";
 import { extractUrl } from "../tools/web/extract";
 import { webSearch } from "../tools/web/search";
 import { allowedUrls, registerUrls } from "../tools/web";
-import { askTeammateTool } from "./ask-teammate";
+import { askTeammateTool, withAliases } from "./ask-teammate";
 import { grantedLeases } from "./lease";
 import { memoryTools } from "./memory-tools";
 import { scheduleFollowUpTool } from "./follow-up-tool";
@@ -159,7 +159,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
   const extras = depth === "deep" || unattended ? {} : {
     enable_tool_family: tool({
       description: `Turn on a rare tool family for the next step: ${[...allowed].join(", ")}.`,
-      inputSchema: z.object({ family: z.enum(FAMILY_NAMES) }),
+      inputSchema: withAliases(z.object({ family: z.enum(FAMILY_NAMES) }), { family: ["name"] }),
       execute: async ({ family }) => {
         if (!allowed.has(family)) return `ERROR: ${family} is not available in this context.`;
         enabled.add(family);
