@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
-import { channelMembers, channels, commitments, meetings, meetingTaskNotifications, users } from "../db/schema";
+import { channelMembers, channels, commitments, meetingAudit, meetings, meetingTaskNotifications, users } from "../db/schema";
 import { log } from "../log";
 import { ACTIVE, resolveCommitment, type Commitment } from "../manager/commitments";
 import { notifyAssignerDone, syncTaskFact, userName } from "../manager/task-sync";
@@ -348,4 +348,46 @@ async function notifyDeclined(m: Meeting, task: MeetingItem | undefined, decline
     const text = `:raised_hand: ${slackText(who)} says the task *${safe(task.title)}* from the meeting is not theirs. It is now unassigned: assign someone else in Tasks, or on the meeting notes page.`;
     await postMessage({ channel, text: `${who} says task "${task.title}" is not theirs: assign someone else`, blocks: [section(text), { type: "actions", elements: [link("Assign in Tasks", tasksUrl()), link("Meeting notes", meetingUrl(m.id))] }] });
   } catch (err) { log.warn("decline notice failed", { meetingId: m.id, error: String(err) }); }
+}
+
+/**
+ * One summary post in the channel where the huddle happened (only people already there see it): what was decided, key points, open questions
+ * and who got which task, with a link to the notes. Slack huddles only (never uploads or extension calls), at most once per meeting
+ * (a meeting_audit row is the claim), and never when the workspace requires approval first. Never throws.
+ */
+export async function postChannelSummary(meetingId: string): Promise<boolean> {
+  try {
+    const [m] = await db.select().from(meetings).where(eq(meetings.id, meetingId));
+    if (!m?.summary || m.status !== "ready" || m.platform !== "slack" || m.channelId.startsWith("ext_")) return false;
+    if ((await getApprovalMode()) === "approve") return false;
+    const [done] = await db.select({ id: meetingAudit.id }).from(meetingAudit).where(and(eq(meetingAudit.meetingId, meetingId), eq(meetingAudit.action, "channel_summary"))).limit(1);
+    if (done) return false;
+    const [claim] = await db.insert(meetingAudit).values({ meetingId, action: "channel_summary", detail: { state: "posting" } }).returning({ id: meetingAudit.id });
+    const items = asItems(m.id, m.tasks).filter((i) => i.approval !== "rejected");
+    const decisions = items.filter((i) => i.itemType === "decision" && !i.unverified).map((i) => i.title);
+    const questions = items.filter((i) => i.itemType === "question").map((i) => i.title);
+    const bullets = recapBullets(m.summary, decisions, questions);
+    const tasks = items.filter((i) => i.itemType === "task" && i.approval === "approved" && i.assigneeId).slice(0, MAX_ITEMS);
+    if (!bullets.length && !tasks.length) { await db.delete(meetingAudit).where(eq(meetingAudit.id, claim!.id)); return false; }
+    const title = cleanTitle(m.title, null, m.endedAt);
+    const lines = tasks.map((t) => `• ${safe(t.title)} – <@${t.assigneeId}>${t.dueDate ? `, due ${prettyDue(t.dueDate)}` : ""}`);
+    const blocks: unknown[] = [
+      { type: "header", text: { type: "plain_text", text: `Huddle summary: ${title}`.slice(0, 150) } },
+      ...(bullets.length ? [section(`*What happened*\n${bullets.map((b) => `• ${safe(b)}`).join("\n")}`)] : []),
+      ...(lines.length ? [section(`*Tasks assigned* (${tasks.length})\n${lines.join("\n")}\n_Each person also got a DM._`)] : []),
+      { type: "actions", elements: [link("View notes", meetingUrl(m.id)), link("Open Tasks", tasksUrl())] },
+    ];
+    try {
+      const posted = await postMessage({ channel: m.channelId, text: `Huddle summary: ${title}`, blocks });
+      await db.update(meetingAudit).set({ detail: { state: "posted", ts: posted.ts ?? null } }).where(eq(meetingAudit.id, claim!.id));
+      return true;
+    } catch (err) {
+      await db.delete(meetingAudit).where(eq(meetingAudit.id, claim!.id)); // release so the next sync retries
+      log.warn("huddle channel summary failed", { meetingId, error: err instanceof Error ? err.message : String(err) });
+      return false;
+    }
+  } catch (err) {
+    log.warn("huddle channel summary failed", { meetingId, error: err instanceof Error ? err.message : String(err) });
+    return false;
+  }
 }

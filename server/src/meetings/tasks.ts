@@ -374,5 +374,5 @@ async function refreshDms(meetingId: string) {
 
 /** Detached: Slack event ACKs and HTTP responses never wait for DMs. */
 export function queueRecaps(meetingId: string) {
-  void import("./recap").then((r) => r.sendMeetingRecaps(meetingId)).catch((err) => log.warn("automatic meeting recap DMs failed", { meetingId, error: err instanceof Error ? err.message : String(err) }));
+  void import("./recap").then(async (r) => { await r.sendMeetingRecaps(meetingId); await r.postChannelSummary(meetingId); }).catch((err) => log.warn("automatic meeting recap DMs failed", { meetingId, error: err instanceof Error ? err.message : String(err) }));
 }
