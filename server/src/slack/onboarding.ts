@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { mcpConnections, users } from "../db/schema";
+import { getPersona } from "../persona";
 import { log } from "../log";
 import { homeFacts } from "./commands";
 import { channelIntroCard, homeView, teamInviteCard, welcomeCard } from "./cards";
@@ -16,7 +17,7 @@ export async function onUserJoined(userId: string): Promise<void> {
   const [u] = await db.select().from(users).where(eq(users.id, userId));
   if (!u || u.isBot || u.deactivated) return;
   if (!(await startJourney(userId))) return; // already welcomed
-  const card = welcomeCard(u.name);
+  const card = welcomeCard(u.name, (await getPersona()).name);
   await postDm(userId, card.text, card.blocks);
 }
 
@@ -27,13 +28,13 @@ export async function onAppHome(userId: string): Promise<void> {
     const [u] = await db.select().from(users).where(eq(users.id, userId));
     const [c] = await db.select({ n: sql<number>`count(*)::int` }).from(mcpConnections)
       .where(and(eq(mcpConnections.status, "connected"), sql`(${mcpConnections.scope} = 'org' or ${mcpConnections.ownerUserId} = ${userId})`));
-    await (await slackClient()).views.publish({ user_id: userId, view: homeView({ name: u?.name, connections: c?.n ?? 0, facts: await homeFacts(userId), admin: u?.role === "admin" || u?.role === "owner" }) as never });
+    await (await slackClient()).views.publish({ user_id: userId, view: homeView({ botName: (await getPersona()).name, name: u?.name, connections: c?.n ?? 0, facts: await homeFacts(userId), admin: u?.role === "admin" || u?.role === "owner" }) as never });
   } catch (err) { log.warn("app home publish failed", { userId, error: (err as Error).message }); }
 }
 
 /** Bot added to a channel: one short introduction (never in DMs). */
 export async function introduceInChannel(channelId: string): Promise<void> {
-  const card = channelIntroCard();
+  const card = channelIntroCard((await getPersona()).name);
   try { await postMessage({ channel: channelId, text: card.text, blocks: card.blocks }); }
   catch (err) { log.warn("channel intro failed", { channelId, error: (err as Error).message }); }
 }

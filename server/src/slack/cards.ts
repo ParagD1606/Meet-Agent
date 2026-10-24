@@ -9,21 +9,21 @@ const link = (path: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}${path}`;
 export const button = (text: string, actionId: string, extra: Record<string, unknown> = {}) =>
   ({ type: "button", text: { type: "plain_text", text }, action_id: actionId, ...extra });
 
-export function welcomeCard(name?: string | null): Card {
+export function welcomeCard(name?: string | null, bot = "Pixel"): Card {
   const hi = name ? `Hi ${escapeSlackText(name.split(" ")[0]!)}!` : "Hi!";
-  const text = `${hi} I'm Company Brain: a teammate that remembers what you tell me and can use the tools you connect. DM me or @mention me in any channel I've been added to.`;
+  const text = `${hi} I'm ${escapeSlackText(bot)}, your teammate on Company Brain. I remember what you tell me and can use the tools you connect. DM me or @mention me in any channel I've been added to.`;
   return {
     text,
     blocks: [
-      section(`*${hi}* I'm Company Brain, a teammate that remembers what you tell me and can use the tools you connect.`),
+      section(`*${hi}* I'm ${escapeSlackText(bot)}, your teammate on Company Brain. I remember what you tell me and can use the tools you connect.`),
       section("• Ask me anything: _\"what did we decide about pricing?\"_ (I only know what I've been told or connected to)\n• I save decisions and owners from conversations I'm part of; an admin can opt channels in to learn from more\n• Say _\"remind me…\"_ or _\"every Monday, send a digest of…\"_"),
       { type: "actions", elements: [button("Connect your tools", "brain_open_dashboard", { url: link("/configure/integrations") })] },
     ],
   };
 }
 
-export function channelIntroCard(): Card {
-  const text = "Hi, I'm Company Brain. @mention me to ask anything or to save a decision, owner or deadline. I stay quiet here unless an admin has turned on proactive replies, and I only learn from this channel's history if an admin opts it in.";
+export function channelIntroCard(bot = "Pixel"): Card {
+  const text = `Hi, I'm ${escapeSlackText(bot)}. @mention me to ask anything or to save a decision, owner or deadline. I stay quiet here unless an admin has turned on proactive replies, and I only learn from this channel's history if an admin opts it in.`;
   return { text, blocks: [section(text)] };
 }
 
@@ -59,13 +59,13 @@ export function nudgeCard(rung: JourneyRung): Card {
   };
 }
 
-export function homeView(o: { name?: string | null; connections: number; facts?: { id: number; text: string }[]; admin?: boolean }): unknown {
+export function homeView(o: { botName?: string; name?: string | null; connections: number; facts?: { id: number; text: string }[]; admin?: boolean }): unknown {
   const facts = o.facts ?? [];
   const confirm = { title: { type: "plain_text", text: "Delete this memory?" }, text: { type: "plain_text", text: "I will forget it for good." }, confirm: { type: "plain_text", text: "Delete" }, deny: { type: "plain_text", text: "Keep" } };
   return {
     type: "home",
     blocks: [
-      { type: "header", text: { type: "plain_text", text: "Company Brain" } },
+      { type: "header", text: { type: "plain_text", text: o.botName ? `${o.botName} · Company Brain` : "Company Brain" } },
       section(`${o.name ? `Welcome back, ${escapeSlackText(o.name.split(" ")[0]!)}.` : "Welcome."} DM me or @mention me in a channel to get started.`),
       section(o.connections > 0 ? `*${o.connections}* connected tool${o.connections === 1 ? "" : "s"} available to me.` : "_No tools connected yet._"),
       { type: "actions", elements: [

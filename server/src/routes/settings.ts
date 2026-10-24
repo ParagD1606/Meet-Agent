@@ -9,6 +9,7 @@ import { ACTION_CLASSES, getApprovalCards, setApprovalCards } from "../mcp/polic
 import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
 import { FEATURES, featureChannels, setFeatureChannels } from "../slack/proactive-features";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
+import { DEFAULT_PERSONA, getPersona, PERSONA_LIMITS, setPersona } from "../persona";
 import { httpError, readBody, codedError } from "./util";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -24,6 +25,15 @@ settingsRoutes.put("/settings/workspace-prompt", requireAuth("admin"), async (c)
   try {
     return c.json({ prompt: await setWorkspacePrompt(prompt) });
   } catch (e) { throw codedError(e); }
+});
+
+// ---------- persona (voice only; scanned like core memory) ----------
+settingsRoutes.get("/settings/persona", requireAuth("admin"), async (c) => c.json({ persona: await getPersona(), defaults: DEFAULT_PERSONA, limits: PERSONA_LIMITS }));
+settingsRoutes.put("/settings/persona", requireAuth("admin"), async (c) => {
+  const body = await readBody(c, z.object({ name: z.string(), role: z.string().default(""), tone: z.string().default(""), greeting: z.string().default("") }));
+  const r = await setPersona(body);
+  if (!r.ok) throw httpError(400, "invalid_persona", { message: r.error });
+  return c.json({ persona: r.persona });
 });
 
 // ---------- approval cards per action class (default: none; deletes and unclassified actions always get one) ----------

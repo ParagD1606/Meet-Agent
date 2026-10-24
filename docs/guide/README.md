@@ -9,6 +9,7 @@ A Slack teammate that remembers what your team says, answers from it, and acts i
 | [permissions](permissions.md) | know who can see and do what |
 | [connectors](connectors.md) | connect GitHub, Linear, Notion... and browse the marketplace |
 | [automations](automations.md) | schedule reminders, digests and research |
+| [persona](persona.md) | rename the bot (default Pixel) and set its voice |
 | [memory](memory.md) | see what is remembered, how it is scoped, corrected and exported |
 | [tokens-and-limits](tokens-and-limits.md) | control cost and understand rate limits |
 

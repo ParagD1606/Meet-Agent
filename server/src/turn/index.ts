@@ -17,6 +17,7 @@ import { DEPTH_CONFIG, routeDepth, type Depth } from "./depth";
 import { memoryTools } from "./memory-tools";
 import { setFollowUp } from "./followup";
 import { runLoop } from "./loop";
+import { getPersona } from "../persona";
 import { buildDynamicContext, buildSystemMessages, type Trigger } from "./prompt";
 import { serialize } from "./queue";
 import { getSlack } from "./slack";
@@ -140,7 +141,7 @@ async function execute(input: TurnInput): Promise<void> {
     const userContent = `${dynamic}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
     const history: ModelMessage[] = depth === "direct" ? bc.history.slice(-4) : bc.history;
     const messages: ModelMessage[] = [...history, { role: "user", content: userContent }];
-    const system = buildSystemMessages(bc.frozenPrefixBlocks);
+    const system = buildSystemMessages(bc.frozenPrefixBlocks, await getPersona());
 
     stage = "model";
     const result = await runLoop({

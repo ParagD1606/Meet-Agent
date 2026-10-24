@@ -18,6 +18,8 @@ const ROUTES: [string, string, R][] = [
   ["POST", "/api/memories/upload", "admin"],
   ["GET", "/api/settings/workspace-prompt", "member"],
   ["PUT", "/api/settings/workspace-prompt", "admin"],
+  ["GET", "/api/settings/persona", "admin"],
+  ["PUT", "/api/settings/persona", "admin"],
   ["GET", "/api/settings/approvals", "admin"],
   ["PUT", "/api/settings/approvals", "admin"],
   ["GET", "/api/settings/proactivity", "admin"],

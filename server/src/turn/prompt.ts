@@ -1,5 +1,6 @@
 import type { SystemModelMessage } from "ai";
 import { cachedSystem } from "../llm";
+import { DEFAULT_PERSONA, personaPrompt, type Persona } from "../persona";
 
 export type Trigger = "mention" | "dm" | "chime" | "automation" | "research";
 
@@ -86,7 +87,7 @@ export function buildDynamicContext(i: DynamicInput): string {
 const blockText = (b: unknown): string => (typeof b === "string" ? b : b && typeof b === "object" && "text" in b ? String((b as { text: unknown }).text) : "");
 
 /** [static][frozen blocks...] with Anthropic cache breakpoints on the static prompt and the last stable block (B's cachedSystem). */
-export function buildSystemMessages(frozenBlocks: unknown[] = []): SystemModelMessage[] {
+export function buildSystemMessages(frozenBlocks: unknown[] = [], persona: Persona = DEFAULT_PERSONA): SystemModelMessage[] {
   const blocks = frozenBlocks.map(blockText).filter((t) => t.trim());
-  return cachedSystem([{ text: STATIC_SYSTEM, cache: true }, ...blocks.map((text, i) => ({ text, cache: i === blocks.length - 1 }))]);
+  return cachedSystem([{ text: `${STATIC_SYSTEM}\n\n${personaPrompt(persona)}`, cache: true }, ...blocks.map((text, i) => ({ text, cache: i === blocks.length - 1 }))]);
 }
