@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { APPS, DriveLogo, GitHubLogo, JiraLogo, MeetLogo, NotionLogo, SlackLogo, TeamsLogo, Tile, TrelloLogo, ZoomLogo } from "./logos"
 
 const AV: Record<string, string> = { Ana: "#e0703a", Bob: "#3b82f6", Parag: "#8b5cf6", You: "#14b8a6", Maya: "#ec4899" }
@@ -248,3 +248,36 @@ export const FAQ: { q: string; a: ReactNode }[] = [
 ]
 
 export { APPS }
+
+const ROLES = [
+  { k: "Founder", d: "Remembers every decision", ch: "#leadership", msgs: [["Ana", "Did we ever settle the AWS vs GCP question?"], ["Raj", "No idea, that was in a call weeks ago."]], ask: "what did we decide about hosting?", ans: "Staying on AWS until December, then revisit. Decided in the 14 Oct call and confirmed in #infra.", src: ["meet: Infra sync", "slack: #infra"] },
+  { k: "Eng lead", d: "Knows why things were built", ch: "#eng", msgs: [["Sam", "Why do we retry uploads three times?"], ["Priya", "Was a fix for flaky Meet captions I think?"]], ask: "why do uploads retry 3 times?", ans: "A retry queue was added after captions failed to upload on bad networks. It's in the PR thread from September.", src: ["slack: #eng thread", "github: PR notes"] },
+  { k: "Head of ops", d: "Keeps follow-ups from slipping", ch: "#ops", msgs: [["Mia", "Who owns the vendor renewal?"], ["Jo", "Parag said he'd take it, due Friday."]], ask: "open tasks for Parag this week", ans: "2 open: vendor renewal (due Fri) and advertisements. A reminder goes out Thursday.", src: ["meet: Weekly standup", "slack: #ops"] },
+  { k: "New hire", d: "Gets up to speed alone", ch: "DM with Brain", msgs: [["You", "Just joined. What is the launch plan?"]], ask: "summarise the launch plan", ans: "Launch on Friday. Ads go to Parag, docs to Ana. Only from channels you can see.", src: ["slack: #launch-plan", "notion: Launch plan"] },
+]
+export function RoleStories() {
+  const [i, setI] = useState(0)
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (paused) return
+    const t = setInterval(() => setI((x) => (x + 1) % ROLES.length), 6500)
+    return () => clearInterval(t)
+  }, [paused])
+  const r = ROLES[i]!
+  return (
+    <div className="roles" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div className="rtabs" role="tablist" aria-label="Choose a role">
+        {ROLES.map((x, n) => (
+          <button key={x.k} type="button" role="tab" aria-selected={n === i} className={n === i ? "on" : ""} onClick={() => setI(n)}>
+            <b>{x.k}</b><span>{x.d}</span>{n === i && !paused && <i className="rbar" key={i} />}
+          </button>
+        ))}
+      </div>
+      <div className="rstage" key={i}>
+        <div className="rhead"><SlackLogo size={16} />{r.ch}</div>
+        {r.msgs.map((m, n) => <div className="rmsg" style={{ animationDelay: `${n * 0.25}s` }} key={n}><i>{m[0]![0]}</i><div><b>{m[0]}</b><p>{m[1]}</p></div></div>)}
+        <div className="rmsg" style={{ animationDelay: `${r.msgs.length * 0.25}s` }}><i className="br"><Brain size={13} color="#111" /></i><div><b>@Brain <em>{r.ask}</em></b><p className="rans">{r.ans}</p><div className="rsrc">{r.src.map((x) => <span key={x}>{x}</span>)}</div></div></div>
+      </div>
+    </div>
+  )
+}

@@ -5,7 +5,7 @@ import { DrawSVGPlugin } from "gsap/DrawSVGPlugin"
 import { MotionPathPlugin } from "gsap/MotionPathPlugin"
 import { useLayoutEffect, useRef } from "react"
 import { APPS, MeetLogo, SlackLogo, TeamsLogo, Tile, ZoomLogo } from "./logos"
-import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, BrainField, Brain, FAQ, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PLATFORMS, PRIVACY } from "./scenes"
+import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, BrainField, Brain, FAQ, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PLATFORMS, PRIVACY, RoleStories } from "./scenes"
 import { css } from "./styles"
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, DrawSVGPlugin, MotionPathPlugin)
@@ -272,6 +272,12 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <div className="hwrap"><HeroWindow /></div>
       </div></section>
 
+      <section className="sec" id="roles" style={{ paddingTop: 20 }}><div className="wrap">
+        <p className="tag" data-reveal>One brain. Any job.</p>
+        <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 820 }}>It already knows what happened, <span className="it">just ask</span>.</h2>
+        <RoleStories />
+      </div></section>
+
       <section className="sec" id="how" style={{ paddingTop: 20 }}><div className="wrap">
         <p className="tag" data-reveal>How it works</p>
         <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 760 }}>One brain for everything your team <span className="it">knows</span>.</h2>
@@ -320,6 +326,10 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <p className="tag" data-reveal style={{ textAlign: "center" }}>FAQ</p>
         <h2 className="big" data-reveal style={{ marginTop: 16, textAlign: "center" }}>Questions, answered.</h2>
         <div className="faq" data-reveal>{FAQ.map((f) => <div className="qa" key={f.q}><button type="button" className="q" aria-expanded="false"><span>{f.q}</span><i className="pm" /></button><div className="a"><p>{f.a}</p></div></div>)}</div>
+      </div></section>
+
+      <section className="bigline"><div className="wrap">
+        <h2 data-reveal>The best memory is<br />your <span className="it">team's</span> memory.</h2>
       </div></section>
 
       <section className="cta"><div className="wrap">
