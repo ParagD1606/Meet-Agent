@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { config } from "../../src/config";
-import { memories, channels } from "../../src/db/schema";
+import { memories, channels, meetings, meetingTaskNotifications } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
+import { setSlackClientForTest } from "../../src/slack/client";
 import { app, call, db, login, mkUser, resetDb } from "./helpers";
 
 let admin: string, member: string;
@@ -160,5 +161,71 @@ describe("static web", () => {
       expect((await app.request("/api/unknown")).status).toBe(404);
       expect((await app.request("/slack/unknown")).headers.get("content-type")).toContain("json");
     } finally { delete process.env.WEB_DIST; }
+  });
+});
+
+describe("extension upload", () => {
+  test("rejects bad tokens and bodies", async () => {
+    expect((await app.request("/ext/meetings", { method: "POST", body: "{}" })).status).toBe(401);
+    expect((await app.request("/ext/ping", { headers: { authorization: "Bearer nope" } })).status).toBe(401);
+  });
+
+  test("live ask/analyze need a token and a valid body", async () => {
+    const post = (path: string, headers: Record<string, string>, b: unknown) => app.request(path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(b) });
+    expect((await post("/ext/ask", {}, { lines: [], question: "x" })).status).toBe(401);
+    expect((await post("/ext/analyze", {}, { lines: [] })).status).toBe(401);
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const auth = { authorization: `Bearer ${tok.token}` };
+    expect((await post("/ext/ask", auth, { lines: [], question: "x" })).status).toBe(400);
+    expect((await post("/ext/analyze", auth, { lines: [{ speaker: "A", text: "hi" }], context: { roster: ["A"] }, known: [] })).status).not.toBe(401);
+  });
+
+  test("stores an upload privately for its owner", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const body = { externalId: "abc", platform: "meet", title: "Standup", lines: [{ speaker: "Ana", text: "Ship it Friday." }] };
+    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" }, body: JSON.stringify(b) });
+    expect((await post({ ...body, lines: [] })).status).toBe(400);
+    expect((await post(body)).status).toBe(201);
+    expect((await post(body)).status).toBe(201); // same externalId replaces, not duplicates
+    const mine = await json(await call("GET", "/api/meetings", { cookie: admin }));
+    expect(mine.filter((m: any) => m.platform === "meet")).toHaveLength(1);
+    expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
+  });
+
+  test("keeps the decisions and tasks recorded in the side panel", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const res = await app.request("/ext/meetings", {
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ externalId: "n1", platform: "meet", title: "Planning", lines: [{ speaker: "Ana", text: "Bob sends the deck." }],
+        decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
+    });
+    expect(res.status).toBe(201);
+    const { id } = await json(res);
+    const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
+    expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
+    expect(m.summary).toContain("Launch on Friday");
+  });
+});
+
+describe("meeting task DMs", () => {
+  test("a meeting viewer can send a task DM once and correct an assignee", async () => {
+    await mkUser("U2", "member", { name: "Max Member" });
+    await db.insert(channels).values({ id: "C1", name: "general", isPrivate: false });
+    await db.insert(meetings).values({
+      id: "mt_dm", sourceFileId: "F_dm", channelId: "C1", title: "Planning", transcript: "Max owns this.", status: "ready",
+      tasks: [{ id: "mtask_1", title: "Draft plan", description: "Write it up", assigneeName: "Max Member", assigneeId: "U2", dueDate: null }], participantIds: [],
+    });
+    let posted = 0;
+    setSlackClientForTest({ conversations: { open: async () => ({ channel: { id: "D2" } }) }, chat: { postMessage: async () => { posted += 1; return { ts: "1.2" }; } } });
+    try {
+      const first = await json(await call("POST", "/api/meetings/mt_dm/task-dms", { cookie: member }));
+      expect(first).toMatchObject({ sent: 1, failed: 0 });
+      expect(posted).toBe(1);
+      const again = await json(await call("POST", "/api/meetings/mt_dm/task-dms", { cookie: member }));
+      expect(again).toMatchObject({ sent: 0, skipped: 1 });
+      expect(await db.select().from(meetingTaskNotifications)).toHaveLength(1);
+      const changed = await json(await call("PATCH", "/api/meetings/mt_dm/tasks/mtask_1", { cookie: member, body: { assigneeId: "M1" } }));
+      expect(changed.tasks[0]).toMatchObject({ assigneeId: "M1", assigneeName: "User M1" });
+    } finally { setSlackClientForTest(null); }
   });
 });

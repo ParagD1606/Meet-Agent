@@ -192,6 +192,10 @@ export const meetings = pgTable("meetings", {
   sourceFileId: text("source_file_id").notNull(),
   channelId: text("channel_id").notNull(),
   threadTs: text("thread_ts"),
+  /** Where the transcript came from: "slack" or a browser-extension platform (meet, teams, zoom, ...). */
+  platform: text("platform").notNull().default("slack"),
+  /** Set for extension uploads, which have no Slack channel; only the owner (and admins) can read them. */
+  ownerId: text("owner_id"),
   title: text("title").notNull(),
   transcript: text("transcript").notNull(),
   summary: text("summary"),
@@ -207,6 +211,26 @@ export const meetings = pgTable("meetings", {
   uniqueIndex("meetings_source_file_uniq").on(t.sourceFileId),
   index("meetings_channel_idx").on(t.channelId),
   index("meetings_ended_idx").on(t.endedAt),
+]);
+
+/** Delivery history for task-assignment DMs. A task may be reassigned after a recipient declines it. */
+export const meetingTaskNotifications = pgTable("meeting_task_notifications", {
+  id: text("id").primaryKey(),
+  meetingId: text("meeting_id").notNull(),
+  taskId: text("task_id").notNull(),
+  recipientUserId: text("recipient_user_id").notNull(),
+  status: text("status", { enum: ["sent", "acknowledged", "declined", "failed"] }).notNull(),
+  dmChannelId: text("dm_channel_id"),
+  messageTs: text("message_ts"),
+  error: text("error"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+  declinedAt: timestamp("declined_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+}, (t) => [
+  uniqueIndex("meeting_task_notification_recipient_uniq").on(t.meetingId, t.taskId, t.recipientUserId),
+  index("meeting_task_notification_meeting_idx").on(t.meetingId),
 ]);
 
 export const researchRuns = pgTable("research_runs", {

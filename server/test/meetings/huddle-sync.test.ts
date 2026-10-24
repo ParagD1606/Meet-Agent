@@ -15,7 +15,7 @@ beforeEach(async () => {
   await resetDb();
   listCalls = []; infoCalls = [];
   setEmbedder(async (t) => t.map(fakeVector));
-  setMemoryLlm(async (a) => a.system.includes("Slack Huddle source material") ? '{"summary":"s","tasks":[]}' : a.system.includes("durable company knowledge") ? '{"facts":[]}' : '{"superseded":[]}');
+  setMemoryLlm(async (a) => a.system.includes("meeting source material") ? '{"summary":"s","tasks":[]}' : a.system.includes("durable company knowledge") ? '{"facts":[]}' : '{"superseded":[]}');
   await seedChannel("C1", {});
   setSlackClientForTest({
     files: {

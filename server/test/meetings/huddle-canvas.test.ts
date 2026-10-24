@@ -14,7 +14,7 @@ beforeEach(async () => {
   await resetDb();
   fetched = [];
   setEmbedder(async (t) => t.map(fakeVector));
-  setMemoryLlm(async (a) => a.system.includes("Slack Huddle source material")
+  setMemoryLlm(async (a) => a.system.includes("meeting source material")
     ? '{"summary":"Decisions: ship in November.","tasks":[]}'
     : a.system.includes("durable company knowledge") ? '{"facts":[]}' : '{"superseded":[]}');
   await seedChannel("C1", {});
