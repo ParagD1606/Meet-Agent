@@ -42,6 +42,9 @@ const schema = z.object({
   GITHUB_APP_ID: z.string().regex(/^\d+$/).optional(),
   GITHUB_APP_SLUG: z.string().regex(/^[a-z0-9-]+$/i).optional(),
   GITHUB_APP_PRIVATE_KEY: z.string().min(1).optional(),
+  /** OAuth credentials for members connecting their own GitHub accounts. */
+  GITHUB_APP_CLIENT_ID: z.string().min(1).optional(),
+  GITHUB_APP_CLIENT_SECRET: z.string().min(1).optional(),
   SEARCH_PROVIDER: z.enum(["tavily", "brave", "firecrawl"]).optional(),
   SEARCH_API_KEY: z.string().optional(),
   /** Post a one-time monthly message to the home channel when estimated model spend crosses this many USD. Alert only, never a cap. */

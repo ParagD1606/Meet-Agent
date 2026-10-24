@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import { log } from "../log";
 import { userFromRequest } from "../auth/session";
 import { getConnection, handleOAuthCallback, startConnect } from "./connections";
+import { finishGithubConnect } from "./github";
 
 export { PRESETS, getPreset, type Preset } from "./catalog";
 export { classifyTool } from "./policy";
@@ -17,6 +18,22 @@ const page = (title: string, body: string, status: 200 | 400 | 401 | 404 | 502 =
   });
 
 export function mountMcp(app: Hono): void {
+  app.get("/github/oauth/callback", async (c) => {
+    const { code, state, error, installation_id: installationId } = c.req.query();
+    // GitHub also uses an App's configured Setup URL after a direct installation.
+    // That is not an OAuth response and deliberately has no authorization code.
+    if (!error && installationId && !code) return page("GitHub App installed", "The GitHub App is installed. Return to Company Brain → Integrations and use your GitHub connection.");
+    if (error || !code || !state) return page("GitHub connection failed", "GitHub did not return an authorization code.", 400);
+    const user = await userFromRequest(c);
+    if (!user) return page("Sign in first", `Sign in to Company Brain with Slack at <a href="/auth/slack">/auth/slack</a>, then connect GitHub again.`, 401);
+    try {
+      const { label } = await finishGithubConnect(code, state, user.id);
+      return page("GitHub connected", `${label.replace(/[<>&]/g, "")} is now connected. You can close this tab.`);
+    } catch (e) {
+      log.warn("github oauth callback error", { error: String(e) });
+      return page("GitHub connection failed", "Could not complete the GitHub connection. Please try again from Integrations.", 400);
+    }
+  });
   app.get("/mcp-oauth/callback", async (c) => {
     const { code, state, error } = c.req.query();
     if (error || !code || !state) return page("Connection failed", "The provider did not return an authorization code.", 400);

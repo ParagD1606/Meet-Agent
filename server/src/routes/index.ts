@@ -57,11 +57,11 @@ export function buildApi(): Hono<AppEnv> {
 
 const WEB_DIST = () => resolve(tuningEnv().WEB_DIST ?? `${import.meta.dir}/../../../web/dist`);
 
-/** Static web app with SPA fallback. Provider callbacks under /sync/oauth stay server-only; the /sync console page is an SPA route. */
+/** Static web app with SPA fallback. OAuth callback paths stay server-only; the /sync console page is an SPA route. */
 function mountStatic(app: Hono<any>): void {
   app.get("*", async (c) => {
     const path = c.req.path;
-    if (/^\/(api|auth|slack|mcp|mcp-oauth|ext)(\/|$)/.test(path) || /^\/sync\/oauth(\/|$)/.test(path)) return c.json({ error: "not_found" }, 404);
+    if (/^\/(api|auth|slack|mcp|mcp-oauth|ext)(\/|$)/.test(path) || /^\/(sync|github)\/oauth(\/|$)/.test(path)) return c.json({ error: "not_found" }, 404);
     const root = WEB_DIST();
     let file: string;
     try { file = resolve(root, `.${decodeURIComponent(path)}`); } catch { return c.json({ error: "not_found" }, 404); }

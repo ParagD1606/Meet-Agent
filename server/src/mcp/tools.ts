@@ -79,6 +79,9 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
     for (const lease of await grantedLeases(ctx.userId)) {
       const [conn] = await db.select().from(mcpConnections).where(eq(mcpConnections.id, lease.connectionId));
       if (!conn || conn.status !== "connected" || conn.scope !== "user" || conn.ownerUserId !== lease.ownerUserId) continue;
+      // GitHub App user authorizations are strictly private. They are never
+      // borrowed by teammates, even through the normal one-read lease flow.
+      if (conn.provider === "github") continue;
       const slot = groups.get(groupKey(conn)) ?? {};
       if (!slot.own && !slot.org) { slot.leased = { conn, leaseId: lease.id }; groups.set(groupKey(conn), slot); }
     }

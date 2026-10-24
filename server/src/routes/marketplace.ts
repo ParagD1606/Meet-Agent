@@ -50,6 +50,7 @@ export function mountMarketplaceRoutes(api: Hono<AppEnv>): void {
       const item = getMarketItem(key);
       if (!item) throw httpError(404, "not_found");
       if (item.personalOnly && b.scope === "org") throw httpError(400, "personal_only", { message: `${item.name} can only be connected personally` });
+      if (item.key === "github" && b.token) throw httpError(400, "oauth_only", { message: "GitHub is connected by authorizing your account; do not use an API key." });
       if (item.connectMode === "apikey" && !b.token) throw httpError(400, "token_required", { message: `${item.name} needs an API key` });
       name = item.name;
       args = item.curated ? { provider: item.key, label: b.label || name } : { url: item.url, label: b.label || name };
