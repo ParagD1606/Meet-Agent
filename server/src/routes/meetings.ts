@@ -16,4 +16,4 @@ meetingRoutes.get("/meetings/:id", requireAuth(), async (c) => {
 
 // A workspace-wide import can discover transcripts in channels other than the caller's;
 // keep the trigger with workspace admins while the resulting rows retain normal visibility rules.
-meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles()));
+meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles({ force: c.req.query("force") === "1" })));

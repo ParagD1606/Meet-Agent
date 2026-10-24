@@ -226,15 +226,21 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
  * This is deliberately callable on demand: Slack does not replay file events that happened
  * before an app subscribed, and a Huddle transcript can finish processing after its first event.
  */
-export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> {
+export async function syncRecentHuddles(opts: { force?: boolean; maxPages?: number } = {}): Promise<HuddleSyncResult> {
   const client = await slackClient();
-  const response = await client.files.list({ count: Math.min(Math.max(limit, 1), 100) });
-  const files = (response.files ?? []) as HuddleFile[];
+  const files: HuddleFile[] = [];
+  // files.list is page-numbered, newest first; walk every page (capped) so older huddles are found too
+  for (let page = 1, pages = 1; page <= Math.min(pages, opts.maxPages ?? 50); page++) {
+    const r = await client.files.list({ count: 100, page });
+    files.push(...((r.files ?? []) as HuddleFile[]));
+    pages = r.paging?.pages ?? 1;
+  }
   const candidates = files.filter((file) => Boolean(file.is_huddle_canvas || file.huddle_transcription || file.huddle_transcript_file_id));
+  const done = new Set(opts.force ? [] : (await db.select({ id: meetings.sourceFileId }).from(meetings).where(eq(meetings.status, "ready"))).map((r) => r.id));
   let imported = 0;
   let failed = 0;
   for (const file of candidates) {
-    if (typeof file.id !== "string") continue;
+    if (typeof file.id !== "string" || done.has(file.id) || (typeof file.huddle_transcript_file_id === "string" && done.has(file.huddle_transcript_file_id))) continue; // rows are keyed by the transcript file when notes point to one
     try {
       const channelId = Array.isArray(file.channels) && typeof file.channels[0] === "string" ? file.channels[0] : undefined;
       if (await ingestHuddleFile(file.id, channelId)) imported += 1;
