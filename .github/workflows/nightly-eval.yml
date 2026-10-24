@@ -1,0 +1,91 @@
+name: Nightly eval
+
+# Real-model evaluation (Vertex Gemini + gemini-embedding-001) against a throwaway Postgres, see docs/guide/operations.md
+# ("Evaluation and the local gate"). The job FAILS on a regression, and GitHub then emails the repository owner / workflow author.
+#
+# One-time setup, repo secrets (Settings > Secrets and variables > Actions); none are created by this file:
+#   GCP_SA_JSON            JSON of a Google service account (or ADC authorized_user file) allowed to call Vertex AI
+#                          (role roles/aiplatform.user) in the project below. It is written to a temp file, never to the repo.
+#   GOOGLE_VERTEX_PROJECT  the Vertex project id (same value as in the production .env)
+# Optional repo variables: GOOGLE_VERTEX_LOCATION (default global), GOOGLE_VERTEX_EMBED_LOCATION (default us-central1).
+on:
+  schedule:
+    - cron: "23 2 * * *"
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "Hard budget in USD (the run aborts when exceeded)"
+        default: "5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-eval
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    services:
+      # eval-nightly.ts refuses to run unless DATABASE_URL contains 5433; it truncates every table in this database
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: brain
+          POSTGRES_DB: brain_eval
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U brain -d brain_eval"
+          --health-interval 3s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgres://brain@localhost:5433/brain_eval
+      MODEL_PROVIDER: vertex
+      GOOGLE_VERTEX_PROJECT: ${{ secrets.GOOGLE_VERTEX_PROJECT }}
+      GOOGLE_VERTEX_LOCATION: ${{ vars.GOOGLE_VERTEX_LOCATION || 'global' }}
+      GOOGLE_VERTEX_EMBED_LOCATION: ${{ vars.GOOGLE_VERTEX_EMBED_LOCATION || 'us-central1' }}
+      GOOGLE_VERTEX_EMBED_MODEL: gemini-embedding-001
+      EMBEDDING_DIM: "1536"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Vertex credentials
+        env:
+          GCP_SA_JSON: ${{ secrets.GCP_SA_JSON }}
+        run: |
+          set -euo pipefail
+          : "${GCP_SA_JSON:?missing secret GCP_SA_JSON}" "${GOOGLE_VERTEX_PROJECT:?missing secret GOOGLE_VERTEX_PROJECT}"
+          umask 077
+          printf '%s' "$GCP_SA_JSON" > "$RUNNER_TEMP/gcp-credentials.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/gcp-credentials.json" >> "$GITHUB_ENV"
+      # the previous report gives the run-over-run deltas; the cache is only saved by a passing run, so the baseline is the last good night
+      - uses: actions/cache@v4
+        with:
+          path: server/test/eval/last-nightly.json
+          key: nightly-eval-${{ github.run_id }}
+          restore-keys: nightly-eval-
+      - name: Evaluate
+        run: bun run eval:nightly --budget "${{ inputs.budget || '5' }}"
+      - name: Summary
+        if: always()
+        run: |
+          f=server/test/eval/last-nightly.json
+          [ -f "$f" ] || exit 0
+          {
+            echo "### Nightly eval"
+            echo '```json'
+            jq '{spentUsd: .budget.spentUsd, models, headline, deltasVsPrevious, regressions, questions: {cosine_gate_097: .questions.cosine_gate_097.answer, paraphrase_churn: .questions.paraphrase_churn.churn_rate}}' "$f"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-report
+          path: server/test/eval/last-nightly.json
+          if-no-files-found: ignore
+          retention-days: 60

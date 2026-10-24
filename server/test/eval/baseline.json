@@ -1,0 +1,15 @@
+{
+  "k": 5,
+  "recall": {
+    "qa": 0.963,
+    "multihop": 0.8,
+    "aggregation": 0.867,
+    "temporal": 1,
+    "abstention": 0.867
+  },
+  "drift": {
+    "current_recall": 0.995,
+    "stale_leak_rate": 0.142,
+    "dup_rate": 0.119
+  }
+}

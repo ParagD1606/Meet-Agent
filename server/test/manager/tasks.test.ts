@@ -61,13 +61,14 @@ describe("assign_task", () => {
     expect(await db.select().from(commitments)).toHaveLength(1);
   });
 
-  test("in a channel the owner is mentioned in the thread (no DM); notify:false stays silent", async () => {
+  test("in a channel the owner still gets a DM (not a thread post); notify:false stays silent", async () => {
     const tools = taskTools(ctx("UDANA", scopeCh("UDANA"), { threadTs: "1700000000.000100" }));
     await run(tools, "assign_task", { title: "Write docs", assignee: "UPARAG" });
     const p = posts();
     expect(p).toHaveLength(1);
-    expect(p[0]).toMatchObject({ channel: "C1", thread_ts: "1700000000.000100" });
-    expect(p[0].text).toContain("<@UPARAG>");
+    expect(p[0].thread_ts).toBeUndefined();
+    expect(p[0].channel).not.toBe("C1");
+    expect(p[0].text).toContain("assigned you a task");
     expect((await db.select().from(commitments))[0]!.scopeTag).toBe("shared");
     await run(tools, "assign_task", { title: "Other thing", assignee: "UPARAG", notify: false });
     expect(posts()).toHaveLength(1);

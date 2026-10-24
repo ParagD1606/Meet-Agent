@@ -1,0 +1,41 @@
+{"_header": true, "set": "supersede", "version": 1, "date": "2026-10-24"}
+{"id": "sup-01", "kind": "date", "old": "Launch is Sept 22", "new": "Launch moved to Sept 15", "expect": "supersede", "key": true}
+{"id": "sup-02", "kind": "date", "old": "The Titan launch is scheduled for September 22", "new": "The Titan launch moved to September 15", "expect": "supersede"}
+{"id": "sup-03", "kind": "date", "old": "The Juniper audit kickoff is on 2026-03-02", "new": "The Juniper audit kickoff moved to 2026-03-16", "expect": "supersede"}
+{"id": "sup-04", "kind": "date", "old": "Garnet renewal deadline is November 30", "new": "Garnet renewal deadline was extended to December 14", "expect": "supersede"}
+{"id": "sup-05", "kind": "date", "old": "The Larkspur offsite is on May 6", "new": "The Larkspur offsite is now on May 20", "expect": "supersede"}
+{"id": "sup-06", "kind": "date", "old": "Onyx board review is the first Tuesday of June", "new": "Onyx board review is the second Tuesday of June", "expect": "supersede"}
+{"id": "sup-07", "kind": "date", "old": "The Quartz demo is scheduled for Friday at 10:00", "new": "The Quartz demo was rescheduled to Friday at 15:00", "expect": "supersede"}
+{"id": "sup-08", "kind": "date", "old": "Rook Labs retest starts on April 7", "new": "Rook Labs retest slipped to April 28", "expect": "supersede"}
+{"id": "sup-09", "kind": "numeric", "old": "The Thistle budget is 120k", "new": "The Thistle budget is now 150k", "expect": "supersede"}
+{"id": "sup-10", "kind": "numeric", "old": "Umber warehouse capacity is 4,000 pallets", "new": "Umber warehouse capacity was expanded to 6,500 pallets", "expect": "supersede"}
+{"id": "sup-11", "kind": "numeric", "old": "Wren has 12 engineers", "new": "Wren has 15 engineers", "expect": "supersede"}
+{"id": "sup-12", "kind": "numeric", "old": "The Zinnia API rate limit is 500 requests per minute", "new": "The Zinnia API rate limit is 1,000 requests per minute", "expect": "supersede"}
+{"id": "sup-13", "kind": "numeric", "old": "Gossamer retention is 30 days", "new": "Gossamer retention is 90 days", "expect": "supersede"}
+{"id": "sup-14", "kind": "numeric", "old": "Sable monthly churn is 2.1%", "new": "Sable monthly churn is 3.4%", "expect": "supersede"}
+{"id": "sup-15", "kind": "numeric", "old": "The Tamarack cluster has 8 nodes", "new": "The Tamarack cluster has 12 nodes", "expect": "supersede"}
+{"id": "sup-16", "kind": "numeric", "old": "Fathom storage quota per tenant is 50 GB", "new": "Fathom storage quota per tenant is 200 GB", "expect": "supersede"}
+{"id": "sup-17", "kind": "owner", "old": "The Halcyon project owner is Marta Silva", "new": "The Halcyon project owner is now Kofi Mensah", "expect": "supersede"}
+{"id": "sup-18", "kind": "owner", "old": "Ember on-call this week is Dmitri", "new": "Ember on-call this week is Priyanka", "expect": "supersede"}
+{"id": "sup-19", "kind": "owner", "old": "Fathom billing questions go to Lena Fischer", "new": "Fathom billing questions now go to Omar Haddad", "expect": "supersede"}
+{"id": "sup-20", "kind": "owner", "old": "Garnet account manager is Tobias Klein", "new": "Garnet account manager changed from Tobias Klein to Sunita Rao", "expect": "supersede"}
+{"id": "sup-21", "kind": "owner", "old": "Larkspur security reviews are handled by Ian Walsh", "new": "Larkspur security reviews are handled by Chloe Martin since last month", "expect": "supersede"}
+{"id": "sup-22", "kind": "owner", "old": "Onyx release manager is Hye-jin Park", "new": "Hye-jin Park handed the Onyx release manager role to Jorge Ramos", "expect": "supersede"}
+{"id": "sup-23", "kind": "update", "old": "Quartz vendor selection is still open between two vendors", "new": "Quartz vendor selection is decided: we signed with Brightwave", "expect": "supersede"}
+{"id": "sup-24", "kind": "update", "old": "The Rook Labs contract is under negotiation", "new": "The Rook Labs contract was signed", "expect": "supersede"}
+{"id": "sup-25", "kind": "paraphrase", "old": "The Thistle wiki is hosted on Confluence", "new": "Thistle's wiki lives in Confluence", "expect": "equivalent"}
+{"id": "sup-26", "kind": "paraphrase", "old": "Umber warehouse is located in Rotterdam", "new": "The Umber warehouse is in Rotterdam", "expect": "equivalent"}
+{"id": "sup-27", "kind": "paraphrase", "old": "Wren on-call handoff happens on Mondays", "new": "On-call handoff for Wren is done every Monday", "expect": "equivalent"}
+{"id": "sup-28", "kind": "paraphrase", "old": "Zinnia trial length is 14 days", "new": "The Zinnia free trial lasts 14 days", "expect": "equivalent"}
+{"id": "sup-29", "kind": "paraphrase", "old": "Gossamer raw uploads are deleted after 45 days", "new": "Raw uploads in Gossamer are removed after 45 days", "expect": "equivalent"}
+{"id": "sup-30", "kind": "paraphrase", "old": "Sable invoices go out on the last business day of the month", "new": "Sable invoices are sent on the final business day of each month", "expect": "equivalent"}
+{"id": "sup-31", "kind": "paraphrase", "old": "Tamarack staging is behind the bastion host", "new": "Access to Tamarack staging goes through the bastion host", "expect": "equivalent"}
+{"id": "sup-32", "kind": "paraphrase", "old": "The Halcyon beta has 38 customers", "new": "38 customers are in the Halcyon beta", "expect": "equivalent"}
+{"id": "sup-33", "kind": "unrelated", "old": "Ember nightly builds go to us-east-2", "new": "Garnet contracts auto-renew after 12 months", "expect": "coexist"}
+{"id": "sup-34", "kind": "unrelated", "old": "The Larkspur offsite is in Lisbon", "new": "Onyx cashback is 3 percent on annual plans", "expect": "coexist"}
+{"id": "sup-35", "kind": "unrelated", "old": "Fathom reports run at 06:15 UTC", "new": "Juniper escalations go to juniper-escalations", "expect": "coexist"}
+{"id": "sup-36", "kind": "unrelated", "old": "Quartz is led by Odalys Ferreira", "new": "Rook Labs is our penetration testing vendor", "expect": "coexist"}
+{"id": "sup-37", "kind": "retraction", "old": "Hollis Dental is churning at the end of the quarter", "new": "Correction: Hollis Dental is not churning, the churn rumor was wrong", "expect": "supersede"}
+{"id": "sup-38", "kind": "retraction", "old": "The Thistle migration to Notion is approved", "new": "The Thistle migration to Notion was cancelled, it is not approved", "expect": "supersede"}
+{"id": "sup-39", "kind": "retraction", "old": "Elena is leaving the company in June", "new": "Elena is not leaving the company, she is only taking leave in June", "expect": "supersede"}
+{"id": "sup-40", "kind": "retraction", "old": "Wren will drop Android support", "new": "Wren will not drop Android support, that plan was withdrawn", "expect": "supersede"}

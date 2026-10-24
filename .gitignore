@@ -6,3 +6,4 @@ dist
 pgdata
 graphify-out
 .claude/worktrees
+server/test/eval/last-nightly.json

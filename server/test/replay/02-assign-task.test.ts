@@ -25,8 +25,8 @@ async function assertAssigned() {
   expect(facts.length).toBeGreaterThanOrEqual(1);
   expect(facts[0]!.text.toLowerCase()).toContain("urgent");
   expect(facts[0]!.text).toContain(PARAG);
-  // Parag was told immediately: an @mention in the thread (he is in the channel) or a DM, with Done/Drop buttons
-  const told = slack.posts().filter((p) => (p.text.includes(`<@${PARAG}>`) && /tales/i.test(p.text)) && !/^_Thinking/.test(p.text));
+  // Parag was told immediately: a DM (even though he is in the channel), with Done/Drop buttons
+  const told = slack.posts().filter((p) => /assigned you a task/.test(p.text) && /tales/i.test(p.text));
   expect(told.length).toBeGreaterThanOrEqual(1);
   expect(JSON.stringify(told.map((p) => p.blocks))).toContain("brain_commit_done");
   expect(told.some((p) => /urgent/i.test(p.text))).toBe(true);

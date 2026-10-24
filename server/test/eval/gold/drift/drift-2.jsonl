@@ -1,0 +1,294 @@
+{"_header": true, "set": "drift-2", "version": 1, "date": "2026-10-24", "theme": "customers", "days": 84, "startAgoDays": 90, "facts": 244, "entities": 40}
+{"day": 0, "op": "add", "key": "Wynzubor|seats", "entity": "Wynzubor", "attr": "seats", "value": "638 seats", "text": "Wynzubor seats is 638 seats"}
+{"day": 0, "op": "add", "key": "Yarzubon|contract value", "entity": "Yarzubon", "attr": "contract value", "value": "779k dollars", "text": "Yarzubon contract value is 779k dollars"}
+{"day": 0, "op": "add", "key": "Zelpryia|contract value", "entity": "Zelpryia", "attr": "contract value", "value": "144k dollars", "text": "Zelpryia contract value is 144k dollars"}
+{"day": 0, "op": "add", "key": "Wynxania|contract value", "entity": "Wynxania", "attr": "contract value", "value": "683k dollars", "text": "Wynxania contract value is 683k dollars"}
+{"day": 0, "op": "add", "key": "Wynxania|renewal quarter", "entity": "Wynxania", "attr": "renewal quarter", "value": "Q2", "text": "Wynxania renewal quarter is Q2"}
+{"day": 0, "op": "add", "key": "Ulmnexor|contract value", "entity": "Ulmnexor", "attr": "contract value", "value": "149k dollars", "text": "Ulmnexor contract value is 149k dollars"}
+{"day": 0, "op": "add", "key": "Ulmbroar|renewal quarter", "entity": "Ulmbroar", "attr": "renewal quarter", "value": "Q4", "text": "Ulmbroar renewal quarter is Q4"}
+{"day": 0, "op": "add", "key": "Zubmirar|seats", "entity": "Zubmirar", "attr": "seats", "value": "721 seats", "text": "Zubmirar seats is 721 seats"}
+{"day": 0, "op": "add", "key": "Zubmirar|plan", "entity": "Zubmirar", "attr": "plan", "value": "growth", "text": "Zubmirar plan is growth"}
+{"day": 0, "op": "add", "key": "Zubmirar|support contact", "entity": "Zubmirar", "attr": "support contact", "value": "Pia Jensen", "text": "Zubmirar support contact is Pia Jensen"}
+{"day": 1, "op": "add", "key": "Yarbroar|renewal quarter", "entity": "Yarbroar", "attr": "renewal quarter", "value": "Q3", "text": "Yarbroar renewal quarter is Q3"}
+{"day": 1, "op": "add", "key": "Mirsavon|renewal quarter", "entity": "Mirsavon", "attr": "renewal quarter", "value": "Q1", "text": "Mirsavon renewal quarter is Q1"}
+{"day": 1, "op": "add", "key": "Zelpryia|plan", "entity": "Zelpryia", "attr": "plan", "value": "enterprise", "text": "Zelpryia plan is enterprise"}
+{"day": 1, "op": "add", "key": "Zubtalor|plan", "entity": "Zubtalor", "attr": "plan", "value": "growth", "text": "Zubtalor plan is growth"}
+{"day": 1, "op": "add", "key": "Vanulmar|contract value", "entity": "Vanulmar", "attr": "contract value", "value": "325k dollars", "text": "Vanulmar contract value is 325k dollars"}
+{"day": 1, "op": "add", "key": "Bromiron|renewal quarter", "entity": "Bromiron", "attr": "renewal quarter", "value": "Q1", "text": "Bromiron renewal quarter is Q1"}
+{"day": 1, "op": "add", "key": "Zelfenex|plan", "entity": "Zelfenex", "attr": "plan", "value": "enterprise", "text": "Zelfenex plan is enterprise"}
+{"day": 1, "op": "add", "key": "Fenvanus|renewal quarter", "entity": "Fenvanus", "attr": "renewal quarter", "value": "Q4", "text": "Fenvanus renewal quarter is Q4"}
+{"day": 1, "op": "add", "key": "Dratalex|contract value", "entity": "Dratalex", "attr": "contract value", "value": "199k dollars", "text": "Dratalex contract value is 199k dollars"}
+{"day": 2, "op": "add", "key": "Savkoria|renewal quarter", "entity": "Savkoria", "attr": "renewal quarter", "value": "Q2", "text": "Savkoria renewal quarter is Q2"}
+{"day": 2, "op": "add", "key": "Vanmiron|seats", "entity": "Vanmiron", "attr": "seats", "value": "498 seats", "text": "Vanmiron seats is 498 seats"}
+{"day": 2, "op": "add", "key": "Fenvanus|support contact", "entity": "Fenvanus", "attr": "support contact", "value": "Bruno Costa", "text": "Fenvanus support contact is Bruno Costa"}
+{"day": 2, "op": "add", "key": "Trefenus|contract value", "entity": "Trefenus", "attr": "contract value", "value": "571k dollars", "text": "Trefenus contract value is 571k dollars"}
+{"day": 2, "op": "add", "key": "Dratalex|renewal quarter", "entity": "Dratalex", "attr": "renewal quarter", "value": "Q4", "text": "Dratalex renewal quarter is Q4"}
+{"day": 3, "op": "add", "key": "Fentalia|account manager", "entity": "Fentalia", "attr": "account manager", "value": "Farid Nasser", "text": "Fentalia account manager is Farid Nasser"}
+{"day": 3, "op": "add", "key": "Draulmia|renewal quarter", "entity": "Draulmia", "attr": "renewal quarter", "value": "Q1", "text": "Draulmia renewal quarter is Q1"}
+{"day": 3, "op": "add", "key": "Tredraon|contract value", "entity": "Tredraon", "attr": "contract value", "value": "482k dollars", "text": "Tredraon contract value is 482k dollars"}
+{"day": 3, "op": "add", "key": "Zelulmon|contract value", "entity": "Zelulmon", "attr": "contract value", "value": "632k dollars", "text": "Zelulmon contract value is 632k dollars"}
+{"day": 3, "op": "add", "key": "Wynxania|plan", "entity": "Wynxania", "attr": "plan", "value": "starter", "text": "Wynxania plan is starter"}
+{"day": 3, "op": "add", "key": "Ulmbroar|plan", "entity": "Ulmbroar", "attr": "plan", "value": "starter", "text": "Ulmbroar plan is starter"}
+{"day": 3, "op": "add", "key": "Ostwynor|plan", "entity": "Ostwynor", "attr": "plan", "value": "business", "text": "Ostwynor plan is business"}
+{"day": 3, "op": "add", "key": "Zelvanus|support contact", "entity": "Zelvanus", "attr": "support contact", "value": "Opal Reyes", "text": "Zelvanus support contact is Opal Reyes"}
+{"day": 4, "op": "add", "key": "Savwynex|seats", "entity": "Savwynex", "attr": "seats", "value": "351 seats", "text": "Savwynex seats is 351 seats"}
+{"day": 4, "op": "add", "key": "Savzelyn|contract value", "entity": "Savzelyn", "attr": "contract value", "value": "707k dollars", "text": "Savzelyn contract value is 707k dollars"}
+{"day": 4, "op": "add", "key": "Korvanus|contract value", "entity": "Korvanus", "attr": "contract value", "value": "664k dollars", "text": "Korvanus contract value is 664k dollars"}
+{"day": 4, "op": "add", "key": "Bromiron|support contact", "entity": "Bromiron", "attr": "support contact", "value": "Keira Doyle", "text": "Bromiron support contact is Keira Doyle"}
+{"day": 4, "op": "add", "key": "Quipryex|support contact", "entity": "Quipryex", "attr": "support contact", "value": "Jonas Berg", "text": "Quipryex support contact is Jonas Berg"}
+{"day": 4, "op": "add", "key": "Ostwynor|support contact", "entity": "Ostwynor", "attr": "support contact", "value": "Farid Nasser", "text": "Ostwynor support contact is Farid Nasser"}
+{"day": 4, "op": "add", "key": "Ostwynor|seats", "entity": "Ostwynor", "attr": "seats", "value": "39 seats", "text": "Ostwynor seats is 39 seats"}
+{"day": 4, "op": "add", "key": "Zubmirar|renewal quarter", "entity": "Zubmirar", "attr": "renewal quarter", "value": "Q1", "text": "Zubmirar renewal quarter is Q1"}
+{"day": 4, "op": "add", "key": "Trefenus|support contact", "entity": "Trefenus", "attr": "support contact", "value": "Jonas Berg", "text": "Trefenus support contact is Jonas Berg"}
+{"day": 5, "op": "add", "key": "Fentalia|renewal quarter", "entity": "Fentalia", "attr": "renewal quarter", "value": "Q3", "text": "Fentalia renewal quarter is Q3"}
+{"day": 5, "op": "add", "key": "Savwynex|support contact", "entity": "Savwynex", "attr": "support contact", "value": "Nils Persson", "text": "Savwynex support contact is Nils Persson"}
+{"day": 5, "op": "add", "key": "Fenfenex|support contact", "entity": "Fenfenex", "attr": "support contact", "value": "Jonas Berg", "text": "Fenfenex support contact is Jonas Berg"}
+{"day": 5, "op": "add", "key": "Wynyaryn|seats", "entity": "Wynyaryn", "attr": "seats", "value": "66 seats", "text": "Wynyaryn seats is 66 seats"}
+{"day": 5, "op": "add", "key": "Zublumon|contract value", "entity": "Zublumon", "attr": "contract value", "value": "534k dollars", "text": "Zublumon contract value is 534k dollars"}
+{"day": 5, "op": "add", "key": "Zubtalor|renewal quarter", "entity": "Zubtalor", "attr": "renewal quarter", "value": "Q1", "text": "Zubtalor renewal quarter is Q1"}
+{"day": 5, "op": "add", "key": "Korvanus|account manager", "entity": "Korvanus", "attr": "account manager", "value": "Nils Persson", "text": "Korvanus account manager is Nils Persson"}
+{"day": 5, "op": "add", "key": "Nexvanon|plan", "entity": "Nexvanon", "attr": "plan", "value": "enterprise", "text": "Nexvanon plan is enterprise"}
+{"day": 5, "op": "add", "key": "Ostwynor|contract value", "entity": "Ostwynor", "attr": "contract value", "value": "402k dollars", "text": "Ostwynor contract value is 402k dollars"}
+{"day": 5, "op": "add", "key": "Yarpryor|renewal quarter", "entity": "Yarpryor", "attr": "renewal quarter", "value": "Q1", "text": "Yarpryor renewal quarter is Q1"}
+{"day": 5, "op": "add", "key": "Lumdraar|plan", "entity": "Lumdraar", "attr": "plan", "value": "business", "text": "Lumdraar plan is business"}
+{"day": 5, "op": "add", "key": "Vanulmar|override", "entity": "Vanulmar", "attr": "override", "value": "temp-604", "forgetAfterDay": 19, "text": "Vanulmar has a temporary override code temp-604 until day 19"}
+{"day": 5, "op": "add", "key": "Savkoria|override", "entity": "Savkoria", "attr": "override", "value": "temp-414", "forgetAfterDay": 17, "text": "Savkoria has a temporary override code temp-414 until day 17"}
+{"day": 6, "op": "add", "key": "Draulmia|account manager", "entity": "Draulmia", "attr": "account manager", "value": "Jonas Berg", "text": "Draulmia account manager is Jonas Berg"}
+{"day": 6, "op": "add", "key": "Mirsavon|seats", "entity": "Mirsavon", "attr": "seats", "value": "60 seats", "text": "Mirsavon seats is 60 seats"}
+{"day": 6, "op": "add", "key": "Vanulmar|plan", "entity": "Vanulmar", "attr": "plan", "value": "business", "text": "Vanulmar plan is business"}
+{"day": 6, "op": "add", "key": "Zelfenex|seats", "entity": "Zelfenex", "attr": "seats", "value": "40 seats", "text": "Zelfenex seats is 40 seats"}
+{"day": 6, "op": "add", "key": "Nexvanon|support contact", "entity": "Nexvanon", "attr": "support contact", "value": "Esme Walker", "text": "Nexvanon support contact is Esme Walker"}
+{"day": 7, "op": "add", "key": "Draulmia|contract value", "entity": "Draulmia", "attr": "contract value", "value": "152k dollars", "text": "Draulmia contract value is 152k dollars"}
+{"day": 7, "op": "add", "key": "Vanzelar|renewal quarter", "entity": "Vanzelar", "attr": "renewal quarter", "value": "Q1", "text": "Vanzelar renewal quarter is Q1"}
+{"day": 7, "op": "add", "key": "Dratalex|account manager", "entity": "Dratalex", "attr": "account manager", "value": "Tara Singh", "text": "Dratalex account manager is Tara Singh"}
+{"day": 8, "op": "add", "key": "Fentalia|contract value", "entity": "Fentalia", "attr": "contract value", "value": "427k dollars", "text": "Fentalia contract value is 427k dollars"}
+{"day": 8, "op": "add", "key": "Wynyaryn|plan", "entity": "Wynyaryn", "attr": "plan", "value": "growth", "text": "Wynyaryn plan is growth"}
+{"day": 8, "op": "add", "key": "Zublumon|plan", "entity": "Zublumon", "attr": "plan", "value": "growth", "text": "Zublumon plan is growth"}
+{"day": 8, "op": "add", "key": "Zubtalor|seats", "entity": "Zubtalor", "attr": "seats", "value": "674 seats", "text": "Zubtalor seats is 674 seats"}
+{"day": 8, "op": "add", "key": "Wynxania|seats", "entity": "Wynxania", "attr": "seats", "value": "171 seats", "text": "Wynxania seats is 171 seats"}
+{"day": 8, "op": "add", "key": "Ulmnexor|support contact", "entity": "Ulmnexor", "attr": "support contact", "value": "Esme Walker", "text": "Ulmnexor support contact is Esme Walker"}
+{"day": 8, "op": "add", "key": "Lumdraar|seats", "entity": "Lumdraar", "attr": "seats", "value": "322 seats", "text": "Lumdraar seats is 322 seats"}
+{"day": 8, "op": "add", "key": "Trefenus|renewal quarter", "entity": "Trefenus", "attr": "renewal quarter", "value": "Q3", "text": "Trefenus renewal quarter is Q3"}
+{"day": 8, "op": "add", "key": "Prydraon|plan", "entity": "Prydraon", "attr": "plan", "value": "enterprise", "text": "Prydraon plan is enterprise"}
+{"day": 8, "op": "add", "key": "Draulmia|override", "entity": "Draulmia", "attr": "override", "value": "temp-880", "forgetAfterDay": 19, "text": "Draulmia has a temporary override code temp-880 until day 19"}
+{"day": 9, "op": "add", "key": "Yarbroar|plan", "entity": "Yarbroar", "attr": "plan", "value": "enterprise", "text": "Yarbroar plan is enterprise"}
+{"day": 9, "op": "add", "key": "Zelulmon|renewal quarter", "entity": "Zelulmon", "attr": "renewal quarter", "value": "Q3", "text": "Zelulmon renewal quarter is Q3"}
+{"day": 9, "op": "add", "key": "Zelfenex|support contact", "entity": "Zelfenex", "attr": "support contact", "value": "Greta Olsen", "text": "Zelfenex support contact is Greta Olsen"}
+{"day": 9, "op": "add", "key": "Fenvanus|account manager", "entity": "Fenvanus", "attr": "account manager", "value": "Esme Walker", "text": "Fenvanus account manager is Esme Walker"}
+{"day": 9, "op": "add", "key": "Zubsavia|renewal quarter", "entity": "Zubsavia", "attr": "renewal quarter", "value": "Q2", "text": "Zubsavia renewal quarter is Q2"}
+{"day": 9, "op": "add", "key": "Zubsavia|plan", "entity": "Zubsavia", "attr": "plan", "value": "growth", "text": "Zubsavia plan is growth"}
+{"day": 9, "op": "add", "key": "Vanzelar|account manager", "entity": "Vanzelar", "attr": "account manager", "value": "Luis Herrera", "text": "Vanzelar account manager is Luis Herrera"}
+{"day": 9, "op": "add", "key": "Vanxanor|seats", "entity": "Vanxanor", "attr": "seats", "value": "732 seats", "text": "Vanxanor seats is 732 seats"}
+{"day": 9, "op": "add", "key": "Zelsavia|account manager", "entity": "Zelsavia", "attr": "account manager", "value": "Rosa Greco", "text": "Zelsavia account manager is Rosa Greco"}
+{"day": 9, "op": "add", "key": "Yarpryor|plan", "entity": "Yarpryor", "attr": "plan", "value": "enterprise", "text": "Yarpryor plan is enterprise"}
+{"day": 10, "op": "add", "key": "Wynzubor|support contact", "entity": "Wynzubor", "attr": "support contact", "value": "Keira Doyle", "text": "Wynzubor support contact is Keira Doyle"}
+{"day": 10, "op": "add", "key": "Zelpryia|support contact", "entity": "Zelpryia", "attr": "support contact", "value": "Esme Walker", "text": "Zelpryia support contact is Esme Walker"}
+{"day": 10, "op": "add", "key": "Korvanus|seats", "entity": "Korvanus", "attr": "seats", "value": "488 seats", "text": "Korvanus seats is 488 seats"}
+{"day": 10, "op": "add", "key": "Ulmbroar|seats", "entity": "Ulmbroar", "attr": "seats", "value": "690 seats", "text": "Ulmbroar seats is 690 seats"}
+{"day": 10, "op": "add", "key": "Yarnexor|contract value", "entity": "Yarnexor", "attr": "contract value", "value": "665k dollars", "text": "Yarnexor contract value is 665k dollars"}
+{"day": 10, "op": "add", "key": "Zelvanus|plan", "entity": "Zelvanus", "attr": "plan", "value": "business", "text": "Zelvanus plan is business"}
+{"day": 10, "op": "add", "key": "Yarpryor|seats", "entity": "Yarpryor", "attr": "seats", "value": "691 seats", "text": "Yarpryor seats is 691 seats"}
+{"day": 10, "op": "add", "key": "Lumdraar|renewal quarter", "entity": "Lumdraar", "attr": "renewal quarter", "value": "Q1", "text": "Lumdraar renewal quarter is Q1"}
+{"day": 10, "op": "add", "key": "Prydraon|renewal quarter", "entity": "Prydraon", "attr": "renewal quarter", "value": "Q4", "text": "Prydraon renewal quarter is Q4"}
+{"day": 11, "op": "add", "key": "Fentalia|seats", "entity": "Fentalia", "attr": "seats", "value": "187 seats", "text": "Fentalia seats is 187 seats"}
+{"day": 11, "op": "add", "key": "Mirsavon|support contact", "entity": "Mirsavon", "attr": "support contact", "value": "Aiko Tanaka", "text": "Mirsavon support contact is Aiko Tanaka"}
+{"day": 11, "op": "add", "key": "Mirsavon|account manager", "entity": "Mirsavon", "attr": "account manager", "value": "Opal Reyes", "text": "Mirsavon account manager is Opal Reyes"}
+{"day": 11, "op": "add", "key": "Vanulmar|renewal quarter", "entity": "Vanulmar", "attr": "renewal quarter", "value": "Q1", "text": "Vanulmar renewal quarter is Q1"}
+{"day": 11, "op": "add", "key": "Zubsavia|support contact", "entity": "Zubsavia", "attr": "support contact", "value": "Keira Doyle", "text": "Zubsavia support contact is Keira Doyle"}
+{"day": 11, "op": "add", "key": "Zelsavia|seats", "entity": "Zelsavia", "attr": "seats", "value": "390 seats", "text": "Zelsavia seats is 390 seats"}
+{"day": 11, "op": "add", "key": "Lumdraar|support contact", "entity": "Lumdraar", "attr": "support contact", "value": "Farid Nasser", "text": "Lumdraar support contact is Farid Nasser"}
+{"day": 12, "op": "add", "key": "Fenfenex|account manager", "entity": "Fenfenex", "attr": "account manager", "value": "Sven Lund", "text": "Fenfenex account manager is Sven Lund"}
+{"day": 12, "op": "add", "key": "Tredraon|account manager", "entity": "Tredraon", "attr": "account manager", "value": "Bruno Costa", "text": "Tredraon account manager is Bruno Costa"}
+{"day": 12, "op": "add", "key": "Wynyaryn|renewal quarter", "entity": "Wynyaryn", "attr": "renewal quarter", "value": "Q3", "text": "Wynyaryn renewal quarter is Q3"}
+{"day": 12, "op": "add", "key": "Wynyaryn|support contact", "entity": "Wynyaryn", "attr": "support contact", "value": "Dev Malhotra", "text": "Wynyaryn support contact is Dev Malhotra"}
+{"day": 12, "op": "add", "key": "Vanmiron|support contact", "entity": "Vanmiron", "attr": "support contact", "value": "Keira Doyle", "text": "Vanmiron support contact is Keira Doyle"}
+{"day": 12, "op": "add", "key": "Quipryex|plan", "entity": "Quipryex", "attr": "plan", "value": "starter", "text": "Quipryex plan is starter"}
+{"day": 12, "op": "add", "key": "Yarnexor|seats", "entity": "Yarnexor", "attr": "seats", "value": "122 seats", "text": "Yarnexor seats is 122 seats"}
+{"day": 12, "op": "add", "key": "Vanxanor|support contact", "entity": "Vanxanor", "attr": "support contact", "value": "Ines Moreau", "text": "Vanxanor support contact is Ines Moreau"}
+{"day": 12, "op": "add", "key": "Zelvanus|contract value", "entity": "Zelvanus", "attr": "contract value", "value": "124k dollars", "text": "Zelvanus contract value is 124k dollars"}
+{"day": 12, "op": "add", "key": "Yarpryor|support contact", "entity": "Yarpryor", "attr": "support contact", "value": "Rosa Greco", "text": "Yarpryor support contact is Rosa Greco"}
+{"day": 12, "op": "add", "key": "Prydraon|account manager", "entity": "Prydraon", "attr": "account manager", "value": "Rosa Greco", "text": "Prydraon account manager is Rosa Greco"}
+{"day": 12, "op": "add", "key": "Zelsavia|override", "entity": "Zelsavia", "attr": "override", "value": "temp-531", "forgetAfterDay": 24, "text": "Zelsavia has a temporary override code temp-531 until day 24"}
+{"day": 13, "op": "add", "key": "Savwynex|plan", "entity": "Savwynex", "attr": "plan", "value": "growth", "text": "Savwynex plan is growth"}
+{"day": 13, "op": "add", "key": "Zelulmon|plan", "entity": "Zelulmon", "attr": "plan", "value": "enterprise", "text": "Zelulmon plan is enterprise"}
+{"day": 13, "op": "add", "key": "Savzelyn|seats", "entity": "Savzelyn", "attr": "seats", "value": "196 seats", "text": "Savzelyn seats is 196 seats"}
+{"day": 14, "op": "add", "key": "Wynzubor|contract value", "entity": "Wynzubor", "attr": "contract value", "value": "717k dollars", "text": "Wynzubor contract value is 717k dollars"}
+{"day": 14, "op": "add", "key": "Yarzubon|renewal quarter", "entity": "Yarzubon", "attr": "renewal quarter", "value": "Q4", "text": "Yarzubon renewal quarter is Q4"}
+{"day": 14, "op": "add", "key": "Savwynex|account manager", "entity": "Savwynex", "attr": "account manager", "value": "Carmen Ortiz", "text": "Savwynex account manager is Carmen Ortiz"}
+{"day": 14, "op": "add", "key": "Savkoria|plan", "entity": "Savkoria", "attr": "plan", "value": "enterprise", "text": "Savkoria plan is enterprise"}
+{"day": 14, "op": "add", "key": "Savkoria|support contact", "entity": "Savkoria", "attr": "support contact", "value": "Bruno Costa", "text": "Savkoria support contact is Bruno Costa"}
+{"day": 14, "op": "add", "key": "Korvanus|plan", "entity": "Korvanus", "attr": "plan", "value": "growth", "text": "Korvanus plan is growth"}
+{"day": 14, "op": "add", "key": "Zelfenex|contract value", "entity": "Zelfenex", "attr": "contract value", "value": "559k dollars", "text": "Zelfenex contract value is 559k dollars"}
+{"day": 14, "op": "add", "key": "Ulmnexor|renewal quarter", "entity": "Ulmnexor", "attr": "renewal quarter", "value": "Q4", "text": "Ulmnexor renewal quarter is Q4"}
+{"day": 14, "op": "add", "key": "Vanzelar|support contact", "entity": "Vanzelar", "attr": "support contact", "value": "Esme Walker", "text": "Vanzelar support contact is Esme Walker"}
+{"day": 14, "op": "add", "key": "Vanzelar|plan", "entity": "Vanzelar", "attr": "plan", "value": "business", "text": "Vanzelar plan is business"}
+{"day": 14, "op": "add", "key": "Nexvanon|contract value", "entity": "Nexvanon", "attr": "contract value", "value": "326k dollars", "text": "Nexvanon contract value is 326k dollars"}
+{"day": 14, "op": "add", "key": "Trefenus|account manager", "entity": "Trefenus", "attr": "account manager", "value": "Esme Walker", "text": "Trefenus account manager is Esme Walker"}
+{"day": 15, "op": "add", "key": "Wynzubor|plan", "entity": "Wynzubor", "attr": "plan", "value": "growth", "text": "Wynzubor plan is growth"}
+{"day": 15, "op": "add", "key": "Savkoria|account manager", "entity": "Savkoria", "attr": "account manager", "value": "Luis Herrera", "text": "Savkoria account manager is Luis Herrera"}
+{"day": 15, "op": "add", "key": "Zelpryia|account manager", "entity": "Zelpryia", "attr": "account manager", "value": "Bruno Costa", "text": "Zelpryia account manager is Bruno Costa"}
+{"day": 15, "op": "add", "key": "Bromiron|seats", "entity": "Bromiron", "attr": "seats", "value": "712 seats", "text": "Bromiron seats is 712 seats"}
+{"day": 15, "op": "add", "key": "Fenvanus|seats", "entity": "Fenvanus", "attr": "seats", "value": "512 seats", "text": "Fenvanus seats is 512 seats"}
+{"day": 15, "op": "add", "key": "Prydraon|seats", "entity": "Prydraon", "attr": "seats", "value": "34 seats", "text": "Prydraon seats is 34 seats"}
+{"day": 16, "op": "add", "key": "Draulmia|support contact", "entity": "Draulmia", "attr": "support contact", "value": "Carmen Ortiz", "text": "Draulmia support contact is Carmen Ortiz"}
+{"day": 16, "op": "add", "key": "Yarbroar|contract value", "entity": "Yarbroar", "attr": "contract value", "value": "88k dollars", "text": "Yarbroar contract value is 88k dollars"}
+{"day": 16, "op": "add", "key": "Tredraon|plan", "entity": "Tredraon", "attr": "plan", "value": "growth", "text": "Tredraon plan is growth"}
+{"day": 16, "op": "add", "key": "Zublumon|account manager", "entity": "Zublumon", "attr": "account manager", "value": "Aiko Tanaka", "text": "Zublumon account manager is Aiko Tanaka"}
+{"day": 16, "op": "add", "key": "Zubtalor|contract value", "entity": "Zubtalor", "attr": "contract value", "value": "144k dollars", "text": "Zubtalor contract value is 144k dollars"}
+{"day": 16, "op": "add", "key": "Zelulmon|seats", "entity": "Zelulmon", "attr": "seats", "value": "318 seats", "text": "Zelulmon seats is 318 seats"}
+{"day": 16, "op": "add", "key": "Vanmiron|plan", "entity": "Vanmiron", "attr": "plan", "value": "business", "text": "Vanmiron plan is business"}
+{"day": 16, "op": "add", "key": "Vanmiron|renewal quarter", "entity": "Vanmiron", "attr": "renewal quarter", "value": "Q2", "text": "Vanmiron renewal quarter is Q2"}
+{"day": 16, "op": "add", "key": "Savzelyn|account manager", "entity": "Savzelyn", "attr": "account manager", "value": "Luis Herrera", "text": "Savzelyn account manager is Luis Herrera"}
+{"day": 16, "op": "add", "key": "Savzelyn|support contact", "entity": "Savzelyn", "attr": "support contact", "value": "Sven Lund", "text": "Savzelyn support contact is Sven Lund"}
+{"day": 16, "op": "add", "key": "Vanulmar|account manager", "entity": "Vanulmar", "attr": "account manager", "value": "Carmen Ortiz", "text": "Vanulmar account manager is Carmen Ortiz"}
+{"day": 16, "op": "add", "key": "Ulmbroar|support contact", "entity": "Ulmbroar", "attr": "support contact", "value": "Tara Singh", "text": "Ulmbroar support contact is Tara Singh"}
+{"day": 16, "op": "add", "key": "Yarnexor|account manager", "entity": "Yarnexor", "attr": "account manager", "value": "Bruno Costa", "text": "Yarnexor account manager is Bruno Costa"}
+{"day": 16, "op": "add", "key": "Yarnexor|plan", "entity": "Yarnexor", "attr": "plan", "value": "business", "text": "Yarnexor plan is business"}
+{"day": 16, "op": "add", "key": "Vanxanor|plan", "entity": "Vanxanor", "attr": "plan", "value": "business", "text": "Vanxanor plan is business"}
+{"day": 17, "op": "add", "key": "Fenfenex|plan", "entity": "Fenfenex", "attr": "plan", "value": "starter", "text": "Fenfenex plan is starter"}
+{"day": 17, "op": "add", "key": "Yarbroar|seats", "entity": "Yarbroar", "attr": "seats", "value": "525 seats", "text": "Yarbroar seats is 525 seats"}
+{"day": 17, "op": "add", "key": "Tredraon|seats", "entity": "Tredraon", "attr": "seats", "value": "242 seats", "text": "Tredraon seats is 242 seats"}
+{"day": 17, "op": "add", "key": "Zublumon|seats", "entity": "Zublumon", "attr": "seats", "value": "169 seats", "text": "Zublumon seats is 169 seats"}
+{"day": 17, "op": "add", "key": "Bromiron|contract value", "entity": "Bromiron", "attr": "contract value", "value": "306k dollars", "text": "Bromiron contract value is 306k dollars"}
+{"day": 17, "op": "add", "key": "Ulmnexor|seats", "entity": "Ulmnexor", "attr": "seats", "value": "608 seats", "text": "Ulmnexor seats is 608 seats"}
+{"day": 17, "op": "add", "key": "Quipryex|contract value", "entity": "Quipryex", "attr": "contract value", "value": "626k dollars", "text": "Quipryex contract value is 626k dollars"}
+{"day": 17, "op": "add", "key": "Zubsavia|seats", "entity": "Zubsavia", "attr": "seats", "value": "273 seats", "text": "Zubsavia seats is 273 seats"}
+{"day": 17, "op": "add", "key": "Nexvanon|renewal quarter", "entity": "Nexvanon", "attr": "renewal quarter", "value": "Q3", "text": "Nexvanon renewal quarter is Q3"}
+{"day": 17, "op": "add", "key": "Zelsavia|plan", "entity": "Zelsavia", "attr": "plan", "value": "growth", "text": "Zelsavia plan is growth"}
+{"day": 17, "op": "add", "key": "Dratalex|override", "entity": "Dratalex", "attr": "override", "value": "temp-126", "forgetAfterDay": 28, "text": "Dratalex has a temporary override code temp-126 until day 28"}
+{"day": 18, "op": "add", "key": "Yarzubon|seats", "entity": "Yarzubon", "attr": "seats", "value": "254 seats", "text": "Yarzubon seats is 254 seats"}
+{"day": 18, "op": "add", "key": "Yarzubon|plan", "entity": "Yarzubon", "attr": "plan", "value": "business", "text": "Yarzubon plan is business"}
+{"day": 18, "op": "add", "key": "Fenfenex|renewal quarter", "entity": "Fenfenex", "attr": "renewal quarter", "value": "Q3", "text": "Fenfenex renewal quarter is Q3"}
+{"day": 18, "op": "add", "key": "Quipryex|account manager", "entity": "Quipryex", "attr": "account manager", "value": "Aiko Tanaka", "text": "Quipryex account manager is Aiko Tanaka"}
+{"day": 18, "op": "add", "key": "Vanxanor|renewal quarter", "entity": "Vanxanor", "attr": "renewal quarter", "value": "Q4", "text": "Vanxanor renewal quarter is Q4"}
+{"day": 18, "op": "add", "key": "Zelsavia|renewal quarter", "entity": "Zelsavia", "attr": "renewal quarter", "value": "Q3", "text": "Zelsavia renewal quarter is Q3"}
+{"day": 18, "op": "add", "key": "Zelvanus|renewal quarter", "entity": "Zelvanus", "attr": "renewal quarter", "value": "Q1", "text": "Zelvanus renewal quarter is Q1"}
+{"day": 18, "op": "add", "key": "Dratalex|seats", "entity": "Dratalex", "attr": "seats", "value": "261 seats", "text": "Dratalex seats is 261 seats"}
+{"day": 18, "op": "add", "key": "Yarpryor|override", "entity": "Yarpryor", "attr": "override", "value": "temp-339", "forgetAfterDay": 30, "text": "Yarpryor has a temporary override code temp-339 until day 30"}
+{"day": 19, "op": "add", "key": "Trefenus|override", "entity": "Trefenus", "attr": "override", "value": "temp-506", "forgetAfterDay": 30, "text": "Trefenus has a temporary override code temp-506 until day 30"}
+{"day": 19, "op": "add", "key": "Zublumon|override", "entity": "Zublumon", "attr": "override", "value": "temp-483", "forgetAfterDay": 33, "text": "Zublumon has a temporary override code temp-483 until day 33"}
+{"day": 22, "op": "update", "key": "Ostwynor|plan", "entity": "Ostwynor", "attr": "plan", "value": "enterprise", "old": "business", "text": "Ostwynor plan is now enterprise"}
+{"day": 24, "op": "update", "key": "Fenvanus|support contact", "entity": "Fenvanus", "attr": "support contact", "value": "Esme Walker", "old": "Bruno Costa", "text": "Fenvanus support contact is now Esme Walker"}
+{"day": 25, "op": "update", "key": "Fentalia|contract value", "entity": "Fentalia", "attr": "contract value", "value": "601k dollars", "old": "427k dollars", "text": "Fentalia contract value is now 601k dollars"}
+{"day": 26, "op": "update", "key": "Vanulmar|plan", "entity": "Vanulmar", "attr": "plan", "value": "starter", "old": "business", "text": "Vanulmar plan is now starter"}
+{"day": 26, "op": "update", "key": "Bromiron|contract value", "entity": "Bromiron", "attr": "contract value", "value": "536k dollars", "old": "306k dollars", "text": "Bromiron contract value is now 536k dollars"}
+{"day": 28, "op": "consolidate"}
+{"day": 30, "op": "add", "key": "Wynxania|override", "entity": "Wynxania", "attr": "override", "value": "temp-390", "forgetAfterDay": 42, "text": "Wynxania has a temporary override code temp-390 until day 42"}
+{"day": 32, "op": "update", "key": "Wynxania|contract value", "entity": "Wynxania", "attr": "contract value", "value": "627k dollars", "old": "683k dollars", "text": "Wynxania contract value is now 627k dollars"}
+{"day": 32, "op": "update", "key": "Zubmirar|plan", "entity": "Zubmirar", "attr": "plan", "value": "business", "old": "growth", "text": "Zubmirar plan is now business"}
+{"day": 32, "op": "update", "key": "Zelvanus|contract value", "entity": "Zelvanus", "attr": "contract value", "value": "800k dollars", "old": "124k dollars", "text": "Zelvanus contract value is now 800k dollars"}
+{"day": 33, "op": "update", "key": "Zelfenex|support contact", "entity": "Zelfenex", "attr": "support contact", "value": "Farid Nasser", "old": "Greta Olsen", "text": "Zelfenex support contact is now Farid Nasser"}
+{"day": 33, "op": "update", "key": "Savkoria|account manager", "entity": "Savkoria", "attr": "account manager", "value": "Hugo Lambert", "old": "Luis Herrera", "text": "Savkoria account manager is now Hugo Lambert"}
+{"day": 33, "op": "update", "key": "Fenvanus|renewal quarter", "entity": "Fenvanus", "attr": "renewal quarter", "value": "Q2", "old": "Q4", "text": "Fenvanus renewal quarter is now Q2"}
+{"day": 35, "op": "update", "key": "Vanxanor|plan", "entity": "Vanxanor", "attr": "plan", "value": "starter", "old": "business", "text": "Vanxanor plan is now starter"}
+{"day": 37, "op": "update", "key": "Prydraon|seats", "entity": "Prydraon", "attr": "seats", "value": "534 seats", "old": "34 seats", "text": "Prydraon seats is now 534 seats"}
+{"day": 37, "op": "update", "key": "Zubmirar|renewal quarter", "entity": "Zubmirar", "attr": "renewal quarter", "value": "Q4", "old": "Q1", "text": "Zubmirar renewal quarter is now Q4"}
+{"day": 38, "op": "update", "key": "Yarbroar|renewal quarter", "entity": "Yarbroar", "attr": "renewal quarter", "value": "Q4", "old": "Q3", "text": "Yarbroar renewal quarter is now Q4"}
+{"day": 38, "op": "update", "key": "Dratalex|contract value", "entity": "Dratalex", "attr": "contract value", "value": "394k dollars", "old": "199k dollars", "text": "Dratalex contract value is now 394k dollars"}
+{"day": 39, "op": "add", "key": "Yarzubon|override", "entity": "Yarzubon", "attr": "override", "value": "temp-894", "forgetAfterDay": 49, "text": "Yarzubon has a temporary override code temp-894 until day 49"}
+{"day": 39, "op": "add", "key": "Zubmirar|override", "entity": "Zubmirar", "attr": "override", "value": "temp-483", "forgetAfterDay": 50, "text": "Zubmirar has a temporary override code temp-483 until day 50"}
+{"day": 39, "op": "update", "key": "Yarbroar|seats", "entity": "Yarbroar", "attr": "seats", "value": "157 seats", "old": "525 seats", "text": "Yarbroar seats is now 157 seats"}
+{"day": 40, "op": "query", "entity": "Savkoria", "attr": "account manager", "question": "What is Savkoria's account manager?", "expect": ["Hugo Lambert"], "forbid": ["Luis Herrera"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Yarbroar", "attr": "seats", "question": "What is Yarbroar's seats?", "expect": ["157 seats"], "forbid": ["525 seats"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Yarbroar", "attr": "renewal quarter", "question": "What is Yarbroar's renewal quarter?", "expect": ["Q4"], "forbid": ["Q3"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Zelfenex", "attr": "support contact", "question": "What is Zelfenex's support contact?", "expect": ["Farid Nasser"], "forbid": ["Greta Olsen"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Vanxanor", "attr": "plan", "question": "What is Vanxanor's plan?", "expect": ["starter"], "forbid": ["business"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Prydraon", "attr": "seats", "question": "What is Prydraon's seats?", "expect": ["534 seats"], "forbid": ["34 seats"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmnexor", "attr": "seats", "question": "What is Ulmnexor's seats?", "expect": ["608 seats"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Lumdraar", "attr": "support contact", "question": "What is Lumdraar's support contact?", "expect": ["Farid Nasser"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Zelulmon", "attr": "contract value", "question": "What is Zelulmon's contract value?", "expect": ["632k dollars"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Zelsavia", "attr": "account manager", "question": "What is Zelsavia's account manager?", "expect": ["Rosa Greco"], "forbid": [], "asOfDay": 40}
+{"day": 41, "op": "update", "key": "Yarzubon|contract value", "entity": "Yarzubon", "attr": "contract value", "value": "629k dollars", "old": "779k dollars", "text": "Yarzubon contract value is now 629k dollars"}
+{"day": 41, "op": "dup", "key": "Mirsavon|renewal quarter", "entity": "Mirsavon", "attr": "renewal quarter", "value": "Q1", "text": "Mirsavon renewal quarter is Q1", "exact": true}
+{"day": 42, "op": "add", "key": "Zelpryia|override", "entity": "Zelpryia", "attr": "override", "value": "temp-784", "forgetAfterDay": 50, "text": "Zelpryia has a temporary override code temp-784 until day 50"}
+{"day": 42, "op": "dup", "key": "Zelvanus|plan", "entity": "Zelvanus", "attr": "plan", "value": "business", "text": "Zelvanus plan is business", "exact": true}
+{"day": 42, "op": "dup", "key": "Nexvanon|contract value", "entity": "Nexvanon", "attr": "contract value", "value": "326k dollars", "text": "Nexvanon contract value is 326k dollars", "exact": true}
+{"day": 42, "op": "dup", "key": "Prydraon|plan", "entity": "Prydraon", "attr": "plan", "value": "enterprise", "text": "Prydraon plan is enterprise", "exact": true}
+{"day": 42, "op": "dup", "key": "Zublumon|plan", "entity": "Zublumon", "attr": "plan", "value": "growth", "text": "The plan for Zublumon is growth", "exact": false}
+{"day": 43, "op": "update", "key": "Yarpryor|seats", "entity": "Yarpryor", "attr": "seats", "value": "117 seats", "old": "691 seats", "text": "Yarpryor seats is now 117 seats"}
+{"day": 43, "op": "dup", "key": "Zubtalor|seats", "entity": "Zubtalor", "attr": "seats", "value": "674 seats", "text": "The seats for Zubtalor is 674 seats", "exact": false}
+{"day": 43, "op": "dup", "key": "Zelulmon|plan", "entity": "Zelulmon", "attr": "plan", "value": "enterprise", "text": "The plan for Zelulmon is enterprise", "exact": false}
+{"day": 44, "op": "update", "key": "Wynzubor|plan", "entity": "Wynzubor", "attr": "plan", "value": "starter", "old": "growth", "text": "Wynzubor plan is now starter"}
+{"day": 46, "op": "update", "key": "Zelpryia|support contact", "entity": "Zelpryia", "attr": "support contact", "value": "Sven Lund", "old": "Esme Walker", "text": "Zelpryia support contact is now Sven Lund"}
+{"day": 47, "op": "dup", "key": "Zubsavia|renewal quarter", "entity": "Zubsavia", "attr": "renewal quarter", "value": "Q2", "text": "The renewal quarter for Zubsavia is Q2", "exact": false}
+{"day": 48, "op": "update", "key": "Yarnexor|account manager", "entity": "Yarnexor", "attr": "account manager", "value": "Tara Singh", "old": "Bruno Costa", "text": "Yarnexor account manager is now Tara Singh"}
+{"day": 48, "op": "dup", "key": "Mirsavon|account manager", "entity": "Mirsavon", "attr": "account manager", "value": "Opal Reyes", "text": "Mirsavon account manager is Opal Reyes", "exact": true}
+{"day": 48, "op": "dup", "key": "Savkoria|plan", "entity": "Savkoria", "attr": "plan", "value": "enterprise", "text": "Savkoria plan is enterprise", "exact": true}
+{"day": 48, "op": "dup", "key": "Zelsavia|plan", "entity": "Zelsavia", "attr": "plan", "value": "growth", "text": "The plan for Zelsavia is growth", "exact": false}
+{"day": 48, "op": "dup", "key": "Korvanus|plan", "entity": "Korvanus", "attr": "plan", "value": "growth", "text": "The plan for Korvanus is growth", "exact": false}
+{"day": 49, "op": "dup", "key": "Zelulmon|contract value", "entity": "Zelulmon", "attr": "contract value", "value": "632k dollars", "text": "Zelulmon contract value is 632k dollars", "exact": true}
+{"day": 49, "op": "dup", "key": "Zublumon|contract value", "entity": "Zublumon", "attr": "contract value", "value": "534k dollars", "text": "The contract value for Zublumon is 534k dollars", "exact": false}
+{"day": 50, "op": "add", "key": "Mirsavon|override", "entity": "Mirsavon", "attr": "override", "value": "temp-381", "forgetAfterDay": 59, "text": "Mirsavon has a temporary override code temp-381 until day 59"}
+{"day": 51, "op": "add", "key": "Ulmnexor|override", "entity": "Ulmnexor", "attr": "override", "value": "temp-584", "forgetAfterDay": 62, "text": "Ulmnexor has a temporary override code temp-584 until day 62"}
+{"day": 51, "op": "dup", "key": "Zelsavia|renewal quarter", "entity": "Zelsavia", "attr": "renewal quarter", "value": "Q3", "text": "Zelsavia renewal quarter is Q3", "exact": true}
+{"day": 51, "op": "dup", "key": "Wynzubor|seats", "entity": "Wynzubor", "attr": "seats", "value": "638 seats", "text": "The seats for Wynzubor is 638 seats", "exact": false}
+{"day": 52, "op": "update", "key": "Vanmiron|seats", "entity": "Vanmiron", "attr": "seats", "value": "153 seats", "old": "498 seats", "text": "Vanmiron seats is now 153 seats"}
+{"day": 52, "op": "dup", "key": "Vanzelar|plan", "entity": "Vanzelar", "attr": "plan", "value": "business", "text": "Vanzelar plan is business", "exact": true}
+{"day": 52, "op": "dup", "key": "Quipryex|plan", "entity": "Quipryex", "attr": "plan", "value": "starter", "text": "The plan for Quipryex is starter", "exact": false}
+{"day": 53, "op": "update", "key": "Fenvanus|seats", "entity": "Fenvanus", "attr": "seats", "value": "409 seats", "old": "512 seats", "text": "Fenvanus seats is now 409 seats"}
+{"day": 53, "op": "update", "key": "Zelulmon|renewal quarter", "entity": "Zelulmon", "attr": "renewal quarter", "value": "Q2", "old": "Q3", "text": "Zelulmon renewal quarter is now Q2"}
+{"day": 54, "op": "update", "key": "Tredraon|plan", "entity": "Tredraon", "attr": "plan", "value": "enterprise", "old": "growth", "text": "Tredraon plan is now enterprise"}
+{"day": 54, "op": "dup", "key": "Wynxania|plan", "entity": "Wynxania", "attr": "plan", "value": "starter", "text": "Wynxania plan is starter", "exact": true}
+{"day": 55, "op": "update", "key": "Zubtalor|renewal quarter", "entity": "Zubtalor", "attr": "renewal quarter", "value": "Q4", "old": "Q1", "text": "Zubtalor renewal quarter is now Q4"}
+{"day": 55, "op": "update", "key": "Yarnexor|contract value", "entity": "Yarnexor", "attr": "contract value", "value": "386k dollars", "old": "665k dollars", "text": "Yarnexor contract value is now 386k dollars"}
+{"day": 55, "op": "dup", "key": "Vanulmar|account manager", "entity": "Vanulmar", "attr": "account manager", "value": "Carmen Ortiz", "text": "Vanulmar account manager is Carmen Ortiz", "exact": true}
+{"day": 56, "op": "update", "key": "Fenvanus|account manager", "entity": "Fenvanus", "attr": "account manager", "value": "Sven Lund", "old": "Esme Walker", "text": "Fenvanus account manager is now Sven Lund"}
+{"day": 56, "op": "dup", "key": "Bromiron|seats", "entity": "Bromiron", "attr": "seats", "value": "712 seats", "text": "The seats for Bromiron is 712 seats", "exact": false}
+{"day": 56, "op": "consolidate"}
+{"day": 57, "op": "update", "key": "Zubmirar|support contact", "entity": "Zubmirar", "attr": "support contact", "value": "Aiko Tanaka", "old": "Pia Jensen", "text": "Zubmirar support contact is now Aiko Tanaka"}
+{"day": 57, "op": "dup", "key": "Ostwynor|seats", "entity": "Ostwynor", "attr": "seats", "value": "39 seats", "text": "The seats for Ostwynor is 39 seats", "exact": false}
+{"day": 58, "op": "update", "key": "Savwynex|account manager", "entity": "Savwynex", "attr": "account manager", "value": "Ines Moreau", "old": "Carmen Ortiz", "text": "Savwynex account manager is now Ines Moreau"}
+{"day": 58, "op": "update", "key": "Zelpryia|contract value", "entity": "Zelpryia", "attr": "contract value", "value": "446k dollars", "old": "144k dollars", "text": "Zelpryia contract value is now 446k dollars"}
+{"day": 58, "op": "dup", "key": "Korvanus|contract value", "entity": "Korvanus", "attr": "contract value", "value": "664k dollars", "text": "The contract value for Korvanus is 664k dollars", "exact": false}
+{"day": 58, "op": "dup", "key": "Mirsavon|support contact", "entity": "Mirsavon", "attr": "support contact", "value": "Aiko Tanaka", "text": "The support contact for Mirsavon is Aiko Tanaka", "exact": false}
+{"day": 59, "op": "update", "key": "Zelpryia|contract value", "entity": "Zelpryia", "attr": "contract value", "value": "317k dollars", "old": "446k dollars", "text": "Zelpryia contract value is now 317k dollars"}
+{"day": 60, "op": "update", "key": "Tredraon|contract value", "entity": "Tredraon", "attr": "contract value", "value": "617k dollars", "old": "482k dollars", "text": "Tredraon contract value is now 617k dollars"}
+{"day": 60, "op": "dup", "key": "Draulmia|contract value", "entity": "Draulmia", "attr": "contract value", "value": "152k dollars", "text": "Draulmia contract value is 152k dollars", "exact": true}
+{"day": 61, "op": "update", "key": "Wynzubor|contract value", "entity": "Wynzubor", "attr": "contract value", "value": "656k dollars", "old": "717k dollars", "text": "Wynzubor contract value is now 656k dollars"}
+{"day": 61, "op": "update", "key": "Yarpryor|support contact", "entity": "Yarpryor", "attr": "support contact", "value": "Jonas Berg", "old": "Rosa Greco", "text": "Yarpryor support contact is now Jonas Berg"}
+{"day": 62, "op": "update", "key": "Savwynex|support contact", "entity": "Savwynex", "attr": "support contact", "value": "Aiko Tanaka", "old": "Nils Persson", "text": "Savwynex support contact is now Aiko Tanaka"}
+{"day": 63, "op": "update", "key": "Zelsavia|seats", "entity": "Zelsavia", "attr": "seats", "value": "713 seats", "old": "390 seats", "text": "Zelsavia seats is now 713 seats"}
+{"day": 64, "op": "update", "key": "Zelfenex|seats", "entity": "Zelfenex", "attr": "seats", "value": "73 seats", "old": "40 seats", "text": "Zelfenex seats is now 73 seats"}
+{"day": 64, "op": "update", "key": "Yarnexor|plan", "entity": "Yarnexor", "attr": "plan", "value": "starter", "old": "business", "text": "Yarnexor plan is now starter"}
+{"day": 65, "op": "query", "entity": "Ostwynor", "attr": "plan", "question": "What is Ostwynor's plan?", "expect": ["enterprise"], "forbid": ["business"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Savwynex", "attr": "account manager", "question": "What is Savwynex's account manager?", "expect": ["Ines Moreau"], "forbid": ["Carmen Ortiz"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Zubmirar", "attr": "plan", "question": "What is Zubmirar's plan?", "expect": ["business"], "forbid": ["growth"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Zelfenex", "attr": "support contact", "question": "What is Zelfenex's support contact?", "expect": ["Farid Nasser"], "forbid": ["Greta Olsen"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Fenvanus", "attr": "renewal quarter", "question": "What is Fenvanus's renewal quarter?", "expect": ["Q2"], "forbid": ["Q4"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Yarpryor", "attr": "support contact", "question": "What is Yarpryor's support contact?", "expect": ["Jonas Berg"], "forbid": ["Rosa Greco"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Nexvanon", "attr": "renewal quarter", "question": "What is Nexvanon's renewal quarter?", "expect": ["Q3"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Zelsavia", "attr": "account manager", "question": "What is Zelsavia's account manager?", "expect": ["Rosa Greco"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Dratalex", "attr": "seats", "question": "What is Dratalex's seats?", "expect": ["261 seats"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Dratalex", "attr": "renewal quarter", "question": "What is Dratalex's renewal quarter?", "expect": ["Q4"], "forbid": [], "asOfDay": 65}
+{"day": 66, "op": "update", "key": "Zelvanus|support contact", "entity": "Zelvanus", "attr": "support contact", "value": "Carmen Ortiz", "old": "Opal Reyes", "text": "Zelvanus support contact is now Carmen Ortiz"}
+{"day": 66, "op": "update", "key": "Lumdraar|seats", "entity": "Lumdraar", "attr": "seats", "value": "508 seats", "old": "322 seats", "text": "Lumdraar seats is now 508 seats"}
+{"day": 70, "op": "update", "key": "Zubtalor|contract value", "entity": "Zubtalor", "attr": "contract value", "value": "712k dollars", "old": "144k dollars", "text": "Zubtalor contract value is now 712k dollars"}
+{"day": 70, "op": "update", "key": "Fenfenex|support contact", "entity": "Fenfenex", "attr": "support contact", "value": "Luis Herrera", "old": "Jonas Berg", "text": "Fenfenex support contact is now Luis Herrera"}
+{"day": 70, "op": "update", "key": "Zelsavia|seats", "entity": "Zelsavia", "attr": "seats", "value": "879 seats", "old": "713 seats", "text": "Zelsavia seats is now 879 seats"}
+{"day": 83, "op": "consolidate"}
+{"day": 84, "op": "query", "entity": "Yarnexor", "attr": "contract value", "question": "What is Yarnexor's contract value?", "expect": ["386k dollars"], "forbid": ["665k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zelulmon", "attr": "renewal quarter", "question": "What is Zelulmon's renewal quarter?", "expect": ["Q2"], "forbid": ["Q3"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zelsavia", "attr": "seats", "question": "What is Zelsavia's seats?", "expect": ["879 seats"], "forbid": ["390 seats", "713 seats"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zubmirar", "attr": "renewal quarter", "question": "What is Zubmirar's renewal quarter?", "expect": ["Q4"], "forbid": ["Q1"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Wynxania", "attr": "contract value", "question": "What is Wynxania's contract value?", "expect": ["627k dollars"], "forbid": ["683k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Tredraon", "attr": "contract value", "question": "What is Tredraon's contract value?", "expect": ["617k dollars"], "forbid": ["482k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Fentalia", "attr": "contract value", "question": "What is Fentalia's contract value?", "expect": ["601k dollars"], "forbid": ["427k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Tredraon", "attr": "plan", "question": "What is Tredraon's plan?", "expect": ["enterprise"], "forbid": ["growth"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vanulmar", "attr": "plan", "question": "What is Vanulmar's plan?", "expect": ["starter"], "forbid": ["business"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Savkoria", "attr": "account manager", "question": "What is Savkoria's account manager?", "expect": ["Hugo Lambert"], "forbid": ["Luis Herrera"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Fenvanus", "attr": "support contact", "question": "What is Fenvanus's support contact?", "expect": ["Esme Walker"], "forbid": ["Bruno Costa"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Lumdraar", "attr": "seats", "question": "What is Lumdraar's seats?", "expect": ["508 seats"], "forbid": ["322 seats"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Ulmnexor", "attr": "contract value", "question": "What is Ulmnexor's contract value?", "expect": ["149k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korvanus", "attr": "seats", "question": "What is Korvanus's seats?", "expect": ["488 seats"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zublumon", "attr": "contract value", "question": "What is Zublumon's contract value?", "expect": ["534k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Nexvanon", "attr": "renewal quarter", "question": "What is Nexvanon's renewal quarter?", "expect": ["Q3"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korvanus", "attr": "contract value", "question": "What is Korvanus's contract value?", "expect": ["664k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Draulmia", "attr": "contract value", "question": "What is Draulmia's contract value?", "expect": ["152k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Nexvanon", "attr": "plan", "question": "What is Nexvanon's plan?", "expect": ["enterprise"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Prydraon", "attr": "renewal quarter", "question": "What is Prydraon's renewal quarter?", "expect": ["Q4"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "question": "What is Yarpryor's override code?", "expect": [], "forbid": ["temp-339"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Ulmnexor's override code?", "expect": [], "forbid": ["temp-584"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Dratalex's override code?", "expect": [], "forbid": ["temp-126"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Vanulmar's override code?", "expect": [], "forbid": ["temp-604"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Yarzubon's override code?", "expect": [], "forbid": ["temp-894"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Zelsavia's override code?", "expect": [], "forbid": ["temp-531"], "asOfDay": null, "kind": "stale"}

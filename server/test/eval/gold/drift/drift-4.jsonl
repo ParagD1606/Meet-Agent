@@ -1,0 +1,294 @@
+{"_header": true, "set": "drift-4", "version": 1, "date": "2026-10-24", "theme": "projects", "days": 84, "startAgoDays": 90, "facts": 244, "entities": 40}
+{"day": 0, "op": "add", "key": "Savmiryn|deadline quarter", "entity": "Savmiryn", "attr": "deadline quarter", "value": "Q2", "text": "Savmiryn deadline quarter is Q2"}
+{"day": 0, "op": "add", "key": "Fenkoror|deadline quarter", "entity": "Fenkoror", "attr": "deadline quarter", "value": "Q1", "text": "Fenkoror deadline quarter is Q1"}
+{"day": 0, "op": "add", "key": "Ulmpryyn|headcount", "entity": "Ulmpryyn", "attr": "headcount", "value": "25 people", "text": "Ulmpryyn headcount is 25 people"}
+{"day": 0, "op": "add", "key": "Tallumyn|lead", "entity": "Tallumyn", "attr": "lead", "value": "Opal Reyes", "text": "Tallumyn lead is Opal Reyes"}
+{"day": 0, "op": "add", "key": "Pryulmor|status", "entity": "Pryulmor", "attr": "status", "value": "launched", "text": "Pryulmor status is launched"}
+{"day": 0, "op": "add", "key": "Wynulmia|budget", "entity": "Wynulmia", "attr": "budget", "value": "239k dollars", "text": "Wynulmia budget is 239k dollars"}
+{"day": 0, "op": "add", "key": "Yarquiar|sponsor", "entity": "Yarquiar", "attr": "sponsor", "value": "Farid Nasser", "text": "Yarquiar sponsor is Farid Nasser"}
+{"day": 1, "op": "add", "key": "Savmiryn|budget", "entity": "Savmiryn", "attr": "budget", "value": "668k dollars", "text": "Savmiryn budget is 668k dollars"}
+{"day": 1, "op": "add", "key": "Lumtreex|headcount", "entity": "Lumtreex", "attr": "headcount", "value": "7 people", "text": "Lumtreex headcount is 7 people"}
+{"day": 1, "op": "add", "key": "Broulmor|status", "entity": "Broulmor", "attr": "status", "value": "paused", "text": "Broulmor status is paused"}
+{"day": 1, "op": "add", "key": "Mirzelor|status", "entity": "Mirzelor", "attr": "status", "value": "paused", "text": "Mirzelor status is paused"}
+{"day": 1, "op": "add", "key": "Savyarex|budget", "entity": "Savyarex", "attr": "budget", "value": "481k dollars", "text": "Savyarex budget is 481k dollars"}
+{"day": 2, "op": "add", "key": "Quinexex|status", "entity": "Quinexex", "attr": "status", "value": "building", "text": "Quinexex status is building"}
+{"day": 2, "op": "add", "key": "Kortalex|budget", "entity": "Kortalex", "attr": "budget", "value": "580k dollars", "text": "Kortalex budget is 580k dollars"}
+{"day": 2, "op": "add", "key": "Talbroyn|sponsor", "entity": "Talbroyn", "attr": "sponsor", "value": "Hugo Lambert", "text": "Talbroyn sponsor is Hugo Lambert"}
+{"day": 2, "op": "add", "key": "Tretalia|budget", "entity": "Tretalia", "attr": "budget", "value": "571k dollars", "text": "Tretalia budget is 571k dollars"}
+{"day": 2, "op": "add", "key": "Drafenia|budget", "entity": "Drafenia", "attr": "budget", "value": "133k dollars", "text": "Drafenia budget is 133k dollars"}
+{"day": 2, "op": "add", "key": "Wynkorus|deadline quarter", "entity": "Wynkorus", "attr": "deadline quarter", "value": "Q1", "text": "Wynkorus deadline quarter is Q1"}
+{"day": 2, "op": "add", "key": "Vankorus|status", "entity": "Vankorus", "attr": "status", "value": "testing", "text": "Vankorus status is testing"}
+{"day": 2, "op": "add", "key": "Lumxania|deadline quarter", "entity": "Lumxania", "attr": "deadline quarter", "value": "Q2", "text": "Lumxania deadline quarter is Q2"}
+{"day": 3, "op": "add", "key": "Talzubia|status", "entity": "Talzubia", "attr": "status", "value": "paused", "text": "Talzubia status is paused"}
+{"day": 3, "op": "add", "key": "Vanlumex|sponsor", "entity": "Vanlumex", "attr": "sponsor", "value": "Sven Lund", "text": "Vanlumex sponsor is Sven Lund"}
+{"day": 3, "op": "add", "key": "Brobroex|sponsor", "entity": "Brobroex", "attr": "sponsor", "value": "Aiko Tanaka", "text": "Brobroex sponsor is Aiko Tanaka"}
+{"day": 3, "op": "add", "key": "Tretalia|headcount", "entity": "Tretalia", "attr": "headcount", "value": "17 people", "text": "Tretalia headcount is 17 people"}
+{"day": 3, "op": "add", "key": "Tretalia|lead", "entity": "Tretalia", "attr": "lead", "value": "Esme Walker", "text": "Tretalia lead is Esme Walker"}
+{"day": 3, "op": "add", "key": "Zubvanex|sponsor", "entity": "Zubvanex", "attr": "sponsor", "value": "Luis Herrera", "text": "Zubvanex sponsor is Luis Herrera"}
+{"day": 4, "op": "add", "key": "Quinexex|sponsor", "entity": "Quinexex", "attr": "sponsor", "value": "Carmen Ortiz", "text": "Quinexex sponsor is Carmen Ortiz"}
+{"day": 4, "op": "add", "key": "Taltalon|lead", "entity": "Taltalon", "attr": "lead", "value": "Dev Malhotra", "text": "Taltalon lead is Dev Malhotra"}
+{"day": 4, "op": "add", "key": "Wynnexor|budget", "entity": "Wynnexor", "attr": "budget", "value": "476k dollars", "text": "Wynnexor budget is 476k dollars"}
+{"day": 4, "op": "add", "key": "Brobroex|budget", "entity": "Brobroex", "attr": "budget", "value": "130k dollars", "text": "Brobroex budget is 130k dollars"}
+{"day": 4, "op": "add", "key": "Xankoria|headcount", "entity": "Xankoria", "attr": "headcount", "value": "17 people", "text": "Xankoria headcount is 17 people"}
+{"day": 4, "op": "add", "key": "Tallumyn|budget", "entity": "Tallumyn", "attr": "budget", "value": "521k dollars", "text": "Tallumyn budget is 521k dollars"}
+{"day": 4, "op": "add", "key": "Xanvanon|sponsor", "entity": "Xanvanon", "attr": "sponsor", "value": "Carmen Ortiz", "text": "Xanvanon sponsor is Carmen Ortiz"}
+{"day": 4, "op": "add", "key": "Wynulmia|status", "entity": "Wynulmia", "attr": "status", "value": "paused", "text": "Wynulmia status is paused"}
+{"day": 4, "op": "add", "key": "Kormiria|status", "entity": "Kormiria", "attr": "status", "value": "planning", "text": "Kormiria status is planning"}
+{"day": 4, "op": "add", "key": "Savfenia|budget", "entity": "Savfenia", "attr": "budget", "value": "687k dollars", "text": "Savfenia budget is 687k dollars"}
+{"day": 5, "op": "add", "key": "Savmirus|status", "entity": "Savmirus", "attr": "status", "value": "paused", "text": "Savmirus status is paused"}
+{"day": 5, "op": "add", "key": "Quinexex|budget", "entity": "Quinexex", "attr": "budget", "value": "584k dollars", "text": "Quinexex budget is 584k dollars"}
+{"day": 5, "op": "add", "key": "Wynnexor|status", "entity": "Wynnexor", "attr": "status", "value": "testing", "text": "Wynnexor status is testing"}
+{"day": 5, "op": "add", "key": "Lumkoron|budget", "entity": "Lumkoron", "attr": "budget", "value": "612k dollars", "text": "Lumkoron budget is 612k dollars"}
+{"day": 5, "op": "add", "key": "Fenkoror|headcount", "entity": "Fenkoror", "attr": "headcount", "value": "3 people", "text": "Fenkoror headcount is 3 people"}
+{"day": 5, "op": "add", "key": "Talbroyn|budget", "entity": "Talbroyn", "attr": "budget", "value": "468k dollars", "text": "Talbroyn budget is 468k dollars"}
+{"day": 5, "op": "add", "key": "Xanvanon|budget", "entity": "Xanvanon", "attr": "budget", "value": "118k dollars", "text": "Xanvanon budget is 118k dollars"}
+{"day": 5, "op": "add", "key": "Yarquiar|status", "entity": "Yarquiar", "attr": "status", "value": "building", "text": "Yarquiar status is building"}
+{"day": 5, "op": "add", "key": "Wynkorus|lead", "entity": "Wynkorus", "attr": "lead", "value": "Dev Malhotra", "text": "Wynkorus lead is Dev Malhotra"}
+{"day": 5, "op": "add", "key": "Zubvanex|deadline quarter", "entity": "Zubvanex", "attr": "deadline quarter", "value": "Q4", "text": "Zubvanex deadline quarter is Q4"}
+{"day": 5, "op": "add", "key": "Savyarex|headcount", "entity": "Savyarex", "attr": "headcount", "value": "21 people", "text": "Savyarex headcount is 21 people"}
+{"day": 5, "op": "add", "key": "Browynon|status", "entity": "Browynon", "attr": "status", "value": "paused", "text": "Browynon status is paused"}
+{"day": 5, "op": "add", "key": "Browynon|lead", "entity": "Browynon", "attr": "lead", "value": "Luis Herrera", "text": "Browynon lead is Luis Herrera"}
+{"day": 6, "op": "add", "key": "Zelwynus|deadline quarter", "entity": "Zelwynus", "attr": "deadline quarter", "value": "Q4", "text": "Zelwynus deadline quarter is Q4"}
+{"day": 6, "op": "add", "key": "Lumtreex|sponsor", "entity": "Lumtreex", "attr": "sponsor", "value": "Greta Olsen", "text": "Lumtreex sponsor is Greta Olsen"}
+{"day": 6, "op": "add", "key": "Broulmor|headcount", "entity": "Broulmor", "attr": "headcount", "value": "28 people", "text": "Broulmor headcount is 28 people"}
+{"day": 6, "op": "add", "key": "Pryulmor|deadline quarter", "entity": "Pryulmor", "attr": "deadline quarter", "value": "Q4", "text": "Pryulmor deadline quarter is Q4"}
+{"day": 6, "op": "add", "key": "Fenulmor|budget", "entity": "Fenulmor", "attr": "budget", "value": "83k dollars", "text": "Fenulmor budget is 83k dollars"}
+{"day": 6, "op": "add", "key": "Fenulmor|lead", "entity": "Fenulmor", "attr": "lead", "value": "Aiko Tanaka", "text": "Fenulmor lead is Aiko Tanaka"}
+{"day": 6, "op": "add", "key": "Yarmiryn|headcount", "entity": "Yarmiryn", "attr": "headcount", "value": "23 people", "text": "Yarmiryn headcount is 23 people"}
+{"day": 6, "op": "add", "key": "Ulmsavus|sponsor", "entity": "Ulmsavus", "attr": "sponsor", "value": "Tara Singh", "text": "Ulmsavus sponsor is Tara Singh"}
+{"day": 6, "op": "add", "key": "Quidraon|deadline quarter", "entity": "Quidraon", "attr": "deadline quarter", "value": "Q3", "text": "Quidraon deadline quarter is Q3"}
+{"day": 6, "op": "add", "key": "Mirzelor|sponsor", "entity": "Mirzelor", "attr": "sponsor", "value": "Pia Jensen", "text": "Mirzelor sponsor is Pia Jensen"}
+{"day": 6, "op": "add", "key": "Browynon|headcount", "entity": "Browynon", "attr": "headcount", "value": "11 people", "text": "Browynon headcount is 11 people"}
+{"day": 6, "op": "add", "key": "Quinexex|override", "entity": "Quinexex", "attr": "override", "value": "temp-717", "forgetAfterDay": 17, "text": "Quinexex has a temporary override code temp-717 until day 17"}
+{"day": 7, "op": "add", "key": "Talzubia|lead", "entity": "Talzubia", "attr": "lead", "value": "Pia Jensen", "text": "Talzubia lead is Pia Jensen"}
+{"day": 7, "op": "add", "key": "Talzubia|budget", "entity": "Talzubia", "attr": "budget", "value": "681k dollars", "text": "Talzubia budget is 681k dollars"}
+{"day": 7, "op": "add", "key": "Brobroex|lead", "entity": "Brobroex", "attr": "lead", "value": "Jonas Berg", "text": "Brobroex lead is Jonas Berg"}
+{"day": 7, "op": "add", "key": "Quidraon|sponsor", "entity": "Quidraon", "attr": "sponsor", "value": "Jonas Berg", "text": "Quidraon sponsor is Jonas Berg"}
+{"day": 7, "op": "add", "key": "Mirzelor|budget", "entity": "Mirzelor", "attr": "budget", "value": "204k dollars", "text": "Mirzelor budget is 204k dollars"}
+{"day": 7, "op": "add", "key": "Yarquiar|headcount", "entity": "Yarquiar", "attr": "headcount", "value": "6 people", "text": "Yarquiar headcount is 6 people"}
+{"day": 7, "op": "add", "key": "Vankorus|lead", "entity": "Vankorus", "attr": "lead", "value": "Luis Herrera", "text": "Vankorus lead is Luis Herrera"}
+{"day": 7, "op": "add", "key": "Browynon|sponsor", "entity": "Browynon", "attr": "sponsor", "value": "Quentin Roy", "text": "Browynon sponsor is Quentin Roy"}
+{"day": 8, "op": "add", "key": "Savmirus|sponsor", "entity": "Savmirus", "attr": "sponsor", "value": "Mona Eid", "text": "Savmirus sponsor is Mona Eid"}
+{"day": 8, "op": "add", "key": "Wynnexor|headcount", "entity": "Wynnexor", "attr": "headcount", "value": "13 people", "text": "Wynnexor headcount is 13 people"}
+{"day": 8, "op": "add", "key": "Brofenyn|headcount", "entity": "Brofenyn", "attr": "headcount", "value": "13 people", "text": "Brofenyn headcount is 13 people"}
+{"day": 8, "op": "add", "key": "Xankoria|lead", "entity": "Xankoria", "attr": "lead", "value": "Opal Reyes", "text": "Xankoria lead is Opal Reyes"}
+{"day": 8, "op": "add", "key": "Drafenia|deadline quarter", "entity": "Drafenia", "attr": "deadline quarter", "value": "Q2", "text": "Drafenia deadline quarter is Q2"}
+{"day": 8, "op": "add", "key": "Wynkorus|budget", "entity": "Wynkorus", "attr": "budget", "value": "381k dollars", "text": "Wynkorus budget is 381k dollars"}
+{"day": 8, "op": "add", "key": "Zubvanex|lead", "entity": "Zubvanex", "attr": "lead", "value": "Esme Walker", "text": "Zubvanex lead is Esme Walker"}
+{"day": 9, "op": "add", "key": "Taltalon|deadline quarter", "entity": "Taltalon", "attr": "deadline quarter", "value": "Q4", "text": "Taltalon deadline quarter is Q4"}
+{"day": 9, "op": "add", "key": "Lumkoron|headcount", "entity": "Lumkoron", "attr": "headcount", "value": "9 people", "text": "Lumkoron headcount is 9 people"}
+{"day": 9, "op": "add", "key": "Savmiryn|status", "entity": "Savmiryn", "attr": "status", "value": "launched", "text": "Savmiryn status is launched"}
+{"day": 9, "op": "add", "key": "Nexwynyn|lead", "entity": "Nexwynyn", "attr": "lead", "value": "Rosa Greco", "text": "Nexwynyn lead is Rosa Greco"}
+{"day": 9, "op": "add", "key": "Vankorus|deadline quarter", "entity": "Vankorus", "attr": "deadline quarter", "value": "Q2", "text": "Vankorus deadline quarter is Q2"}
+{"day": 10, "op": "add", "key": "Savmirus|headcount", "entity": "Savmirus", "attr": "headcount", "value": "9 people", "text": "Savmirus headcount is 9 people"}
+{"day": 10, "op": "add", "key": "Wynnexor|deadline quarter", "entity": "Wynnexor", "attr": "deadline quarter", "value": "Q2", "text": "Wynnexor deadline quarter is Q2"}
+{"day": 10, "op": "add", "key": "Brofenyn|status", "entity": "Brofenyn", "attr": "status", "value": "launched", "text": "Brofenyn status is launched"}
+{"day": 10, "op": "add", "key": "Brobroex|status", "entity": "Brobroex", "attr": "status", "value": "launched", "text": "Brobroex status is launched"}
+{"day": 10, "op": "add", "key": "Ulmsavus|lead", "entity": "Ulmsavus", "attr": "lead", "value": "Bruno Costa", "text": "Ulmsavus lead is Bruno Costa"}
+{"day": 10, "op": "add", "key": "Drafenia|sponsor", "entity": "Drafenia", "attr": "sponsor", "value": "Jonas Berg", "text": "Drafenia sponsor is Jonas Berg"}
+{"day": 10, "op": "add", "key": "Mirzelor|lead", "entity": "Mirzelor", "attr": "lead", "value": "Esme Walker", "text": "Mirzelor lead is Esme Walker"}
+{"day": 10, "op": "add", "key": "Savfenia|sponsor", "entity": "Savfenia", "attr": "sponsor", "value": "Sven Lund", "text": "Savfenia sponsor is Sven Lund"}
+{"day": 10, "op": "add", "key": "Savyarex|deadline quarter", "entity": "Savyarex", "attr": "deadline quarter", "value": "Q1", "text": "Savyarex deadline quarter is Q1"}
+{"day": 11, "op": "add", "key": "Zelwynus|sponsor", "entity": "Zelwynus", "attr": "sponsor", "value": "Rosa Greco", "text": "Zelwynus sponsor is Rosa Greco"}
+{"day": 11, "op": "add", "key": "Zelwynus|lead", "entity": "Zelwynus", "attr": "lead", "value": "Aiko Tanaka", "text": "Zelwynus lead is Aiko Tanaka"}
+{"day": 11, "op": "add", "key": "Kortalex|headcount", "entity": "Kortalex", "attr": "headcount", "value": "5 people", "text": "Kortalex headcount is 5 people"}
+{"day": 11, "op": "add", "key": "Savmiryn|headcount", "entity": "Savmiryn", "attr": "headcount", "value": "2 people", "text": "Savmiryn headcount is 2 people"}
+{"day": 11, "op": "add", "key": "Brofenyn|sponsor", "entity": "Brofenyn", "attr": "sponsor", "value": "Aiko Tanaka", "text": "Brofenyn sponsor is Aiko Tanaka"}
+{"day": 11, "op": "add", "key": "Pryulmor|budget", "entity": "Pryulmor", "attr": "budget", "value": "575k dollars", "text": "Pryulmor budget is 575k dollars"}
+{"day": 11, "op": "add", "key": "Yarmiryn|status", "entity": "Yarmiryn", "attr": "status", "value": "building", "text": "Yarmiryn status is building"}
+{"day": 11, "op": "add", "key": "Savostyn|deadline quarter", "entity": "Savostyn", "attr": "deadline quarter", "value": "Q2", "text": "Savostyn deadline quarter is Q2"}
+{"day": 11, "op": "add", "key": "Xanvanon|headcount", "entity": "Xanvanon", "attr": "headcount", "value": "2 people", "text": "Xanvanon headcount is 2 people"}
+{"day": 11, "op": "add", "key": "Kormiria|deadline quarter", "entity": "Kormiria", "attr": "deadline quarter", "value": "Q3", "text": "Kormiria deadline quarter is Q3"}
+{"day": 12, "op": "add", "key": "Kortalex|status", "entity": "Kortalex", "attr": "status", "value": "planning", "text": "Kortalex status is planning"}
+{"day": 12, "op": "add", "key": "Vanlumex|lead", "entity": "Vanlumex", "attr": "lead", "value": "Opal Reyes", "text": "Vanlumex lead is Opal Reyes"}
+{"day": 12, "op": "add", "key": "Fenulmor|deadline quarter", "entity": "Fenulmor", "attr": "deadline quarter", "value": "Q2", "text": "Fenulmor deadline quarter is Q2"}
+{"day": 13, "op": "add", "key": "Fenkoror|lead", "entity": "Fenkoror", "attr": "lead", "value": "Aiko Tanaka", "text": "Fenkoror lead is Aiko Tanaka"}
+{"day": 13, "op": "add", "key": "Broulmor|deadline quarter", "entity": "Broulmor", "attr": "deadline quarter", "value": "Q2", "text": "Broulmor deadline quarter is Q2"}
+{"day": 13, "op": "add", "key": "Xankoria|deadline quarter", "entity": "Xankoria", "attr": "deadline quarter", "value": "Q2", "text": "Xankoria deadline quarter is Q2"}
+{"day": 13, "op": "add", "key": "Xankoria|status", "entity": "Xankoria", "attr": "status", "value": "building", "text": "Xankoria status is building"}
+{"day": 13, "op": "add", "key": "Fenulmor|status", "entity": "Fenulmor", "attr": "status", "value": "launched", "text": "Fenulmor status is launched"}
+{"day": 13, "op": "add", "key": "Savostyn|headcount", "entity": "Savostyn", "attr": "headcount", "value": "5 people", "text": "Savostyn headcount is 5 people"}
+{"day": 13, "op": "add", "key": "Xanvanon|lead", "entity": "Xanvanon", "attr": "lead", "value": "Rosa Greco", "text": "Xanvanon lead is Rosa Greco"}
+{"day": 13, "op": "add", "key": "Wynulmia|sponsor", "entity": "Wynulmia", "attr": "sponsor", "value": "Dev Malhotra", "text": "Wynulmia sponsor is Dev Malhotra"}
+{"day": 13, "op": "add", "key": "Lumxania|sponsor", "entity": "Lumxania", "attr": "sponsor", "value": "Hugo Lambert", "text": "Lumxania sponsor is Hugo Lambert"}
+{"day": 13, "op": "add", "key": "Lumxania|budget", "entity": "Lumxania", "attr": "budget", "value": "518k dollars", "text": "Lumxania budget is 518k dollars"}
+{"day": 14, "op": "add", "key": "Quinexex|lead", "entity": "Quinexex", "attr": "lead", "value": "Keira Doyle", "text": "Quinexex lead is Keira Doyle"}
+{"day": 14, "op": "add", "key": "Kortalex|sponsor", "entity": "Kortalex", "attr": "sponsor", "value": "Nils Persson", "text": "Kortalex sponsor is Nils Persson"}
+{"day": 14, "op": "add", "key": "Taltalon|status", "entity": "Taltalon", "attr": "status", "value": "launched", "text": "Taltalon status is launched"}
+{"day": 14, "op": "add", "key": "Fenkoror|budget", "entity": "Fenkoror", "attr": "budget", "value": "596k dollars", "text": "Fenkoror budget is 596k dollars"}
+{"day": 14, "op": "add", "key": "Ulmpryyn|sponsor", "entity": "Ulmpryyn", "attr": "sponsor", "value": "Dev Malhotra", "text": "Ulmpryyn sponsor is Dev Malhotra"}
+{"day": 14, "op": "add", "key": "Tallumyn|headcount", "entity": "Tallumyn", "attr": "headcount", "value": "24 people", "text": "Tallumyn headcount is 24 people"}
+{"day": 14, "op": "add", "key": "Ulmsavus|status", "entity": "Ulmsavus", "attr": "status", "value": "paused", "text": "Ulmsavus status is paused"}
+{"day": 14, "op": "add", "key": "Nexwynyn|deadline quarter", "entity": "Nexwynyn", "attr": "deadline quarter", "value": "Q2", "text": "Nexwynyn deadline quarter is Q2"}
+{"day": 14, "op": "add", "key": "Savfenia|status", "entity": "Savfenia", "attr": "status", "value": "paused", "text": "Savfenia status is paused"}
+{"day": 14, "op": "add", "key": "Savostyn|override", "entity": "Savostyn", "attr": "override", "value": "temp-715", "forgetAfterDay": 21, "text": "Savostyn has a temporary override code temp-715 until day 21"}
+{"day": 15, "op": "add", "key": "Lumtreex|deadline quarter", "entity": "Lumtreex", "attr": "deadline quarter", "value": "Q3", "text": "Lumtreex deadline quarter is Q3"}
+{"day": 15, "op": "add", "key": "Ulmpryyn|deadline quarter", "entity": "Ulmpryyn", "attr": "deadline quarter", "value": "Q4", "text": "Ulmpryyn deadline quarter is Q4"}
+{"day": 15, "op": "add", "key": "Yarmiryn|lead", "entity": "Yarmiryn", "attr": "lead", "value": "Mona Eid", "text": "Yarmiryn lead is Mona Eid"}
+{"day": 15, "op": "add", "key": "Quidraon|headcount", "entity": "Quidraon", "attr": "headcount", "value": "19 people", "text": "Quidraon headcount is 19 people"}
+{"day": 15, "op": "add", "key": "Nexwynyn|budget", "entity": "Nexwynyn", "attr": "budget", "value": "548k dollars", "text": "Nexwynyn budget is 548k dollars"}
+{"day": 15, "op": "add", "key": "Nexwynyn|status", "entity": "Nexwynyn", "attr": "status", "value": "launched", "text": "Nexwynyn status is launched"}
+{"day": 15, "op": "add", "key": "Zubvanex|headcount", "entity": "Zubvanex", "attr": "headcount", "value": "11 people", "text": "Zubvanex headcount is 11 people"}
+{"day": 15, "op": "add", "key": "Lumxania|status", "entity": "Lumxania", "attr": "status", "value": "paused", "text": "Lumxania status is paused"}
+{"day": 15, "op": "add", "key": "Savmirus|override", "entity": "Savmirus", "attr": "override", "value": "temp-733", "forgetAfterDay": 24, "text": "Savmirus has a temporary override code temp-733 until day 24"}
+{"day": 16, "op": "add", "key": "Zelwynus|headcount", "entity": "Zelwynus", "attr": "headcount", "value": "11 people", "text": "Zelwynus headcount is 11 people"}
+{"day": 16, "op": "add", "key": "Vanlumex|budget", "entity": "Vanlumex", "attr": "budget", "value": "628k dollars", "text": "Vanlumex budget is 628k dollars"}
+{"day": 16, "op": "add", "key": "Tallumyn|sponsor", "entity": "Tallumyn", "attr": "sponsor", "value": "Nils Persson", "text": "Tallumyn sponsor is Nils Persson"}
+{"day": 16, "op": "add", "key": "Pryulmor|sponsor", "entity": "Pryulmor", "attr": "sponsor", "value": "Bruno Costa", "text": "Pryulmor sponsor is Bruno Costa"}
+{"day": 16, "op": "add", "key": "Yarmiryn|sponsor", "entity": "Yarmiryn", "attr": "sponsor", "value": "Farid Nasser", "text": "Yarmiryn sponsor is Farid Nasser"}
+{"day": 16, "op": "add", "key": "Ulmsavus|deadline quarter", "entity": "Ulmsavus", "attr": "deadline quarter", "value": "Q2", "text": "Ulmsavus deadline quarter is Q2"}
+{"day": 16, "op": "add", "key": "Drafenia|status", "entity": "Drafenia", "attr": "status", "value": "building", "text": "Drafenia status is building"}
+{"day": 16, "op": "add", "key": "Savostyn|budget", "entity": "Savostyn", "attr": "budget", "value": "642k dollars", "text": "Savostyn budget is 642k dollars"}
+{"day": 16, "op": "add", "key": "Quidraon|status", "entity": "Quidraon", "attr": "status", "value": "building", "text": "Quidraon status is building"}
+{"day": 16, "op": "add", "key": "Kormiria|sponsor", "entity": "Kormiria", "attr": "sponsor", "value": "Bruno Costa", "text": "Kormiria sponsor is Bruno Costa"}
+{"day": 16, "op": "add", "key": "Yarquiar|deadline quarter", "entity": "Yarquiar", "attr": "deadline quarter", "value": "Q3", "text": "Yarquiar deadline quarter is Q3"}
+{"day": 16, "op": "add", "key": "Savyarex|status", "entity": "Savyarex", "attr": "status", "value": "planning", "text": "Savyarex status is planning"}
+{"day": 16, "op": "add", "key": "Vankorus|budget", "entity": "Vankorus", "attr": "budget", "value": "668k dollars", "text": "Vankorus budget is 668k dollars"}
+{"day": 17, "op": "add", "key": "Savmirus|budget", "entity": "Savmirus", "attr": "budget", "value": "310k dollars", "text": "Savmirus budget is 310k dollars"}
+{"day": 17, "op": "add", "key": "Talzubia|deadline quarter", "entity": "Talzubia", "attr": "deadline quarter", "value": "Q3", "text": "Talzubia deadline quarter is Q3"}
+{"day": 17, "op": "add", "key": "Vanlumex|headcount", "entity": "Vanlumex", "attr": "headcount", "value": "30 people", "text": "Vanlumex headcount is 30 people"}
+{"day": 17, "op": "add", "key": "Ulmpryyn|lead", "entity": "Ulmpryyn", "attr": "lead", "value": "Bruno Costa", "text": "Ulmpryyn lead is Bruno Costa"}
+{"day": 17, "op": "add", "key": "Tretalia|status", "entity": "Tretalia", "attr": "status", "value": "building", "text": "Tretalia status is building"}
+{"day": 17, "op": "add", "key": "Savostyn|status", "entity": "Savostyn", "attr": "status", "value": "paused", "text": "Savostyn status is paused"}
+{"day": 17, "op": "add", "key": "Wynulmia|headcount", "entity": "Wynulmia", "attr": "headcount", "value": "25 people", "text": "Wynulmia headcount is 25 people"}
+{"day": 17, "op": "add", "key": "Wynkorus|status", "entity": "Wynkorus", "attr": "status", "value": "launched", "text": "Wynkorus status is launched"}
+{"day": 17, "op": "add", "key": "Savfenia|deadline quarter", "entity": "Savfenia", "attr": "deadline quarter", "value": "Q2", "text": "Savfenia deadline quarter is Q2"}
+{"day": 18, "op": "add", "key": "Taltalon|sponsor", "entity": "Taltalon", "attr": "sponsor", "value": "Quentin Roy", "text": "Taltalon sponsor is Quentin Roy"}
+{"day": 18, "op": "add", "key": "Lumkoron|lead", "entity": "Lumkoron", "attr": "lead", "value": "Greta Olsen", "text": "Lumkoron lead is Greta Olsen"}
+{"day": 18, "op": "add", "key": "Lumkoron|status", "entity": "Lumkoron", "attr": "status", "value": "launched", "text": "Lumkoron status is launched"}
+{"day": 18, "op": "add", "key": "Lumtreex|budget", "entity": "Lumtreex", "attr": "budget", "value": "681k dollars", "text": "Lumtreex budget is 681k dollars"}
+{"day": 18, "op": "add", "key": "Broulmor|budget", "entity": "Broulmor", "attr": "budget", "value": "472k dollars", "text": "Broulmor budget is 472k dollars"}
+{"day": 18, "op": "add", "key": "Brofenyn|budget", "entity": "Brofenyn", "attr": "budget", "value": "620k dollars", "text": "Brofenyn budget is 620k dollars"}
+{"day": 18, "op": "add", "key": "Talbroyn|lead", "entity": "Talbroyn", "attr": "lead", "value": "Tara Singh", "text": "Talbroyn lead is Tara Singh"}
+{"day": 18, "op": "add", "key": "Talbroyn|headcount", "entity": "Talbroyn", "attr": "headcount", "value": "14 people", "text": "Talbroyn headcount is 14 people"}
+{"day": 18, "op": "add", "key": "Kormiria|lead", "entity": "Kormiria", "attr": "lead", "value": "Dev Malhotra", "text": "Kormiria lead is Dev Malhotra"}
+{"day": 18, "op": "add", "key": "Kormiria|override", "entity": "Kormiria", "attr": "override", "value": "temp-235", "forgetAfterDay": 27, "text": "Kormiria has a temporary override code temp-235 until day 27"}
+{"day": 20, "op": "add", "key": "Savfenia|override", "entity": "Savfenia", "attr": "override", "value": "temp-107", "forgetAfterDay": 27, "text": "Savfenia has a temporary override code temp-107 until day 27"}
+{"day": 20, "op": "add", "key": "Lumkoron|override", "entity": "Lumkoron", "attr": "override", "value": "temp-859", "forgetAfterDay": 33, "text": "Lumkoron has a temporary override code temp-859 until day 33"}
+{"day": 21, "op": "update", "key": "Talzubia|budget", "entity": "Talzubia", "attr": "budget", "value": "631k dollars", "old": "681k dollars", "text": "Talzubia budget is now 631k dollars"}
+{"day": 21, "op": "update", "key": "Lumxania|sponsor", "entity": "Lumxania", "attr": "sponsor", "value": "Ines Moreau", "old": "Hugo Lambert", "text": "Lumxania sponsor is now Ines Moreau"}
+{"day": 22, "op": "update", "key": "Mirzelor|lead", "entity": "Mirzelor", "attr": "lead", "value": "Greta Olsen", "old": "Esme Walker", "text": "Mirzelor lead is now Greta Olsen"}
+{"day": 23, "op": "add", "key": "Tretalia|override", "entity": "Tretalia", "attr": "override", "value": "temp-361", "forgetAfterDay": 37, "text": "Tretalia has a temporary override code temp-361 until day 37"}
+{"day": 23, "op": "add", "key": "Vanlumex|override", "entity": "Vanlumex", "attr": "override", "value": "temp-399", "forgetAfterDay": 34, "text": "Vanlumex has a temporary override code temp-399 until day 34"}
+{"day": 24, "op": "update", "key": "Wynkorus|status", "entity": "Wynkorus", "attr": "status", "value": "testing", "old": "launched", "text": "Wynkorus status is now testing"}
+{"day": 25, "op": "add", "key": "Ulmpryyn|override", "entity": "Ulmpryyn", "attr": "override", "value": "temp-705", "forgetAfterDay": 36, "text": "Ulmpryyn has a temporary override code temp-705 until day 36"}
+{"day": 26, "op": "update", "key": "Lumkoron|status", "entity": "Lumkoron", "attr": "status", "value": "paused", "old": "launched", "text": "Lumkoron status is now paused"}
+{"day": 28, "op": "update", "key": "Mirzelor|sponsor", "entity": "Mirzelor", "attr": "sponsor", "value": "Esme Walker", "old": "Pia Jensen", "text": "Mirzelor sponsor is now Esme Walker"}
+{"day": 28, "op": "consolidate"}
+{"day": 29, "op": "update", "key": "Zelwynus|deadline quarter", "entity": "Zelwynus", "attr": "deadline quarter", "value": "Q2", "old": "Q4", "text": "Zelwynus deadline quarter is now Q2"}
+{"day": 29, "op": "update", "key": "Broulmor|headcount", "entity": "Broulmor", "attr": "headcount", "value": "17 people", "old": "28 people", "text": "Broulmor headcount is now 17 people"}
+{"day": 29, "op": "update", "key": "Quidraon|deadline quarter", "entity": "Quidraon", "attr": "deadline quarter", "value": "Q4", "old": "Q3", "text": "Quidraon deadline quarter is now Q4"}
+{"day": 31, "op": "update", "key": "Fenkoror|deadline quarter", "entity": "Fenkoror", "attr": "deadline quarter", "value": "Q2", "old": "Q1", "text": "Fenkoror deadline quarter is now Q2"}
+{"day": 31, "op": "update", "key": "Pryulmor|deadline quarter", "entity": "Pryulmor", "attr": "deadline quarter", "value": "Q1", "old": "Q4", "text": "Pryulmor deadline quarter is now Q1"}
+{"day": 32, "op": "update", "key": "Xanvanon|lead", "entity": "Xanvanon", "attr": "lead", "value": "Opal Reyes", "old": "Rosa Greco", "text": "Xanvanon lead is now Opal Reyes"}
+{"day": 33, "op": "update", "key": "Nexwynyn|lead", "entity": "Nexwynyn", "attr": "lead", "value": "Luis Herrera", "old": "Rosa Greco", "text": "Nexwynyn lead is now Luis Herrera"}
+{"day": 33, "op": "update", "key": "Pryulmor|sponsor", "entity": "Pryulmor", "attr": "sponsor", "value": "Nils Persson", "old": "Bruno Costa", "text": "Pryulmor sponsor is now Nils Persson"}
+{"day": 34, "op": "add", "key": "Talbroyn|override", "entity": "Talbroyn", "attr": "override", "value": "temp-299", "forgetAfterDay": 43, "text": "Talbroyn has a temporary override code temp-299 until day 43"}
+{"day": 35, "op": "update", "key": "Browynon|sponsor", "entity": "Browynon", "attr": "sponsor", "value": "Dev Malhotra", "old": "Quentin Roy", "text": "Browynon sponsor is now Dev Malhotra"}
+{"day": 36, "op": "update", "key": "Brofenyn|sponsor", "entity": "Brofenyn", "attr": "sponsor", "value": "Keira Doyle", "old": "Aiko Tanaka", "text": "Brofenyn sponsor is now Keira Doyle"}
+{"day": 39, "op": "update", "key": "Kormiria|status", "entity": "Kormiria", "attr": "status", "value": "testing", "old": "planning", "text": "Kormiria status is now testing"}
+{"day": 40, "op": "add", "key": "Xankoria|override", "entity": "Xankoria", "attr": "override", "value": "temp-928", "forgetAfterDay": 47, "text": "Xankoria has a temporary override code temp-928 until day 47"}
+{"day": 40, "op": "update", "key": "Yarquiar|status", "entity": "Yarquiar", "attr": "status", "value": "launched", "old": "building", "text": "Yarquiar status is now launched"}
+{"day": 40, "op": "dup", "key": "Fenulmor|lead", "entity": "Fenulmor", "attr": "lead", "value": "Aiko Tanaka", "text": "The lead for Fenulmor is Aiko Tanaka", "exact": false}
+{"day": 40, "op": "query", "entity": "Zelwynus", "attr": "deadline quarter", "question": "What is Zelwynus's deadline quarter?", "expect": ["Q2"], "forbid": ["Q4"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Yarquiar", "attr": "status", "question": "What is Yarquiar's status?", "expect": ["launched"], "forbid": ["building"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Lumkoron", "attr": "status", "question": "What is Lumkoron's status?", "expect": ["paused"], "forbid": ["launched"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Mirzelor", "attr": "sponsor", "question": "What is Mirzelor's sponsor?", "expect": ["Esme Walker"], "forbid": ["Pia Jensen"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Mirzelor", "attr": "lead", "question": "What is Mirzelor's lead?", "expect": ["Greta Olsen"], "forbid": ["Esme Walker"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Pryulmor", "attr": "sponsor", "question": "What is Pryulmor's sponsor?", "expect": ["Nils Persson"], "forbid": ["Bruno Costa"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Brobroex", "attr": "status", "question": "What is Brobroex's status?", "expect": ["launched"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Yarmiryn", "attr": "lead", "question": "What is Yarmiryn's lead?", "expect": ["Mona Eid"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Vanlumex", "attr": "headcount", "question": "What is Vanlumex's headcount?", "expect": ["30 people"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Talbroyn", "attr": "budget", "question": "What is Talbroyn's budget?", "expect": ["468k dollars"], "forbid": [], "asOfDay": 40}
+{"day": 41, "op": "update", "key": "Savmirus|status", "entity": "Savmirus", "attr": "status", "value": "planning", "old": "paused", "text": "Savmirus status is now planning"}
+{"day": 41, "op": "dup", "key": "Zubvanex|sponsor", "entity": "Zubvanex", "attr": "sponsor", "value": "Luis Herrera", "text": "The sponsor for Zubvanex is Luis Herrera", "exact": false}
+{"day": 43, "op": "update", "key": "Xankoria|status", "entity": "Xankoria", "attr": "status", "value": "launched", "old": "building", "text": "Xankoria status is now launched"}
+{"day": 43, "op": "dup", "key": "Lumkoron|headcount", "entity": "Lumkoron", "attr": "headcount", "value": "9 people", "text": "Lumkoron headcount is 9 people", "exact": true}
+{"day": 43, "op": "dup", "key": "Zubvanex|headcount", "entity": "Zubvanex", "attr": "headcount", "value": "11 people", "text": "The headcount for Zubvanex is 11 people", "exact": false}
+{"day": 44, "op": "update", "key": "Nexwynyn|status", "entity": "Nexwynyn", "attr": "status", "value": "planning", "old": "launched", "text": "Nexwynyn status is now planning"}
+{"day": 45, "op": "update", "key": "Taltalon|deadline quarter", "entity": "Taltalon", "attr": "deadline quarter", "value": "Q2", "old": "Q4", "text": "Taltalon deadline quarter is now Q2"}
+{"day": 45, "op": "dup", "key": "Vanlumex|sponsor", "entity": "Vanlumex", "attr": "sponsor", "value": "Sven Lund", "text": "The sponsor for Vanlumex is Sven Lund", "exact": false}
+{"day": 46, "op": "dup", "key": "Zelwynus|headcount", "entity": "Zelwynus", "attr": "headcount", "value": "11 people", "text": "Zelwynus headcount is 11 people", "exact": true}
+{"day": 46, "op": "dup", "key": "Fenulmor|budget", "entity": "Fenulmor", "attr": "budget", "value": "83k dollars", "text": "The budget for Fenulmor is 83k dollars", "exact": false}
+{"day": 47, "op": "update", "key": "Mirzelor|sponsor", "entity": "Mirzelor", "attr": "sponsor", "value": "Greta Olsen", "old": "Esme Walker", "text": "Mirzelor sponsor is now Greta Olsen"}
+{"day": 49, "op": "add", "key": "Savyarex|override", "entity": "Savyarex", "attr": "override", "value": "temp-970", "forgetAfterDay": 57, "text": "Savyarex has a temporary override code temp-970 until day 57"}
+{"day": 49, "op": "update", "key": "Savfenia|sponsor", "entity": "Savfenia", "attr": "sponsor", "value": "Farid Nasser", "old": "Sven Lund", "text": "Savfenia sponsor is now Farid Nasser"}
+{"day": 49, "op": "dup", "key": "Wynnexor|deadline quarter", "entity": "Wynnexor", "attr": "deadline quarter", "value": "Q2", "text": "Wynnexor deadline quarter is Q2", "exact": true}
+{"day": 49, "op": "dup", "key": "Kortalex|headcount", "entity": "Kortalex", "attr": "headcount", "value": "5 people", "text": "Kortalex headcount is 5 people", "exact": true}
+{"day": 49, "op": "dup", "key": "Talbroyn|budget", "entity": "Talbroyn", "attr": "budget", "value": "468k dollars", "text": "The budget for Talbroyn is 468k dollars", "exact": false}
+{"day": 50, "op": "add", "key": "Browynon|override", "entity": "Browynon", "attr": "override", "value": "temp-371", "forgetAfterDay": 63, "text": "Browynon has a temporary override code temp-371 until day 63"}
+{"day": 50, "op": "update", "key": "Savyarex|headcount", "entity": "Savyarex", "attr": "headcount", "value": "14 people", "old": "21 people", "text": "Savyarex headcount is now 14 people"}
+{"day": 51, "op": "dup", "key": "Yarquiar|sponsor", "entity": "Yarquiar", "attr": "sponsor", "value": "Farid Nasser", "text": "Yarquiar sponsor is Farid Nasser", "exact": true}
+{"day": 52, "op": "add", "key": "Xanvanon|override", "entity": "Xanvanon", "attr": "override", "value": "temp-611", "forgetAfterDay": 63, "text": "Xanvanon has a temporary override code temp-611 until day 63"}
+{"day": 52, "op": "update", "key": "Quidraon|sponsor", "entity": "Quidraon", "attr": "sponsor", "value": "Luis Herrera", "old": "Jonas Berg", "text": "Quidraon sponsor is now Luis Herrera"}
+{"day": 52, "op": "update", "key": "Zelwynus|sponsor", "entity": "Zelwynus", "attr": "sponsor", "value": "Dev Malhotra", "old": "Rosa Greco", "text": "Zelwynus sponsor is now Dev Malhotra"}
+{"day": 52, "op": "dup", "key": "Zubvanex|deadline quarter", "entity": "Zubvanex", "attr": "deadline quarter", "value": "Q4", "text": "Zubvanex deadline quarter is Q4", "exact": true}
+{"day": 52, "op": "dup", "key": "Talzubia|deadline quarter", "entity": "Talzubia", "attr": "deadline quarter", "value": "Q3", "text": "The deadline quarter for Talzubia is Q3", "exact": false}
+{"day": 53, "op": "dup", "key": "Taltalon|sponsor", "entity": "Taltalon", "attr": "sponsor", "value": "Quentin Roy", "text": "Taltalon sponsor is Quentin Roy", "exact": true}
+{"day": 53, "op": "dup", "key": "Xankoria|headcount", "entity": "Xankoria", "attr": "headcount", "value": "17 people", "text": "The headcount for Xankoria is 17 people", "exact": false}
+{"day": 54, "op": "update", "key": "Broulmor|status", "entity": "Broulmor", "attr": "status", "value": "planning", "old": "paused", "text": "Broulmor status is now planning"}
+{"day": 54, "op": "update", "key": "Mirzelor|budget", "entity": "Mirzelor", "attr": "budget", "value": "203k dollars", "old": "204k dollars", "text": "Mirzelor budget is now 203k dollars"}
+{"day": 54, "op": "dup", "key": "Pryulmor|status", "entity": "Pryulmor", "attr": "status", "value": "launched", "text": "The status for Pryulmor is launched", "exact": false}
+{"day": 55, "op": "update", "key": "Wynnexor|headcount", "entity": "Wynnexor", "attr": "headcount", "value": "5 people", "old": "13 people", "text": "Wynnexor headcount is now 5 people"}
+{"day": 56, "op": "update", "key": "Nexwynyn|deadline quarter", "entity": "Nexwynyn", "attr": "deadline quarter", "value": "Q3", "old": "Q2", "text": "Nexwynyn deadline quarter is now Q3"}
+{"day": 56, "op": "update", "key": "Savostyn|budget", "entity": "Savostyn", "attr": "budget", "value": "474k dollars", "old": "642k dollars", "text": "Savostyn budget is now 474k dollars"}
+{"day": 56, "op": "dup", "key": "Pryulmor|budget", "entity": "Pryulmor", "attr": "budget", "value": "575k dollars", "text": "Pryulmor budget is 575k dollars", "exact": true}
+{"day": 56, "op": "dup", "key": "Yarmiryn|status", "entity": "Yarmiryn", "attr": "status", "value": "building", "text": "The status for Yarmiryn is building", "exact": false}
+{"day": 56, "op": "dup", "key": "Brobroex|lead", "entity": "Brobroex", "attr": "lead", "value": "Jonas Berg", "text": "The lead for Brobroex is Jonas Berg", "exact": false}
+{"day": 56, "op": "consolidate"}
+{"day": 57, "op": "dup", "key": "Savmirus|headcount", "entity": "Savmirus", "attr": "headcount", "value": "9 people", "text": "Savmirus headcount is 9 people", "exact": true}
+{"day": 57, "op": "dup", "key": "Lumxania|budget", "entity": "Lumxania", "attr": "budget", "value": "518k dollars", "text": "Lumxania budget is 518k dollars", "exact": true}
+{"day": 57, "op": "dup", "key": "Zubvanex|lead", "entity": "Zubvanex", "attr": "lead", "value": "Esme Walker", "text": "The lead for Zubvanex is Esme Walker", "exact": false}
+{"day": 57, "op": "dup", "key": "Savyarex|status", "entity": "Savyarex", "attr": "status", "value": "planning", "text": "The status for Savyarex is planning", "exact": false}
+{"day": 58, "op": "update", "key": "Savostyn|status", "entity": "Savostyn", "attr": "status", "value": "building", "old": "paused", "text": "Savostyn status is now building"}
+{"day": 58, "op": "update", "key": "Brobroex|status", "entity": "Brobroex", "attr": "status", "value": "building", "old": "launched", "text": "Brobroex status is now building"}
+{"day": 58, "op": "dup", "key": "Brobroex|sponsor", "entity": "Brobroex", "attr": "sponsor", "value": "Aiko Tanaka", "text": "Brobroex sponsor is Aiko Tanaka", "exact": true}
+{"day": 59, "op": "update", "key": "Tallumyn|budget", "entity": "Tallumyn", "attr": "budget", "value": "285k dollars", "old": "521k dollars", "text": "Tallumyn budget is now 285k dollars"}
+{"day": 59, "op": "update", "key": "Nexwynyn|budget", "entity": "Nexwynyn", "attr": "budget", "value": "329k dollars", "old": "548k dollars", "text": "Nexwynyn budget is now 329k dollars"}
+{"day": 60, "op": "dup", "key": "Ulmpryyn|lead", "entity": "Ulmpryyn", "attr": "lead", "value": "Bruno Costa", "text": "Ulmpryyn lead is Bruno Costa", "exact": true}
+{"day": 61, "op": "update", "key": "Fenkoror|lead", "entity": "Fenkoror", "attr": "lead", "value": "Pia Jensen", "old": "Aiko Tanaka", "text": "Fenkoror lead is now Pia Jensen"}
+{"day": 61, "op": "update", "key": "Fenulmor|deadline quarter", "entity": "Fenulmor", "attr": "deadline quarter", "value": "Q4", "old": "Q2", "text": "Fenulmor deadline quarter is now Q4"}
+{"day": 63, "op": "update", "key": "Ulmsavus|lead", "entity": "Ulmsavus", "attr": "lead", "value": "Keira Doyle", "old": "Bruno Costa", "text": "Ulmsavus lead is now Keira Doyle"}
+{"day": 63, "op": "update", "key": "Tallumyn|headcount", "entity": "Tallumyn", "attr": "headcount", "value": "18 people", "old": "24 people", "text": "Tallumyn headcount is now 18 people"}
+{"day": 65, "op": "query", "entity": "Tallumyn", "attr": "headcount", "question": "What is Tallumyn's headcount?", "expect": ["18 people"], "forbid": ["24 people"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Browynon", "attr": "sponsor", "question": "What is Browynon's sponsor?", "expect": ["Dev Malhotra"], "forbid": ["Quentin Roy"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Yarquiar", "attr": "status", "question": "What is Yarquiar's status?", "expect": ["launched"], "forbid": ["building"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Mirzelor", "attr": "budget", "question": "What is Mirzelor's budget?", "expect": ["203k dollars"], "forbid": ["204k dollars"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Savmirus", "attr": "status", "question": "What is Savmirus's status?", "expect": ["planning"], "forbid": ["paused"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Lumxania", "attr": "sponsor", "question": "What is Lumxania's sponsor?", "expect": ["Ines Moreau"], "forbid": ["Hugo Lambert"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Talbroyn", "attr": "budget", "question": "What is Talbroyn's budget?", "expect": ["468k dollars"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Xankoria", "attr": "headcount", "question": "What is Xankoria's headcount?", "expect": ["17 people"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Yarmiryn", "attr": "lead", "question": "What is Yarmiryn's lead?", "expect": ["Mona Eid"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Lumxania", "attr": "deadline quarter", "question": "What is Lumxania's deadline quarter?", "expect": ["Q2"], "forbid": [], "asOfDay": 65}
+{"day": 66, "op": "update", "key": "Savmirus|sponsor", "entity": "Savmirus", "attr": "sponsor", "value": "Tara Singh", "old": "Mona Eid", "text": "Savmirus sponsor is now Tara Singh"}
+{"day": 67, "op": "update", "key": "Tallumyn|lead", "entity": "Tallumyn", "attr": "lead", "value": "Carmen Ortiz", "old": "Opal Reyes", "text": "Tallumyn lead is now Carmen Ortiz"}
+{"day": 67, "op": "update", "key": "Broulmor|budget", "entity": "Broulmor", "attr": "budget", "value": "321k dollars", "old": "472k dollars", "text": "Broulmor budget is now 321k dollars"}
+{"day": 68, "op": "update", "key": "Zelwynus|lead", "entity": "Zelwynus", "attr": "lead", "value": "Tara Singh", "old": "Aiko Tanaka", "text": "Zelwynus lead is now Tara Singh"}
+{"day": 68, "op": "update", "key": "Wynkorus|budget", "entity": "Wynkorus", "attr": "budget", "value": "642k dollars", "old": "381k dollars", "text": "Wynkorus budget is now 642k dollars"}
+{"day": 83, "op": "consolidate"}
+{"day": 84, "op": "query", "entity": "Talzubia", "attr": "budget", "question": "What is Talzubia's budget?", "expect": ["631k dollars"], "forbid": ["681k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quidraon", "attr": "deadline quarter", "question": "What is Quidraon's deadline quarter?", "expect": ["Q4"], "forbid": ["Q3"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zelwynus", "attr": "sponsor", "question": "What is Zelwynus's sponsor?", "expect": ["Dev Malhotra"], "forbid": ["Rosa Greco"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Broulmor", "attr": "status", "question": "What is Broulmor's status?", "expect": ["planning"], "forbid": ["paused"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Pryulmor", "attr": "sponsor", "question": "What is Pryulmor's sponsor?", "expect": ["Nils Persson"], "forbid": ["Bruno Costa"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Yarquiar", "attr": "status", "question": "What is Yarquiar's status?", "expect": ["launched"], "forbid": ["building"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Fenkoror", "attr": "deadline quarter", "question": "What is Fenkoror's deadline quarter?", "expect": ["Q2"], "forbid": ["Q1"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Broulmor", "attr": "budget", "question": "What is Broulmor's budget?", "expect": ["321k dollars"], "forbid": ["472k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Nexwynyn", "attr": "lead", "question": "What is Nexwynyn's lead?", "expect": ["Luis Herrera"], "forbid": ["Rosa Greco"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Fenkoror", "attr": "lead", "question": "What is Fenkoror's lead?", "expect": ["Pia Jensen"], "forbid": ["Aiko Tanaka"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xanvanon", "attr": "lead", "question": "What is Xanvanon's lead?", "expect": ["Opal Reyes"], "forbid": ["Rosa Greco"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zelwynus", "attr": "deadline quarter", "question": "What is Zelwynus's deadline quarter?", "expect": ["Q2"], "forbid": ["Q4"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Savyarex", "attr": "deadline quarter", "question": "What is Savyarex's deadline quarter?", "expect": ["Q1"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Wynkorus", "attr": "lead", "question": "What is Wynkorus's lead?", "expect": ["Dev Malhotra"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vanlumex", "attr": "budget", "question": "What is Vanlumex's budget?", "expect": ["628k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Yarmiryn", "attr": "lead", "question": "What is Yarmiryn's lead?", "expect": ["Mona Eid"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Savostyn", "attr": "headcount", "question": "What is Savostyn's headcount?", "expect": ["5 people"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Talzubia", "attr": "lead", "question": "What is Talzubia's lead?", "expect": ["Pia Jensen"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Mirzelor", "attr": "status", "question": "What is Mirzelor's status?", "expect": ["paused"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Browynon", "attr": "headcount", "question": "What is Browynon's headcount?", "expect": ["11 people"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "question": "What is Kormiria's override code?", "expect": [], "forbid": ["temp-235"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Xanvanon's override code?", "expect": [], "forbid": ["temp-611"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Tretalia's override code?", "expect": [], "forbid": ["temp-361"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Quinexex's override code?", "expect": [], "forbid": ["temp-717"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Ulmpryyn's override code?", "expect": [], "forbid": ["temp-705"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Savfenia's override code?", "expect": [], "forbid": ["temp-107"], "asOfDay": null, "kind": "stale"}
