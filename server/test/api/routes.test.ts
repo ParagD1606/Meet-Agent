@@ -169,6 +169,9 @@ describe("extension upload", () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const auth = { authorization: `Bearer ${tok.token}` };
     expect((await post("/ext/ask", auth, { lines: [], question: "x" })).status).toBe(400);
+    expect((await post("/ext/notes", {}, { lines: [{ speaker: "A", text: "hi" }] })).status).toBe(401);
+    expect((await post("/ext/notes", auth, { lines: [] })).status).toBe(400);
+    expect((await post("/ext/notes", auth, { lines: [{ speaker: "A", text: "hi" }], offset: 3, previous: "- x" })).status).not.toBe(401);
     expect((await post("/ext/analyze", auth, { lines: [{ speaker: "A", text: "hi" }], context: { roster: ["A"] }, known: [] })).status).not.toBe(401);
   });
 

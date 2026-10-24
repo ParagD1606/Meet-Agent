@@ -10,6 +10,7 @@
   <div id="capBanner" class="banner" hidden><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 11h2M14 11h2M8 15h5"/></svg><span class="grow">Captions are off, so nothing can be captured.</span><button id="capOn" class="primary sm">Turn on</button></div>
   <nav id="tabs" role="tablist">
     <button data-tab="live" class="on"><svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg>Live</button>
+    <button data-tab="notes"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Notes</button>
     <button data-tab="items"><svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>Items <span id="pendingCount" class="count" hidden></span></button>
     <button data-tab="ask"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Ask</button>
     <button data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</button>
@@ -20,6 +21,11 @@
     <div class="bar"><button id="recap" class="sm">✦ Catch me up</button><button id="importBtn" class="sm ghost">Import transcript</button><button id="backLive" class="sm" hidden>← Back to live</button></div>
     <div id="recapBox" class="card recap" hidden></div>
     <div id="transcript" class="transcript"></div><div id="liveEmpty" class="empty"></div>
+  </section>
+
+  <section id="notes" class="tab">
+    <div class="bar"><button id="notesNow" class="primary sm">✦ Update now</button><span id="notesMsg" class="muted grow"></span></div>
+    <div id="notesBody" class="notes"></div>
   </section>
 
   <section id="items" class="tab">
@@ -50,7 +56,7 @@
     </div>
     <div class="card">
       <h3>Behavior</h3>
-      <label class="check"><input type="checkbox" id="autoDetect" checked><span>Detect items automatically<br><span class="muted">Uses the model about once a minute during the call.</span></span></label>
+      <label class="check"><input type="checkbox" id="autoDetect" checked><span>Update notes and items automatically<br><span class="muted">Every 2 minutes during the call, when there is something new. Uses the model.</span></span></label>
       <label class="check"><input type="checkbox" id="autoSend" checked><span>Send approved items when the call ends</span></label>
     </div>
   </section>

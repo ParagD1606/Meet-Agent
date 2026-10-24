@@ -36,4 +36,8 @@ describe("extension lib", () => {
     expect(L.badge({ kind: "question", label: "suggestion" })).toBe("Open question");
     expect(L.badge({ kind: "task", label: "tentative" })).toBe("Tentative");
   });
+  test("renderNotes renders the markdown subset and escapes HTML", () => {
+    expect(L.renderNotes("## Decisions\n- Launch **Friday**\n- <img src=x onerror=alert(1)>\n\nplain")).toBe(
+      "<h4>Decisions</h4><ul><li>Launch <b>Friday</b></li><li>&lt;img src=x onerror=alert(1)&gt;</li></ul><p>plain</p>");
+  });
 });

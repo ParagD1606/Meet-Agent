@@ -140,3 +140,9 @@ label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 50
 .sheet h4 { margin: 0 0 8px; font-size: 15px; }
 .sheet ul { margin: 6px 0; padding-left: 18px; }
 .sheet textarea { width: 100%; min-height: 150px; margin-top: 8px; }
+
+/* notes */
+.notes { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 14px 12px; box-shadow: var(--shadow); }
+.notes h4 { margin: 14px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); }
+.notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 3px 0; } .notes p { margin: 6px 0; }
+.notes:has(.empty) { background: none; border: 0; box-shadow: none; }

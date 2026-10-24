@@ -73,6 +73,22 @@
   const LABELS = { confirmed: "Confirmed commitment", tentative: "Tentative", suggestion: "Suggestion" };
   const badge = (item) => item.kind === "question" ? "Open question" : item.kind === "decision" && item.label === "confirmed" ? "Decision" : LABELS[item.label] ?? "Tentative";
 
-  const api = { uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
+  const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  /** Renders the small Markdown subset the notes use (## headings, - bullets, **bold**). Escapes first, so model text can't inject HTML. */
+  function renderNotes(md) {
+    const inline = (t) => escHtml(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const out = []; let open = false;
+    for (const raw of String(md).split(/\r?\n/)) {
+      const line = raw.trim();
+      const li = /^[-*•]\s+(.*)$/.exec(line), h = /^#{1,4}\s+(.*)$/.exec(line);
+      if (li) { if (!open) { out.push("<ul>"); open = true; } out.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (open) { out.push("</ul>"); open = false; }
+      if (h) out.push(`<h4>${inline(h[1])}</h4>`); else if (line) out.push(`<p>${inline(line)}</p>`);
+    }
+    if (open) out.push("</ul>");
+    return out.join("");
+  }
+
+  const api = { renderNotes, uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
   if (typeof module !== "undefined") module.exports = api; else globalThis.BrainLib = api;
 })();

@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const { uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
+const { renderNotes, uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const hue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 50% 42%)`; };
 const ask = (msg) => chrome.runtime.sendMessage(msg);
@@ -62,6 +62,7 @@ function setConn(text, cls) { $("conn").textContent = text; $("conn").className 
 async function loadStore() {
   const s = (await chrome.storage.local.get(storeKey()))[storeKey()];
   state.store = migrate(s ?? { items: [] });
+  renderNotesTab();
   state.editing.clear();
   await refreshLoad();
 }
@@ -169,7 +170,7 @@ async function detect(auto = false) {
   if (state.analyzing) return;
   const block = needReady();
   if (block) { if (!auto) $("detectMsg").textContent = block; return; }
-  state.analyzing = true; state.lastRun = Date.now(); state.lastCount[src().key] = lines().length;
+  state.analyzing = true; if (!auto) { state.lastRun = Date.now(); state.lastCount[src().key] = lines().length; }
   $("detect").disabled = true; if (!auto) $("detectMsg").textContent = "Reading the transcript…";
   const r = await ask({ type: "api", path: "/ext/analyze", body: { lines: lines(), context: context(), known: state.store.items.map((i) => i.title) } });
   state.analyzing = false; $("detect").disabled = false;
@@ -181,10 +182,36 @@ async function detect(auto = false) {
   await persist();
 }
 $("detect").onclick = () => detect(false);
+const AUTO_MS = 120_000; // live notes and item detection refresh on this cycle
 function maybeAutoDetect() {
-  if (!state.cfg.autoDetect || !state.connected || state.analyzing || state.manual || !src()) return;
-  if (lines().length - (state.lastCount[src().key] ?? 0) >= 4 && Date.now() - state.lastRun > 45_000) detect(true);
+  if (!state.cfg.autoDetect || !state.connected || state.analyzing || state.updatingNotes || state.manual || !src()) return;
+  if (lines().length - (state.lastCount[src().key] ?? 0) < 3 || Date.now() - state.lastRun < AUTO_MS) return;
+  refreshCycle();
 }
+async function refreshCycle() { await updateNotes(true); await detect(true); }
+
+// ---------- live notes ----------
+function renderNotesTab() {
+  const n = state.store.notes;
+  $("notesBody").innerHTML = n?.text ? renderNotes(n.text) : `<div class="empty"><b>No notes yet</b>Live notes appear here and refresh every 2 minutes while the call runs. Press “Update now” to write the first ones.</div>`;
+  $("notesMsg").textContent = n?.at ? `Updated ${hhmm(n.at)} · ${n.upTo} lines covered` : "";
+}
+async function updateNotes(auto = false) {
+  if (state.updatingNotes) return;
+  const block = needReady();
+  if (block) { if (!auto) $("notesMsg").textContent = block; return; }
+  const prev = state.store.notes, all = lines(), upTo = Math.min(prev?.upTo ?? 0, all.length);
+  if (prev && upTo === all.length) { if (!auto) $("notesMsg").textContent = "Already up to date"; return; }
+  state.updatingNotes = true; state.lastRun = Date.now(); state.lastCount[src().key] = all.length;
+  $("notesNow").disabled = true; if (!auto) $("notesMsg").textContent = "Writing notes…";
+  const r = await ask({ type: "api", path: "/ext/notes", body: { lines: all.slice(upTo), offset: upTo, previous: prev?.text ?? "", context: context() } });
+  state.updatingNotes = false; $("notesNow").disabled = false;
+  if (!r?.ok) { if (!auto) $("notesMsg").textContent = failText(r); return; }
+  state.store.notes = { text: r.data.notes, at: Date.now(), upTo: all.length };
+  await chrome.storage.local.set({ [storeKey()]: state.store });
+  renderNotesTab();
+}
+$("notesNow").onclick = () => updateNotes(false);
 
 $("addForm").onsubmit = async (e) => {
   e.preventDefault(); const t = $("addText").value.trim(); if (!t) return;

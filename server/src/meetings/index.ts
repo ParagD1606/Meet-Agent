@@ -319,3 +319,15 @@ export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, kn
   const roster = new Map((ctx.roster ?? []).map((n) => [n.toLowerCase(), n]));
   return { items: out.items.map((i) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: i.assignee ? roster.get(i.assignee.toLowerCase()) ?? null : null })) };
 }
+
+const LIVE_NOTES_SYSTEM = `You keep running notes for a live meeting. You get the previous notes and the transcript lines added since (numbered like [12]).
+Return the updated notes in Markdown, replacing the old ones: keep what is still true, fold in the new lines, drop nothing that matters.
+Use these sections when they have content: "## Topics", "## Decisions", "## Action items" (with the owner when it was said), "## Open questions". Short bullets, plain words, no more than about 250 words.
+Use only the transcript. Never invent owners, dates or decisions. Output the notes only, no preamble.`;
+
+/** Rolls the previous live notes forward with the lines added since. `offset` is how many lines came before `lines`. */
+export async function updateLiveNotes(lines: LiveLine[], offset: number, previous: string, ctx: LiveContext): Promise<string> {
+  const fresh = lines.map((l, i) => `[${offset + i + 1}] ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`).join("\n").slice(-40_000);
+  const prompt = `${contextBlock(ctx)}\n\nPrevious notes:\n${previous.trim() || "(none yet)"}\n\nNew transcript lines:\n${fresh}`;
+  return (await completeText({ system: LIVE_NOTES_SYSTEM, prompt, role: "summarize", maxOutputTokens: 900 })).trim();
+}

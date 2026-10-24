@@ -4,7 +4,7 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { z } from "zod";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
-import { analyzeLiveMeeting, askLiveMeeting, getMeeting, ingestExtensionTranscript, listMeetings, syncRecentHuddles } from "../meetings";
+import { analyzeLiveMeeting, askLiveMeeting, getMeeting, ingestExtensionTranscript, listMeetings, syncRecentHuddles, updateLiveNotes } from "../meetings";
 import { httpError } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
@@ -83,4 +83,11 @@ extensionRoutes.post("/analyze", async (c) => {
   const roster = [...new Set([...(r.data.context.roster ?? []), ...r.data.lines.map((l) => l.speaker).filter(Boolean)])].slice(0, 100);
   try { return c.json(await analyzeLiveMeeting(r.data.lines, { ...r.data.context, roster }, r.data.known)); }
   catch (err) { log.warn("live analyze failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
+});
+
+extensionRoutes.post("/notes", async (c) => {
+  const r = await live(c, z.object({ lines: liveLines, offset: z.number().int().min(0).max(1_000_000).default(0), previous: z.string().max(8_000).default(""), context: liveCtx.default({}) }));
+  if ("res" in r) return r.res;
+  try { return c.json({ notes: await updateLiveNotes(r.data.lines, r.data.offset, r.data.previous, r.data.context) }); }
+  catch (err) { log.warn("live notes failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });
