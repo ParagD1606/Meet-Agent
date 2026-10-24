@@ -35,7 +35,7 @@ function NewDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   }
   const valid = d.prompt.trim() && !cronBad && (d.repeat === "cron" || d.runAt)
   return (
-    <Dialog open={open} onClose={onClose} title="New automation" width={560} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" loading={create.isPending} disabled={!valid} onClick={submit}>Create</Button></>}>
+    <Dialog open={open} onClose={onClose} title="New automation" width={560} height={680} footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" loading={create.isPending} disabled={!valid} onClick={submit}>Create</Button></>}>
       <div className="flex flex-col gap-4">
         <FormField label="Type">{() => <Segmented label="Type" value={d.kind} onChange={(kind) => setD({ ...d, kind })} items={[{ id: "digest", label: "Digest" }, { id: "reminder", label: "Reminder" }]} />}</FormField>
         <FormField label={d.kind === "digest" ? "What should the digest cover?" : "Reminder text"} hint={d.kind === "digest" ? "The bot researches read-only with workspace connections and posts a summary." : "Posted exactly as written."} error={fieldErr(create.error, "prompt")}>
