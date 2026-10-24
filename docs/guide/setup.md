@@ -55,3 +55,31 @@ The first person to sign in with Slack becomes **owner**, but only after claimin
 
 ## 4. Check
 Setup > checks shows database, queue, model, embeddings and Slack status. Send the bot a DM; the Turns page shows the run.
+
+## 5. Tuning and environment
+
+All of these are optional. Defaults suit most teams. (Sources: `server/src/memory/*.ts`, `server/src/manager/chase.ts`, `server/src/llm.ts`, `server/src/cost/index.ts`, `server/src/config.ts`, `server/src/routes/index.ts`.)
+
+| Variable | Default | Effect | Use it when |
+|---|---|---|---|
+| `MEMORY_RERANK` | off (`1`/`true`/`on` enables) | LLM re-ranks recalled facts each turn | Leave off. Measured about 11x slower with no gain. |
+| `MEMORY_FRESHNESS` | `normal` | `normal`: learn from a thread after 3 turns or 5 min idle, observe poll every 30 min. `fast`: every turn, 15 s idle, poll every 2 min (many more model calls). A value saved in the console (`PUT /api/settings/memory-freshness`) wins over the env | `fast` for demos only |
+| `MEMORY_AMBIENT_MAX_PER_HOUR` | `60` | Cap on ambient extraction model calls per hour (per process); over it, messages stay buffered | Lower it to cap cost, raise it for faster learning in a busy workspace |
+| `MEMORY_BACKFILL_CALLS_PER_RUN` | `20` | Slack API calls per history-backfill run (Learn-now uses 40). Resumable: the next run continues | Slow initial catch-up on a large workspace. Look-back is the `memory_backfill_days` setting (default 30, max 90). There is no daily-call cap variable. |
+| `MEMORY_ENTITY_EXPANSION` | on (`0` disables) | Recall also pulls facts linked to entities named in the question | Set `0` only if recall drags in unrelated facts |
+| `QUIET_HOURS` | off (`1` enables) | Holds chases, follow-ups and routed questions (`ask_teammate`) to the working window. Task assignment notices are never held | You want no nudges outside work hours |
+| Workspace hours | UTC, 09:00-18:00, Mon-Fri | Timezone and window for quiet hours, chases and standups. Set under Pixel page > Workspace hours (`GET/PUT /api/settings/workspace-hours`) | Your team is not on UTC |
+| `ASK_TIMEZONE` | `UTC` | Legacy: timezone for routed-question delivery windows, only when `QUIET_HOURS=1`. Still read in `server/src/slack/teammate.ts` but being removed | Do not rely on it; use Workspace hours |
+| `WEB_DIST` | `web/dist` beside `server/` | Folder the server serves the console from | Custom image layout only |
+| `MONTHLY_SPEND_ALERT_USD` | unset | One Slack message a month (UTC) to the home channel once model spend crosses it. Alert only: nothing is paused | Cost visibility |
+| `MODEL_FALLBACK` | unset | `provider:model` retried once on a timeout, 429 or 5xx. The Models page can override it | Provider reliability |
+| `FALLBACK_MODEL_API_KEY`, `FALLBACK_MODEL_BASE_URL` | unset | Key (when no `<PROVIDER>_API_KEY` fits the fallback) and OpenAI-compatible base URL for the fallback | Fallback on another provider |
+| `EMBEDDING_API_KEY`, `EMBEDDING_BASE_URL`, `EMBEDDING_MODEL`, `EMBEDDING_DIM` | key falls back to `MODEL_API_KEY`; `text-embedding-3-small`; `1536` | Embedding host, model and vector size (max 2000). `EMBEDDING_BASE_URL` (for example Ollama) never receives the chat key. Vertex uses the ADC JSON | Local or non-OpenAI embeddings. Fixed once memories exist |
+
+### Single replica
+Run one app container. These live in process memory, so a second replica would not share them: ambient extraction budget, run-now rate limit (6 starts per job per minute) and single-flight (one run per job), the huddle-sync single flight, and the freshness mode (re-read from the database only at boot). Scheduled jobs themselves are safe (pg-boss).
+
+### Rollback
+- Migrations are forward-only. Rolling back the image does not undo schema changes; to go back past a migration, restore a database backup taken before the deploy.
+- The CI deploy script rolls back to the previous image itself when the health check or probe fails (see [operations](operations.md)).
+- Changing `EMBEDDING_DIM` is refused while memories exist. With no memories it resizes the column; it also truncates the `entities` tables and the embedding cache (entities are rebuilt from facts later).
