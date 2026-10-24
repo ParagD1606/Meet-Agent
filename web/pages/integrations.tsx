@@ -34,19 +34,21 @@ function InstallDialog({ target, onClose, admin }: { target: Target | null; onCl
   const [seen, setSeen] = useState<Target | null>(null)
   if (target && seen !== target) { setSeen(target); setScope(admin && !item?.personalOnly ? "org" : "user"); setToken(""); setUrl(""); setLabel("") }
   const apikey = item?.connectMode === "apikey"
+  const github = item?.key === "github"
   const install = useAction(() => api.installMarketplace(item?.key ?? "custom", { scope, token: token || undefined, label: label || undefined, url: target?.custom ? url.trim() : undefined }), {
     invalidate: [["connections"], ["marketplace"], ["overview"]], inline: true, onSuccess: (r) => { if (r.authUrl) go(r); else onClose() },
   })
   const title = target?.custom ? "Add a custom MCP server" : `Connect ${item?.name ?? ""}`
   return (
     <Dialog open={!!target} onClose={onClose} title={title} description={target?.custom ? "Any public HTTPS server that speaks MCP." : item?.url}
-      footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" loading={install.isPending} disabled={(apikey && !token) || (!!target?.custom && !url)} onClick={() => install.mutate()}>{apikey || target?.custom ? "Connect" : "Continue to sign in"}</Button></>}>
+      footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" loading={install.isPending} disabled={(apikey && !token) || (!!target?.custom && !url)} onClick={() => install.mutate()}>{apikey || target?.custom ? "Connect" : github ? "Authorize GitHub" : "Continue to sign in"}</Button></>}>
       <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); install.mutate() }}>
         {target?.custom && <>
           <FormField label="Server URL" error={fieldErr(install.error, "url")}>{(p) => <Input {...p} type="url" placeholder="https://example.com/mcp" value={url} onChange={(e) => setUrl(e.target.value)} />}</FormField>
           <FormField label="Name" optional>{(p) => <Input {...p} value={label} onChange={(e) => setLabel(e.target.value)} />}</FormField>
         </>}
         {apikey && <FormField label="API key" hint="Stored encrypted. Used only for this connection." error={fieldErr(install.error, "token")}>{(p) => <Input {...p} type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />}</FormField>}
+        {github && <p className="rounded-md border border-line bg-sunken px-3 py-2 text-sm text-muted">Authorize your own GitHub account. Pixel can read only repositories you can access where the Company Brain GitHub App is installed.</p>}
         {admin && !item?.personalOnly ? (
           <FormField label="Who can use it">{(p) => <Select {...p} value={scope} onChange={(e) => setScope(e.target.value as "org" | "user")}><option value="org">Everyone in the workspace</option><option value="user">Only me</option></Select>}</FormField>
         ) : <p className="text-sm text-muted">This connection will be personal: only you can use it.</p>}
@@ -206,7 +208,7 @@ export default function Integrations() {
           <Panel><Table caption="Connections" rows={rows} rowKey={(c) => c.id} columns={[
             { key: "n", header: "App", primary: true, cell: (c: Connection) => <span className="flex items-center gap-2.5 py-1"><ConnectorIcon id={c.provider} label={c.label} size={18} /><span><span className="block font-medium">{c.label}</span><span className="block max-w-36 truncate text-xs text-muted" title={c.url}>{new URL(c.url).host}</span></span></span> },
             { key: "scope", header: "Scope", hideSm: true, cell: (c) => <span><Badge>{c.scope === "org" ? "Workspace" : "Personal"}</Badge>{c.scope === "user" && <span className="mt-0.5 block text-xs text-muted">{c.ownerUserId === me?.id ? "Yours" : `Owner: ${c.ownerName ?? c.ownerUserId ?? "unknown"}`}</span>}
-              {admin && c.scope === "user" && c.status === "connected" && <button type="button" className="mt-0.5 block text-xs text-accent-text hover:underline" disabled={share.isPending} onClick={() => wide(c)}>Make workspace-wide</button>}
+              {admin && c.scope === "user" && c.status === "connected" && c.provider !== "github" && <button type="button" className="mt-0.5 block text-xs text-accent-text hover:underline" disabled={share.isPending} onClick={() => wide(c)}>Make workspace-wide</button>}
               {admin && c.scope === "org" && <button type="button" className="mt-0.5 block text-xs text-accent-text hover:underline" disabled={allow.isPending} onClick={() => allow.mutate({ id: c.id, allow: c.writesEnabled === false })}>{c.writesEnabled === false ? "Allow writes" : "Disable writes"}</button>}
             </span> },
             { key: "tools", header: "Tools", hideSm: true, cell: (c) => c.toolCount == null ? <span className="text-muted" title="Not checked yet. Use Test.">-</span> : <span><span className="block tabular-nums">{c.toolCount}</span><span className="block text-xs text-muted">{c.readCount ?? 0} read, {c.writeCount ?? 0} write{c.scope === "org" && c.writesEnabled === false ? " (writes off)" : ""}</span></span> },

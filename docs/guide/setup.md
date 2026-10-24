@@ -28,9 +28,13 @@ GITHUB_APP_ID=123456
 GITHUB_APP_SLUG=company-brain
 # base64 is recommended for an env file; PEM text with literal \n escapes also works
 GITHUB_APP_PRIVATE_KEY="$(base64 < company-brain.private-key.pem | tr -d '\n')"
+GITHUB_APP_CLIENT_ID=Iv1_your_github_app_client_id
+GITHUB_APP_CLIENT_SECRET=your_github_app_client_secret
 ```
 
 In the GitHub App settings, set **Setup URL** to `https://slack.derpx06.live/sync/oauth/github/callback` (replace the host if your `PUBLIC_URL` differs). Give the app read-only **Contents**, **Issues**, and **Pull requests** permissions, then install it for the organization or repositories you want. Do not enable “Request user authorization during installation”; that uses a different callback flow.
+
+For the personal GitHub integration, add `https://slack.derpx06.live/github/oauth/callback` as a **Redirect URI** in the same GitHub App, enable expiring user authorization tokens, and keep the Client ID and Client Secret only in the server environment. Each member then authorizes their own GitHub account from **Integrations**; their token can read only repositories that both they and the App installation can access.
 
 After the next deploy, an admin selects **GitHub App** under **Configure → Sync → Connect a source** and installs the app. The app receives a short-lived installation token server-side; no GitHub token is entered in the browser. Choose repositories (or `*`) in **Selection**. Imported GitHub information is shared workspace memory, so every member can use it.
 

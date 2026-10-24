@@ -9,6 +9,7 @@ import { assertPublicUrl, guardedFetch } from "../tools/web/ssrf";
 import { getPreset } from "./catalog";
 import { isReauthError } from "./errors";
 import { AuthDecryptError, DbOAuthProvider, McpReauthRequired, readAuth } from "./oauth";
+import { githubSession } from "./github";
 
 export type ConnectionRow = typeof mcpConnections.$inferSelect;
 export type McpToolInfo = {
@@ -32,6 +33,9 @@ async function realFactory(conn: ConnectionRow): Promise<McpSession> {
   const preset = getPreset(conn.provider);
   if (!preset) await assertPublicUrl(conn.url); // custom URLs: SSRF guard on every connect
   const auth = await readAuth(conn.id);
+  // New GitHub connections are GitHub App user OAuth tokens. Legacy GitHub MCP rows
+  // have `bearer` set and intentionally continue down the generic MCP path.
+  if (conn.provider === "github" && !auth.bearer) return githubSession(conn);
   const url = new URL(conn.url);
   const transport = auth.bearer && auth.accessToken
     ? new StreamableHTTPClientTransport(url, { fetch: guardedFetch, requestInit: { headers: { authorization: `Bearer ${auth.accessToken}` } } }) // static bearer token

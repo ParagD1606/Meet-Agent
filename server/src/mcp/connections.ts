@@ -10,6 +10,7 @@ import { clearToolCache, type ConnectionRow } from "./client";
 import { groupKey } from "./group";
 import { connWritable, getOrgWrites } from "./writes";
 import { type AuthState, AuthDecryptError, DbOAuthProvider, readAuth, writeAuth } from "./oauth";
+import { startGithubConnect } from "./github";
 
 /** Reconnecting is how an unreadable blob gets repaired, so startConnect treats it as empty. */
 const readAuthOrEmpty = (id: string): Promise<AuthState> => readAuth(id).catch((e) => (e instanceof AuthDecryptError ? ({} as AuthState) : Promise.reject(e)));
@@ -58,7 +59,10 @@ export async function makeWorkspaceWide(connectionId: string): Promise<PublicCon
   const conn = await getConnection(connectionId);
   if (!conn) throw new Error("connection not found");
   if (conn.scope === "org") throw new Error("already workspace-wide");
-  if (getPreset(conn.provider)?.personalOnly) throw new Error(`${conn.label} can only be connected personally`);
+  // Legacy GitHub PAT/MCP connections may already be workspace-wide. New GitHub
+  // App OAuth connections never carry `bearer` and can never be shared.
+  const legacyGithubToken = conn.provider === "github" && (await readAuthOrEmpty(conn.id)).bearer === true;
+  if (getPreset(conn.provider)?.personalOnly && !legacyGithubToken) throw new Error(`${conn.label} can only be connected personally`);
   const dup = (await db.select().from(mcpConnections).where(eq(mcpConnections.scope, "org"))).find((c) => groupKey(c) === groupKey(conn));
   if (dup) throw new Error(`${dup.label} is already connected workspace-wide; remove one of them first`);
   await db.update(mcpConnections).set({ scope: "org", ownerUserId: null, allowWrites: null }).where(eq(mcpConnections.id, connectionId));
@@ -85,7 +89,10 @@ export async function createConnection(a: {
   const preset = a.provider ? getPreset(a.provider) : undefined;
   if (a.provider && a.provider !== "custom" && !preset) throw new Error(`unknown provider: ${a.provider}`);
   if (!preset && !a.url) throw new Error("url is required for custom connections");
-  if (preset?.personalOnly && a.scope === "org") throw new Error(`${preset.label} can only be connected personally`);
+  // Keep historic GitHub PAT/MCP rows operable. The Marketplace cannot create
+  // these anymore; all new GitHub connections use personal App OAuth instead.
+  const legacyGithubToken = a.provider === "github" && !!a.token;
+  if (preset?.personalOnly && a.scope === "org" && !legacyGithubToken) throw new Error(`${preset.label} can only be connected personally`);
   if (a.scope === "user" && !a.ownerUserId) throw new Error("ownerUserId is required for user-scoped connections");
   const url = preset?.url ?? a.url!;
   if (!preset) await assertPublicUrl(url);
@@ -110,6 +117,7 @@ export async function startConnect(connectionId: string): Promise<{ authUrl: str
   const conn = await getConnection(connectionId);
   if (!conn) throw new Error("connection not found");
   if ((await readAuthOrEmpty(connectionId)).bearer) throw new Error("this connection uses a static token; nothing to authorize");
+  if (conn.provider === "github") return startGithubConnect(connectionId);
   if (!getPreset(conn.provider)) await assertPublicUrl(conn.url);
   // fresh handshake: drop old tokens but keep the registered client
   const prev = await readAuthOrEmpty(connectionId);
