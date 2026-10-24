@@ -19,6 +19,8 @@ import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 import { ingestHuddleFile } from "../meetings";
 import { captureOwnerReply } from "./teammate";
+import { ambientHook } from "./ambient-hook";
+import { announceAmbient } from "../memory/ambient";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
@@ -54,6 +56,7 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
       ...(route.kind === "ignore" ? { reason: route.reason } : {}),
     });
   }
+  if (ev.type === "message") await ambientHook(ev, me, route.kind, privacyOf).catch((e) => log.warn("ambient hook failed", { error: String(e) }));
   // an owner answering a question Pixel routed to them is consumed here (stored + relayed), not run as a turn
   if (ev.type === "message" && !ev.bot_id && ev.user !== me && await captureOwnerReply(ev).catch((e) => { log.warn("owner reply capture failed", { error: String(e) }); return false; })) return;
   if (route.kind === "ignore") return;
@@ -146,6 +149,7 @@ async function handleMemberJoined(ev: Record<string, any>): Promise<void> {
     await syncChannelMembers(await slackClient(), ev.channel).catch((e) => log.warn("member sync failed", { error: (e as Error).message }));
     await introduceInChannel(ev.channel);
     void bootstrapIfEmpty(`channel:${ev.channel}`);
+    await announceAmbient(ev.channel).catch(() => {});
     return;
   }
   await ensureUser(ev.user);

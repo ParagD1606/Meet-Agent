@@ -35,6 +35,14 @@ features:
       command: "/brain-review"
       description: "Review pending memory changes (admins)"
       should_escape: true
+    -
+      command: "/brain-pause"
+      description: "Stop learning from this channel (admins, channel creator)"
+      should_escape: true
+    -
+      command: "/brain-resume"
+      description: "Resume learning from this channel (admins, channel creator)"
+      should_escape: true
 oauth_config:
   redirect_urls:
     - "https://slack.derpx06.live/slack/oauth/callback"

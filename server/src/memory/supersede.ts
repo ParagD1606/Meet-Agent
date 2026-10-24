@@ -72,6 +72,7 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
  */
 export async function addFact(a: AddFactInput): Promise<AddFactResult> {
   const r = await addFactCore(a);
+  if (!r.deduped) clearRecallCache(); // after COMMIT: a recall racing the in-tx clear could re-cache pre-commit state
   // also on a dedupe: a repeat mention may name entities the first one did not (links are idempotent)
   if (a.entities?.length) await attachMentions(r.id, a.entities, a.text);
   return r;

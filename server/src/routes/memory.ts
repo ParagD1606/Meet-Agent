@@ -17,6 +17,10 @@ const TAGS = ["shared"];
 const MAX_UPLOAD = 20 * 1024 * 1024;
 const UPLOAD_SYNC_MS = 8_000;
 
+// Reads must reflect a just-committed fact immediately (demo "learn now"): never let a browser or proxy reuse a response.
+memory.use("/graph", async (c, next) => { await next(); c.header("cache-control", "no-store"); });
+memory.use("/memories", async (c, next) => { await next(); c.header("cache-control", "no-store"); });
+
 memory.get("/graph", requireAuth(), async (c) => {
   const q = readQuery(c, z.object({
     limit: z.coerce.number().int().min(1).max(MAX_GRAPH_NODES).default(300),

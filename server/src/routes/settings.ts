@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireAuth, type AppEnv } from "../auth/session";
@@ -10,6 +10,8 @@ import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } fro
 import { FEATURES, featureChannels, setFeatureChannels } from "../slack/proactive-features";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
 import { DEFAULT_PERSONA, getPersona, PERSONA_LIMITS, setPersona } from "../persona";
+import { getFreshness, saveFreshness, TUNING } from "../memory/freshness";
+import { setObserve } from "../memory/ambient";
 import { httpError, readBody, codedError } from "./util";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -41,6 +43,28 @@ settingsRoutes.get("/settings/approvals", requireAuth("admin"), async (c) => c.j
 settingsRoutes.put("/settings/approvals", requireAuth("admin"), async (c) => {
   const body = await readBody(c, z.object({ cards: z.object(Object.fromEntries(ACTION_CLASSES.map((k) => [k, z.boolean().optional()]))) }));
   return c.json({ cards: await setApprovalCards(body.cards), classes: ACTION_CLASSES });
+});
+
+// ---------- memory freshness: 'normal' (cheap cadence) or 'fast' (demo: learn within seconds) ----------
+const freshness = () => ({ mode: getFreshness(), tuning: TUNING[getFreshness()], options: Object.keys(TUNING) });
+settingsRoutes.get("/settings/memory-freshness", requireAuth("admin"), async (c) => c.json(freshness()));
+settingsRoutes.put("/settings/memory-freshness", requireAuth("admin"), async (c) => {
+  const { mode } = await readBody(c, z.object({ mode: z.enum(["normal", "fast"]) }));
+  await saveFreshness(mode);
+  return c.json(freshness());
+});
+
+// ---------- ambient capture: the bot learns from every channel it is in unless an admin opts the channel out ----------
+settingsRoutes.get("/channels/observe", requireAuth("admin"), async (c) => {
+  const rows = await db.select({ id: channels.id, name: channels.name, isPrivate: channels.isPrivate, observe: channels.observe })
+    .from(channels).where(and(eq(channels.isIm, false), eq(channels.botIsMember, true))).orderBy(channels.name);
+  return c.json({ channels: rows.map((r) => ({ ...r, observe: r.observe !== false })) });
+});
+settingsRoutes.put("/channels/:id/observe", requireAuth("admin"), async (c) => {
+  const { observe } = await readBody(c, z.object({ observe: z.boolean() }));
+  const id = c.req.param("id");
+  if (!(await setObserve(id, observe))) throw httpError(404, "not_found");
+  return c.json({ id, observe });
 });
 
 // ---------- proactivity ----------

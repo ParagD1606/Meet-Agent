@@ -10,6 +10,7 @@ import { linkFacts, type Mention } from "./entities";
 import { recordEpisode } from "./episodes";
 import { completeJson } from "./llm";
 import { type SlackScope, writeTag } from "./scope";
+import { tuning } from "./freshness";
 import { addFact, embedText } from "./supersede";
 
 const MAX_FACTS = 8;
@@ -41,6 +42,7 @@ Rules:
 - Update, don't duplicate: when the conversation changes or corrects something ("actually", "moved to", "now owned by"), state ONLY the new value as a complete sentence ("The Titan launch date moved to 2026-09-15"), never the old one.
 - Never include raw Slack ids (U0123ABCD, C0123ABCD) or <@...> / <#...> tokens; use the person's or channel's name, or skip the fact if you cannot name them.
 - Never store state a connected tool owns and that changes under us: PR, issue or ticket status, build/deploy results, who is assigned right now in Jira/Linear/GitHub. Tools are queried live. A decision or reason about them is fine.
+- Never store passwords, API keys, tokens, card numbers or other credentials, even if they appear in the conversation.
 - "type" is one of fact, preference, decision, procedure, opinion.
 - "entities" lists the people, customers, projects, products and channels the fact is about, each as {"name":"...","type":"person|org|project|product|channel|other"}, using the name exactly as written in the fact sentence (max 5). Omit generic words.
 - "relations" links this fact to ANOTHER fact in this same list when they are directly connected: {"relation":"owns|part_of|depends_on|reports_to|caused_by|blocks","to":<0-based index of the other fact>}. Usually omit it.
@@ -153,8 +155,6 @@ async function extractAndStore(a: CaptureArgs): Promise<number | null> {
 
 // ---------- debounced thread capture (write-path diet) ----------
 // The transcript buffer lives in `capture_buffer` so a restart never drops it; the in-memory map only holds idle timers.
-const CAPTURE_EVERY_N = 3;
-const IDLE_MS = 5 * 60_000;
 const MAX_ATTEMPTS = 3;
 const pending = new Map<string, { channelId: string; threadTs: string; lastAt: number; timer?: ReturnType<typeof setTimeout> }>();
 const keyOf = (channelId: string, threadTs: string) => `${channelId}:${threadTs}`;
@@ -213,16 +213,16 @@ export async function scheduleCapture(a: {
       target: [threadState.channelId, threadState.threadTs],
       set: { turnsSinceReflect: sql`${threadState.turnsSinceReflect} + 1`, updatedAt: new Date() },
     }).returning({ n: threadState.turnsSinceReflect });
-  if (a.final || (row?.n ?? 1) >= (a.every ?? CAPTURE_EVERY_N)) return { stored: await flush(a.channelId, a.threadTs), deferred: false };
+  if (a.final || (row?.n ?? 1) >= (a.every ?? tuning().captureEvery)) return { stored: await flush(a.channelId, a.threadTs), deferred: false };
 
   if (p.timer) clearTimeout(p.timer);
-  p.timer = setTimeout(() => { void flush(a.channelId, a.threadTs).catch((e) => log.warn("idle capture failed", { err: String(e) })); }, a.idleMs ?? IDLE_MS);
+  p.timer = setTimeout(() => { void flush(a.channelId, a.threadTs).catch((e) => log.warn("idle capture failed", { err: String(e) })); }, a.idleMs ?? tuning().idleMs);
   (p.timer as { unref?: () => void }).unref?.();
   return { stored: 0, deferred: true };
 }
 
 /** Flush every persisted thread buffer idle for >= idleMs (reflection sweep; also covers buffers whose timer died with a restart). */
-export async function flushIdleCaptures(idleMs = IDLE_MS, now = Date.now()): Promise<number> {
+export async function flushIdleCaptures(idleMs = tuning().idleMs, now = Date.now()): Promise<number> {
   const rows = await db.select({ c: captureBuffer.channelId, t: captureBuffer.threadTs }).from(captureBuffer).where(lte(captureBuffer.lastAt, new Date(now - idleMs)));
   let n = 0;
   for (const r of rows) n += await flush(r.c, r.t);

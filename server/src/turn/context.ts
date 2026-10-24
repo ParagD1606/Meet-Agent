@@ -1,3 +1,4 @@
+import { tuning } from "../memory/freshness";
 import type { ModelMessage } from "ai";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
@@ -17,7 +18,6 @@ import type { ToolContext } from "./tools";
 const FETCH_LIMIT = 60;
 export const HISTORY_WINDOW_TOKENS = 3000;
 export const MESSAGE_CHAR_CAP = 1200;
-const SNAPSHOT_TTL_MS = 6 * 3600_000;
 type SlackMsg = { user?: string; bot_id?: string; text?: string; ts?: string; subtype?: string };
 
 /** Slack mrkdwn noise -> compact plain text: links keep their label, entities decoded, quoted lines dropped, blobs capped. */
@@ -96,7 +96,7 @@ async function frozenBlocks(i: TurnInput, ctx: ToolContext): Promise<{ shared: s
     const [r] = await db.select({ s: threadState.coreSnapshot }).from(threadState)
       .where(sql`${threadState.channelId} = ${i.channelId} and ${threadState.threadTs} = ${threadKey}`);
     const f = (r?.s as { prefix?: Frozen } | null)?.prefix;
-    if (f && Date.now() - f.at < SNAPSHOT_TTL_MS) snap = f;
+    if (f && Date.now() - f.at < tuning().snapshotTtlMs) snap = f;
   }
   const uid = i.userId ?? "";
   if (snap && (snap.users[uid] !== undefined || !i.userId)) {

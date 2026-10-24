@@ -15,6 +15,7 @@ import { behavior } from "./behavior";
 import { channelRoutes } from "./channels";
 import { core } from "./core";
 import { memory } from "./memory";
+import { memoryRun } from "./memory-run";
 import { meetingRoutes } from "./meetings";
 import { managerRoutes } from "../manager/routes";
 import { settingsRoutes } from "./settings";
@@ -31,6 +32,7 @@ export function buildApi(): Hono<AppEnv> {
   api.route("/", core);
   api.route("/", channelRoutes);
   api.route("/", memory);
+  api.route("/", memoryRun);
   api.route("/", meetingRoutes);
   api.route("/", settingsRoutes);
   api.route("/", behavior);

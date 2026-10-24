@@ -23,4 +23,6 @@ export const SLACK_SLASH_COMMANDS = [
   { command: "/forget", description: "Find and delete memories", usage_hint: "[what to forget]" },
   { command: "/whatdoyouknow", description: "See what I remember", usage_hint: "[@person or topic]" },
   { command: "/brain-review", description: "Review pending memory changes (admins)" },
+  { command: "/brain-pause", description: "Stop learning from this channel (admins, channel creator)" },
+  { command: "/brain-resume", description: "Resume learning from this channel (admins, channel creator)" },
 ] as const;

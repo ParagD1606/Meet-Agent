@@ -57,6 +57,13 @@
       "when": 1792867206000,
       "tag": "0007_commitments",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792953606000,
+      "tag": "0008_ambient_capture",
+      "breakpoints": true
     }
   ]
 }

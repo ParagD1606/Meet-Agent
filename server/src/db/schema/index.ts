@@ -41,7 +41,9 @@ export const channels = pgTable("channels", {
   isIm: boolean("is_im").notNull().default(false),
   botIsMember: boolean("bot_is_member").notNull().default(false),
   proactivity: text("proactivity", { enum: ["default", "proactive", "quiet"] }).notNull().default("default"),
-  observe: boolean("observe").notNull().default(false), // passive learning opt-in (admin)
+  /** Ambient learning: null/true = on (default for every channel the bot is in), false = admin opt-out (sticky). */
+  observe: boolean("observe"),
+  ambientNoticeAt: timestamp("ambient_notice_at", { withTimezone: true }), // the one-time "I learn from this channel" notice
   observedUpTo: text("observed_up_to"), // slack ts watermark of the passive-learning job
 });
 
@@ -400,6 +402,17 @@ export const captureBuffer = pgTable("capture_buffer", {
   attempts: integer("attempts").notNull().default(0),
   lastAt: ts("last_at"),
 }, (t) => [primaryKey({ columns: [t.channelId, t.threadTs] })]);
+
+/** Ambient channel messages: buffer (text kept until flushed, then blanked) and the (channel, ts) idempotency ledger shared by events and the poll. */
+export const ambientMessages = pgTable("ambient_messages", {
+  channelId: text("channel_id").notNull(),
+  ts: text("ts").notNull(),
+  threadTs: text("thread_ts"),
+  userId: text("user_id"),
+  text: text("text").notNull().default(""),
+  flushedAt: timestamp("flushed_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+}, (t) => [primaryKey({ columns: [t.channelId, t.ts] }), index("ambient_pending_idx").on(t.channelId, t.flushedAt)]);
 
 // ---------- consolidation audit ----------
 export const consolidationLog = pgTable("consolidation_log", {
