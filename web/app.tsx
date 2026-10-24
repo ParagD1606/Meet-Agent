@@ -46,6 +46,7 @@ const Pixel = page(() => import("@/pages/pixel"))
 const MemoryHealth = page(() => import("@/pages/memory-health"))
 const Tasks =page(() => import("@/pages/tasks"))
 const Meetings = page(() => import("@/pages/meetings"))
+const Landing = page(() => import("@/pages/landing"))
 
 const ROUTES: Record<string, ComponentType> = {
   "/": Home, "/graph": Graph, "/memories": Memories, "/core-memory": CoreMemory, "/review": Review, "/skills": Skills,
@@ -83,14 +84,19 @@ function Authed() {
   const [loc] = useLocation()
   // Public until a workspace exists; a 401 here just means "already configured".
   const setup = useQuery({ queryKey: ["setup-status"], queryFn: api.setupStatus, retry: false, enabled: me === null })
-  useTitle(!me ? (loc === "/setup" ? "Set up" : "Sign in") : undefined)
+  // The public front door: /welcome always, and / for visitors who are not signed in (unless Slack sent back an error to show).
+  const signInError = new URLSearchParams(location.search).has("error")
+  const onLanding = loc === "/welcome" || (me === null && loc === "/" && !signInError)
+  useTitle(onLanding ? "The teammate that remembers" : !me ? (loc === "/setup" ? "Set up" : "Sign in") : undefined)
 
+  if (loc === "/welcome") return <Suspense fallback={<Spinner />}><Landing signedIn={!!me} /></Suspense>
   if (loading || (me === null && setup.isPending)) return <Spinner />
   if (error) return <div className="mx-auto max-w-md p-6"><ErrorState error={error} retry={() => refetch()} /></div>
   if (!me) {
     const s = setup.data
     const unconfigured = s && (!s.slack || !s.workspace)
-    return loc === "/setup" || unconfigured ? <Setup /> : <SignIn />
+    if (loc === "/setup" || unconfigured) return <Setup />
+    return onLanding ? <Suspense fallback={<Spinner />}><Landing /></Suspense> : <SignIn />
   }
   if (loc === "/setup") return <Setup signedIn />
   return <Shell me={me} admin={admin}><Routed admin={admin} /></Shell>
