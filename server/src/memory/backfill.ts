@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { tuningEnv } from "../config";
 import { db } from "../db";
 import { channels, users } from "../db/schema";
 import { log } from "../log";
@@ -68,7 +69,7 @@ export async function backfillChannel(channelId: string, o: { budget?: Budget; f
   if (state?.done && !o.force) return { ...out, done: true };
   if (!state || o.force) state = { oldest: (Date.now() / 1000 - (await backfillDays()) * 86_400).toFixed(6), messages: 0 };
   const base = state.messages;
-  const budget = o.budget ?? { calls: Number(process.env.MEMORY_BACKFILL_CALLS_PER_RUN ?? 20) };
+  const budget = o.budget ?? { calls: tuningEnv().MEMORY_BACKFILL_CALLS_PER_RUN };
   const slack = await slackClient();
   const self = await botUserId().catch(() => null);
   const bots = new Set((await db.select({ id: users.id }).from(users).where(eq(users.isBot, true))).map((u) => u.id));
@@ -115,11 +116,21 @@ export async function backfillChannel(channelId: string, o: { budget?: Budget; f
   return out;
 }
 
+const dailyKey = () => `backfill_calls:${new Date().toISOString().slice(0, 10)}`;
+/** Slack calls the scheduled history backfill may still make today (UTC day), cap MEMORY_BACKFILL_DAILY_CALLS. */
+export async function backfillCallsLeft(): Promise<number> {
+  return Math.max(0, tuningEnv().MEMORY_BACKFILL_DAILY_CALLS - (Number(await getSetting<number>(dailyKey())) || 0));
+}
+export async function spendBackfillCalls(n: number): Promise<void> {
+  if (n > 0) await putSetting(dailyKey(), (Number(await getSetting<number>(dailyKey())) || 0) + n);
+}
+
 /** Every observed channel the bot is in that is not finished yet, one shared call budget. */
-export async function backfillAll(o: { calls?: number; force?: boolean } = {}): Promise<{ channels: number; messages: number; tasks: number; remaining: number }> {
+export async function backfillAll(o: { calls?: number; force?: boolean } = {}): Promise<{ channels: number; messages: number; tasks: number; remaining: number; used: number }> {
   const rows = await db.select({ id: channels.id }).from(channels).where(sql`${channels.observe} is distinct from false and ${channels.botIsMember} and not ${channels.isIm}`);
-  const budget = { calls: o.calls ?? Number(process.env.MEMORY_BACKFILL_CALLS_PER_RUN ?? 20) };
-  const total = { channels: 0, messages: 0, tasks: 0, remaining: 0 };
+  const budget = { calls: o.calls ?? tuningEnv().MEMORY_BACKFILL_CALLS_PER_RUN };
+  const start = budget.calls;
+  const total = { channels: 0, messages: 0, tasks: 0, remaining: 0, used: 0 };
   for (const r of rows) {
     if (budget.calls <= 0) { if (!(await getBackfillState(r.id))?.done) total.remaining++; continue; }
     const res = await backfillChannel(r.id, { budget, force: o.force });
@@ -128,6 +139,7 @@ export async function backfillAll(o: { calls?: number; force?: boolean } = {}): 
     total.tasks += res.tasks;
     if (!res.done) total.remaining++;
   }
+  total.used = start - budget.calls;
   return total;
 }
 

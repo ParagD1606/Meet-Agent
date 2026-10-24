@@ -18,7 +18,6 @@ const fileSchema = z.object({ version: z.number(), entries: z.array(entrySchema)
 export type DirectoryEntry = z.infer<typeof entrySchema>;
 
 /** Parsed at import: a malformed catalog fails loudly in CI/boot instead of mis-offering an app. */
-export const DIRECTORY_VERSION = fileSchema.parse(raw).version;
 const ENTRIES = fileSchema.parse(raw).entries;
 
 export type ConnectMode = "oauth" | "apikey";

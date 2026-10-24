@@ -12,11 +12,6 @@ export type Actor = { userId: string | null; role: "owner" | "admin" | "member" 
 
 export const BLOCK_LIMITS: Record<BlockLabel, number> = { company: 1500, channel: 1000, user: 1000 };
 
-/** Shown in the core_memory tool description (Hermes MEMORY_GUIDANCE, adapted to a company). */
-export const CORE_MEMORY_GUIDANCE =
-  "Core memory is always in context, so keep it tiny and durable: company profile, channel purpose/norms, a person's stable preferences. " +
-  "Write declarative facts, not instructions: 'Support SLA is 4 business hours' (good), 'Always reply within 4 hours' (bad). " +
-  "Never store task progress, one-off results, secrets or credentials; use memory_remember for individual facts.";
 
 const THREATS: [RegExp, string][] = [
   [/ignore\s+(?:(?:all|any|the|your|previous|prior|above|earlier|preceding)\s+)+(?:instructions|rules|prompts?)/i, "prompt_injection"],

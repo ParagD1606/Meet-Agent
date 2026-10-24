@@ -55,4 +55,4 @@ export const followUps = pgTable("follow_ups", {
 export const managerRisks = pgTable("manager_risks", {
   key: text("key").primaryKey(),
   postedAt: ts("posted_at"),
-});
+}, (t) => [index("manager_risks_posted_at_idx").on(t.postedAt)]);

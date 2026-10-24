@@ -8,7 +8,8 @@ import { registerBootstrapJobs } from "./bootstrap";
 import { alreadySeen, flushIdleAmbient, markPolled } from "./ambient";
 import { applyMemorySchedules, bindBoss, loadFreshness } from "./freshness";
 import { consolidate } from "./consolidate";
-import { backfillAll, backfillChannel } from "./backfill";
+import { backfillAll, backfillCallsLeft, backfillChannel, spendBackfillCalls } from "./backfill";
+import { tuningEnv } from "../config";
 import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
 import { writeTag } from "./scope";
@@ -124,6 +125,8 @@ export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-c
 /** Observe poll (backstop for ambient events), consolidate nightly, flush idle captures; observe/reflect cadence follows the freshness mode. */
 export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
   for (const name of Object.values(MEMORY_QUEUES)) await boss.createQueue(name, { name, retryLimit: 0, policy: "short" });
+  // the default 15 min job timeout expired a paced (1.2 s/call, Retry-After) backfill run on prod; createQueue never updates an existing queue
+  await boss.updateQueue(MEMORY_QUEUES.backfillHistory, { name: MEMORY_QUEUES.backfillHistory, policy: "short", retryLimit: 0, expireInSeconds: 3600 });
   // timers died with the previous process: flush transcripts still buffered in capture_buffer
   void recoverCaptures().then((n) => { if (n) log.info("recovered buffered captures", { stored: n }); }).catch((e) => log.warn("capture recovery failed", { err: String(e) }));
   bindBoss(boss);
@@ -144,7 +147,12 @@ export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
   });
   await boss.work<{ channelId?: string }>(MEMORY_QUEUES.backfillHistory, async (jobs) => {
     const channelId = jobs[0]?.data?.channelId;
-    const r = channelId ? await backfillChannel(channelId) : await backfillAll();
+    const left = await backfillCallsLeft();
+    if (left <= 0) { log.info("history backfill: daily call cap reached, resuming tomorrow"); return; }
+    const budget = { calls: Math.min(tuningEnv().MEMORY_BACKFILL_CALLS_PER_RUN, left) };
+    const start = budget.calls;
+    const r = channelId ? await backfillChannel(channelId, { budget }) : await backfillAll({ calls: budget.calls });
+    await spendBackfillCalls(channelId ? start - budget.calls : (r as { used: number }).used);
     const more = channelId ? !(r as { done: boolean }).done : (r as { remaining: number }).remaining > 0;
     log.info("history backfill", { channelId, ...r });
     if (more) await boss.sendAfter(MEMORY_QUEUES.backfillHistory, channelId ? { channelId } : {}, { singletonKey: `${channelId ?? "all"}:${Date.now()}` }, 90); // continue where the budget stopped

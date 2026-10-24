@@ -45,6 +45,12 @@ const schema = z.object({
   DB_POOL_MAX: z.coerce.number().int().min(2).default(20),
   /** Connections reserved for session-level advisory locks (one per running turn). Kept separate so locks can never starve queries. */
   DB_LOCK_POOL_MAX: z.coerce.number().int().min(2).default(25),
+  /** Cross-provider fallback "provider:model" (the model_fallback setting wins). */
+  MODEL_FALLBACK: z.string().optional(),
+  FALLBACK_MODEL_API_KEY: z.string().optional(),
+  FALLBACK_MODEL_BASE_URL: z.string().optional(),
+  /** Boot default for memory cadence; the persisted memory_freshness setting wins. */
+  MEMORY_FRESHNESS: z.enum(["normal", "fast"]).optional().catch(undefined),
 });
 
 export type Config = z.infer<typeof schema>;
@@ -76,6 +82,26 @@ export function assertConfig(c: Config, production?: boolean): void {
 }
 
 export const config = schema.parse(process.env);
+
+/**
+ * Tuning knobs. Parsed on every call (cheap) so tests and ops can change process.env without a restart of the module;
+ * an invalid value falls back to the default rather than throwing mid-request.
+ */
+const flag = (def: boolean) => z.string().optional().transform((v) => (v === undefined || v === "" ? def : /^(1|true|on)$/i.test(v)));
+const num = (def: number) => z.coerce.number().int().min(0).catch(def).default(def);
+const tuningSchema = z.object({
+  QUIET_HOURS: z.string().optional(),
+  MEMORY_RERANK: flag(false),
+  MEMORY_ENTITY_EXPANSION: z.string().optional(),
+  MEMORY_AMBIENT_MAX_PER_HOUR: num(60),
+  MEMORY_BACKFILL_CALLS_PER_RUN: num(20),
+  MEMORY_BACKFILL_DAILY_CALLS: num(400),
+  WEB_DIST: z.string().optional(),
+});
+export const tuningEnv = () => {
+  const t = tuningSchema.parse(process.env);
+  return { ...t, quietHoursForced: t.QUIET_HOURS === "1", entityExpansion: t.MEMORY_ENTITY_EXPANSION !== "0" };
+};
 
 /** True when a chat model is reachable by configuration: an API key, an OpenAI-compatible URL, or Vertex ADC. */
 export const modelConfigured = (c: Config = config) => Boolean(c.MODEL_API_KEY || c.MODEL_BASE_URL || c.MODEL_PROVIDER === "vertex");

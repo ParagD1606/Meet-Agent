@@ -97,7 +97,7 @@ export function getModel(requested: ModelRole | ModelProfile = "main", override?
   const key = config.MODEL_API_KEY;
   const provider = detectProvider(key, config.MODEL_BASE_URL);
   if (provider === "compat") {
-    const m = override ?? process.env.MODEL_NAME;
+    const m = override ?? config.MODEL_NAME;
     if (!m) throw new Error("MODEL_NAME is required with MODEL_BASE_URL");
     return build("compat", m, key, config.MODEL_BASE_URL);
   }
@@ -111,16 +111,16 @@ export function getModel(requested: ModelRole | ModelProfile = "main", override?
 export function getFallbackModel(role: ModelRole | ModelProfile = "main"): LanguageModel | null {
   const t = testModel?.(role, true);
   if (t) return t;
-  const spec = chosen.fallback ?? process.env.MODEL_FALLBACK ?? null;
+  const spec = chosen.fallback ?? config.MODEL_FALLBACK ?? null;
   if (!spec) return null;
   const i = spec.indexOf(":");
   const provider = (i > 0 ? spec.slice(0, i) : "") as ProviderName | "compat";
   const model = i > 0 ? spec.slice(i + 1) : spec;
   if (!["anthropic", "openai", "google", "xai", "compat"].includes(provider) || !model) return null;
   const envKey = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GOOGLE_GENERATIVE_AI_API_KEY", xai: "XAI_API_KEY", compat: "", vertex: "" }[provider];
-  const key = (envKey && process.env[envKey]) || process.env.FALLBACK_MODEL_API_KEY;
+  const key = (envKey && process.env[envKey]) || config.FALLBACK_MODEL_API_KEY;
   if (!key && provider !== "compat" && provider !== "vertex") return null;
-  return build(provider, model, key, process.env.FALLBACK_MODEL_BASE_URL);
+  return build(provider, model, key, config.FALLBACK_MODEL_BASE_URL);
 }
 
 /** Network-ish failures worth retrying on another provider: timeouts, 429, 5xx. Never user aborts or 4xx request errors. */

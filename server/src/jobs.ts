@@ -1,5 +1,6 @@
 import PgBoss from "pg-boss";
 import { config } from "./config";
+import { quietHoursOn, workingHours } from "./manager/chase";
 import { executeAutomation, findDue, registerProactiveJobs } from "./automations";
 import { log } from "./log";
 import { failStaleResearch, runResearch } from "./research";
@@ -41,7 +42,28 @@ export async function enqueueAutomation(id: string, fireAt: Date): Promise<void>
 
 /** Re-attempt a quiet-hours-deferred ask_teammate delivery at the next working window. */
 export async function enqueueAskDelivery(id: string, at: Date): Promise<void> {
+  await workingHours(); // refresh quiet-hours flag; with quiet hours off nothing should wait for a future window
+  if (!quietHoursOn() && at.getTime() > Date.now()) at = new Date();
   await ready().sendAfter(Q.askDeliver, { id }, { singletonKey: `${id}:${at.getTime()}` }, at);
+}
+
+/**
+ * Boot sweep (also run when quiet hours are switched off): queued ask-deliver jobs whose ask is gone, no longer 'confirmed'
+ * or older than 24h are cancelled; jobs whose delivery is now allowed are pulled forward to run immediately.
+ */
+export async function sweepAskDeliveries(now = new Date()): Promise<{ cancelled: number; released: number }> {
+  const { pool } = await import("./db");
+  const { getAsk, nextWindow, ASK_TTL_MS } = await import("./slack/teammate");
+  await workingHours();
+  const { rows } = await pool.query("select id, data->>'id' as ask from pgboss.job where name = $1 and state = 'created'", [Q.askDeliver]);
+  const out = { cancelled: 0, released: 0 };
+  for (const r of rows) {
+    const ask = r.ask ? await getAsk(r.ask) : null;
+    const stale = !ask || ask.status !== "confirmed" || !ask.createdAt || now.getTime() - Date.parse(ask.createdAt) > ASK_TTL_MS;
+    if (stale) { await pool.query("update pgboss.job set state = 'cancelled', completed_on = now() where id = $1 and state = 'created'", [r.id]); out.cancelled++; }
+    else if (nextWindow(now) === null) out.released += (await pool.query("update pgboss.job set start_after = now() where id = $1 and state = 'created' and start_after > now()", [r.id])).rowCount ?? 0;
+  }
+  return out;
 }
 
 /** Throws when pg-boss refuses the job (send() returns null for a deduped/throttled job): a silently dropped run would sit `planned` forever. */
@@ -64,6 +86,17 @@ export async function purgeOld(now = new Date()): Promise<Record<string, number>
     q("rateLimits", "delete from rate_limits where updated_at < now() - interval '2 days'"),
     q("chimeLog", "delete from chime_log where at < now() - interval '7 days'"),
     q("usageDaily", "delete from usage_daily where day < to_char(now() - interval '400 days', 'YYYY-MM-DD')"),
+    q("recallLog", "delete from recall_log where created_at < now() - interval '30 days'"),
+    // the (channel, ts) ledger is only needed while a message can still be re-delivered or re-polled
+    q("ambientMessages", "delete from ambient_messages where flushed_at is not null and created_at < now() - interval '14 days'"),
+    q("followUps", "delete from follow_ups where status in ('sent','cancelled','failed') and due_at < now() - interval '90 days'"),
+    q("commitments", "delete from commitments where status in ('done','dropped') and coalesce(completed_at, created_at) < now() - interval '180 days'"),
+    // always keep the newest run that can still be undone
+    q("consolidationLog", `delete from consolidation_log where created_at < now() - interval '90 days'
+      and run_id <> coalesce((select run_id from consolidation_log where undone_at is null order by created_at desc, id desc limit 1), '')`),
+    q("managerRisks", "delete from manager_risks where posted_at < now() - interval '90 days'"),
+    q("memoryReminders", "delete from memory_reminders where reminded_at < now() - interval '60 days'"),
+    q("captureBuffer", "delete from capture_buffer where last_at < now() - interval '7 days' and attempts >= 3"),
   ]);
   const res = Object.fromEntries(out);
   log.info("purge", res);
@@ -90,8 +123,12 @@ async function optionalExport<T>(paths: string[], key: string): Promise<T | unde
     try {
       const fn = (await import(p))[key];
       if (typeof fn === "function") return fn as T;
-    } catch {
-      // module absent or failed to load: try next / degrade
+    } catch (e) {
+      // a module that is simply absent is fine (try the next candidate); one that exists but fails to load must not silently disable its jobs
+      const absent = /Cannot find module|ERR_MODULE_NOT_FOUND/.test(String(e)) && String(e).includes(p);
+      if (absent) continue;
+      if (config.NODE_ENV !== "test") throw e;
+      log.warn("optional job module failed to load", { path: p, err: String(e) });
     }
   }
   return undefined;
@@ -140,12 +177,13 @@ export async function startJobs(): Promise<void> {
   await b.schedule(Q.purge, "17 3 * * *");
   await b.work(Q.membersResync, async () => {
     const { resyncChannelMembers } = await import("./slack/sync");
-    log.info("members resync", await resyncChannelMembers().catch((e) => ({ error: String(e) })));
+    // throw so pg-boss records the failure (retryLimit stays 0)
+    log.info("members resync", await resyncChannelMembers().catch((e) => { log.warn("members resync failed", { err: String(e) }); throw e; }));
   });
   await b.schedule(Q.membersResync, "7 */6 * * *");
   await b.work(Q.mcpHealth, async () => {
     const { verifyAllConnections } = await import("./mcp/health");
-    log.info("mcp health", await verifyAllConnections().catch((e) => ({ error: String(e) })));
+    log.info("mcp health", await verifyAllConnections().catch((e) => { log.warn("mcp health failed", { err: String(e) }); throw e; }));
   });
   await b.schedule(Q.mcpHealth, "23 * * * *");
 
@@ -168,8 +206,9 @@ export async function startJobs(): Promise<void> {
   else log.warn("registerMemoryJobs not available; observe/consolidate disabled");
 
   await seedBuiltinSkills().catch((err) => log.error("skill seed failed", { err: String(err) }));
-  const stale = await failStaleResearch().catch(() => 0);
+  const stale = await failStaleResearch().catch((e) => { log.warn("failStaleResearch failed", { err: String(e) }); return 0; });
   if (stale) log.warn("failed stale research runs", { count: stale });
+  await sweepAskDeliveries().then((r) => { if (r.cancelled || r.released) log.info("ask-deliver sweep", r); }).catch((e) => log.warn("ask-deliver sweep failed", { err: String(e) }));
   log.info("jobs started");
 }
 

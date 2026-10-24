@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type PgBoss from "pg-boss";
 import { db } from "../db";
 import { settings } from "../db/schema";
+import { config } from "../config";
 import { log } from "../log";
 
 /** 'normal' = production cadence (cheap); 'fast' = demo cadence (learn within seconds, many more LLM calls). */
@@ -28,7 +29,7 @@ export const TUNING: Record<Freshness, Tuning> = {
 };
 
 const parse = (v: unknown): Freshness | null => (v === "fast" || v === "normal" ? v : null);
-let mode: Freshness = parse(process.env.MEMORY_FRESHNESS) ?? "normal";
+let mode: Freshness = config.MEMORY_FRESHNESS ?? "normal";
 let boss: PgBoss | null = null;
 
 export const getFreshness = (): Freshness => mode;

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../db";
 import { ambientMessages, channels, memories, users } from "../db/schema";
+import { tuningEnv } from "../config";
 import { log } from "../log";
 import { postMessage, slackClient } from "../slack/client";
 import { isTrivialMessage } from "./budget";
@@ -57,7 +58,7 @@ export async function announceAmbient(channelId: string): Promise<boolean> {
 const calls: number[] = [];
 export const resetAmbientRate = () => { calls.length = 0; };
 function takeBudget(now: number): boolean {
-  const max = Number(process.env.MEMORY_AMBIENT_MAX_PER_HOUR ?? 60);
+  const max = tuningEnv().MEMORY_AMBIENT_MAX_PER_HOUR;
   while (calls.length && now - calls[0]! >= 3_600_000) calls.shift();
   if (calls.length >= max) return false;
   calls.push(now);

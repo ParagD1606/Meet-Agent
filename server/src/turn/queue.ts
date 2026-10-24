@@ -64,7 +64,6 @@ export function serialize<T>(key: string, fn: () => Promise<T>): Promise<T> {
 }
 
 export const inflightCount = () => inflight.size;
-export const isDraining = () => draining;
 /** Test hook. */
 export const resetDraining = () => { draining = false; };
 
