@@ -167,6 +167,28 @@ export interface Usage {
   topTurns: { id: string; userId?: string | null; trigger?: string; depth?: string | null; steps?: number; model?: string | null; inputTokens: number; outputTokens: number; costMicros: number; startedAt: string; channelId?: string }[]
 }
 
+// ---- channels, Pixel, cost, commitments
+export interface Channel { id: string; name: string | null; isPrivate: boolean; isIm: boolean; botIsMember: boolean; hasCoreBlock: boolean }
+export interface Persona { name: string; role: string; tone: string; greeting: string }
+export interface PersonaSettings { persona: Persona; defaults: Persona; limits: Record<keyof Persona, number> }
+export const ACTION_CLASSES = ["ticket", "slack_post", "doc_edit", "email_calendar"] as const
+export type ActionClass = (typeof ACTION_CLASSES)[number]
+export type ApprovalCards = Partial<Record<ActionClass, boolean>>
+export const FEATURES = ["digest", "nudge", "deadlines", "autoreply", "standup", "risks"] as const
+export type Feature = (typeof FEATURES)[number]
+export type ProactiveFeatures = Record<Feature, string[]>
+export interface CostReport {
+  days: number; totalUsd: number
+  byDay: { day: string; usd: number; turns: number; models: Record<string, number> }[]
+  byModel: { model: string; usd: number; turns: number; inputTokens: number; outputTokens: number }[]
+  month?: { spentUsd: number; alertUsd: number | null }
+}
+export type CommitmentStatus = "open" | "done" | "dropped" | "overdue"
+export interface Commitment {
+  id: string; ownerId: string | null; ownerName: string | null; text: string; dueAt: string | null; sourceType: string
+  permalink: string | null; channelId: string | null; status: CommitmentStatus; nudgeCount: number; completedAt: string | null; createdAt: string
+}
+
 export const api = {
   me: () => get<Me | { user: Me }>("/api/me").then((m) => ("user" in m ? m.user : m)),
   users: () => get<unknown>("/api/users").then((d) => list<UserRow>(d, "users")),
@@ -183,6 +205,15 @@ export const api = {
   exportMemoriesUrl: "/api/export/memories",
   coreBlock: (scope: string) => get<CoreBlock>(`/api/core-blocks${qs({ scope })}`),
   saveCoreBlock: (scope: string, text: string) => send<{ block: CoreBlock; usage?: string; queuedForReview?: boolean }>("PUT", `/api/core-blocks${qs({ scope })}`, { text }),
+  channels: () => get<Channel[]>("/api/channels"),
+  persona: () => get<PersonaSettings>("/api/settings/persona"),
+  savePersona: (p: Persona) => send<{ persona: Persona }>("PUT", "/api/settings/persona", p),
+  approvals: () => get<{ cards: ApprovalCards }>("/api/settings/approvals"),
+  saveApprovals: (cards: ApprovalCards) => send<{ cards: ApprovalCards }>("PUT", "/api/settings/approvals", { cards }),
+  proactiveFeatures: () => get<ProactiveFeatures>("/api/settings/proactive-features"),
+  saveProactiveFeatures: (f: Partial<ProactiveFeatures>) => send<ProactiveFeatures>("PUT", "/api/settings/proactive-features", f),
+  costReport: (days: number) => get<CostReport>(`/api/usage/cost${qs({ days })}`),
+  commitments: (status: string) => get<unknown>(`/api/manager/commitments${qs({ status, limit: 200 })}`).then((d) => list<Commitment>(d, "commitments")),
   reviews: (status: "pending" | "approved" | "rejected" = "pending") => get<unknown>(`/api/reviews${qs({ status })}`).then((d) => list<Review>(d, "reviews")),
   decideReview: (id: number | string, approve: boolean) => send("POST", `/api/reviews/${id}/decide`, { approve }),
   workspacePrompt: () => get<{ prompt: string }>("/api/settings/workspace-prompt"),

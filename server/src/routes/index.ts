@@ -12,6 +12,7 @@ import { mountMarketplaceRoutes } from "./marketplace";
 import { mountMemoryExtRoutes } from "./memory-ext";
 import { mountSkillsUploadRoutes } from "./skills-upload";
 import { behavior } from "./behavior";
+import { channelRoutes } from "./channels";
 import { core } from "./core";
 import { memory } from "./memory";
 import { meetingRoutes } from "./meetings";
@@ -28,6 +29,7 @@ export function buildApi(): Hono<AppEnv> {
   mountExportRoutes(api);
   mountMemoryExtRoutes(api);
   api.route("/", core);
+  api.route("/", channelRoutes);
   api.route("/", memory);
   api.route("/", meetingRoutes);
   api.route("/", settingsRoutes);
