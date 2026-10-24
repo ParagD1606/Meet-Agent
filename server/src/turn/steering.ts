@@ -15,7 +15,7 @@ const defaultClassifier: SteerClassifier = async (active, incoming, signal) =>
     model: getModel("triage"),
     system: "A teammate's request is being worked on. They just sent another message in the same thread. Reply with ONE word: IGNORE (chit-chat/ack, needs no action), APPEND (extra detail or a separate follow-up to handle after the current work), or REPLACE (changes or supersedes the current request, so the current work should be abandoned).",
     prompt: `Current request: ${active.slice(0, 500)}\nNew message: ${incoming.slice(0, 500)}`,
-    maxOutputTokens: 5,
+    maxOutputTokens: 16, // 5 truncated "REPLACE" to "RE" on Gemini, so REPLACE never fired
     abortSignal: signal,
   })).text;
 

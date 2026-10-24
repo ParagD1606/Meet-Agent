@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, like, lte, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type PgBoss from "pg-boss";
 import { db } from "../db";
 import { channels, episodes, meetings, memories, memoryReminders } from "../db/schema";
@@ -24,6 +24,7 @@ function channelFacts(ch: Ch): SQL {
     eq(memories.scopeTag, SHARED_TAG),
     or(
       eq(memories.sourceRef, ch.id),
+      like(memories.sourceRef, `${ch.id}/%`), // ambient capture: "<channel>/<first message ts>"
       inArray(memories.sourceRef, sql`(select thread_ts from turns where channel_id = ${ch.id} and thread_ts is not null union select thread_ts from episodes where channel_id = ${ch.id})`),
     ),
   )!;

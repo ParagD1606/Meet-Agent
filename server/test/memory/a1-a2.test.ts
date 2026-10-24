@@ -56,7 +56,7 @@ describe("A1 extraction parsing", () => {
       return '{"superseded":[]}';
     });
     expect(await captureTurn({ scope, transcript: "Priya: launch is moving to Friday", at: NOW })).toBe(1);
-    expect(prompt).toContain("Today is 2026-06-10");
+    expect(prompt).toContain("Today is Wednesday 2026-06-10");
     const [row] = await db.select().from(memories);
     expect(row).toMatchObject({ factType: "decision", contextPrefix: "Priya in #launch on 2026-06-09 about Titan", sourceScope: "shared" });
     expect(row!.validAt).toEqual(day("2026-06-09"));

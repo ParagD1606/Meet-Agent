@@ -74,7 +74,7 @@ export async function bootstrapChannel(channelId: string): Promise<BootstrapResu
   // public -> shared facts sourced from this channel; private -> only its own tag
   const facts = await db.select({ text: memories.text }).from(memories).where(and(
     eq(memories.scopeTag, ch.isPrivate ? tag : "shared"), eq(memories.kind, "fact"), eq(memories.status, "active"), eq(memories.reviewState, "ok"),
-    sql`${memories.invalidAt} is null`, ...(ch.isPrivate ? [] : [eq(memories.sourceRef, channelId)]),
+    sql`${memories.invalidAt} is null`, ...(ch.isPrivate ? [] : [sql`(${memories.sourceRef} = ${channelId} or ${memories.sourceRef} like ${`${channelId}/%`})`]), // ambient facts use "<channel>/<first ts>"
   )).orderBy(desc(memories.importance), desc(memories.validAt)).limit(10);
   const eps = await db.select({ summary: episodes.summary }).from(episodes)
     .where(and(eq(episodes.channelId, channelId), inArray(episodes.scopeTag, ch.isPrivate ? [tag] : ["shared", tag])))

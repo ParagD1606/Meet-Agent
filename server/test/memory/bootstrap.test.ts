@@ -59,6 +59,15 @@ describe("core block bootstrap", () => {
     expect((await block("CPUB", "U1", "channel")).split("\n")).toEqual(["About: Generated summary of the subject.", "Human note"]);
   });
 
+  test("ambient facts (source_ref '<channel>/<ts>') feed the public channel About, other channels' do not", async () => {
+    await bot("CPUB");
+    await seedMemory("shared", "AMBIENTFACT deploys run Tuesdays", { sourceRef: "CPUB/1700000000.000100" });
+    await seedMemory("shared", "OTHERCHANNEL fact", { sourceRef: "CPUBX/1700000000.000100" });
+    await bootstrapChannel("CPUB");
+    expect(prompts[0]).toContain("AMBIENTFACT");
+    expect(prompts[0]).not.toContain("OTHERCHANNEL");
+  });
+
   test("private channel prompt uses only its own scope, never shared facts", async () => {
     await bot("CPRIV", true);
     await seedMemory("shared", "PUBLICFACT about everyone", { sourceRef: "CPRIV" });

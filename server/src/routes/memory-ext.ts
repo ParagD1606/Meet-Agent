@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { Hono } from "hono";
 import { z } from "zod";
 import { hasRole, requireAuth, type AppEnv } from "../auth/session";
 import { db } from "../db";
-import { channelMembers, channels, memories, memoryReviews } from "../db/schema";
+import { channelMembers, channels, consolidationLog, memories, memoryReviews } from "../db/schema";
+import { undoConsolidation } from "../memory/consolidate";
 import { getCoreBlocks, setCoreBlockText, type BlockLabel } from "../memory/core-blocks";
 import { listEpisodes, searchThreads } from "../memory/episodes";
 import { getMemoryHistory } from "../memory/facts";
@@ -87,6 +88,21 @@ export function mountMemoryExtRoutes(api: Hono<AppEnv>): void {
     if (!rv) throw httpError(404, "not_found");
     const r = await decideReview(rv.id, c.get("user").id, approve);
     if (!r.ok) throw httpError(r.error === "already_decided" ? 409 : 400, r.error ?? "failed");
+    return c.json(r);
+  });
+
+  // ---------- consolidation log + undo (admin; undoConsolidation had no caller, so a bad nightly merge could not be reversed) ----------
+  api.get("/consolidation-log", requireAuth("admin"), async (c) => {
+    const { limit } = readQuery(c, z.object({ limit: z.coerce.number().int().min(1).max(200).default(50) }));
+    const rows = await db.select().from(consolidationLog).orderBy(desc(consolidationLog.id)).limit(limit);
+    // private scopes are reported as "private" only
+    return c.json(rows.map((r) => ({ id: r.id, runId: r.runId, action: r.action, scopeTag: r.scopeTag === SHARED_TAG || !r.scopeTag ? r.scopeTag : "private", count: r.memoryIds.length, createdAt: r.createdAt, undoneAt: r.undoneAt })));
+  });
+  api.post("/consolidation-log/:id/undo", requireAuth("admin"), async (c) => {
+    const id = Number(c.req.param("id"));
+    if (!Number.isInteger(id)) throw httpError(400, "invalid_id");
+    const r = await undoConsolidation(id, c.get("user").id);
+    if (!r.ok) throw httpError(r.error === "not_found" ? 404 : 409, r.error ?? "failed");
     return c.json(r);
   });
 

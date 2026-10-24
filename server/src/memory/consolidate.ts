@@ -300,6 +300,9 @@ export async function consolidate(): Promise<ConsolidateResult> {
   await step("procedures", async () => {
     const eps = rows(await db.execute(sql`select summary from episodes where scope_tag = 'shared' and ended_at > now() - interval '36 hours' order by ended_at desc limit 20`));
     if (eps.length < 2) return;
+    // The model rewords the same procedures every night (36h window), so an unreviewed batch means: wait for the admin, do not pile on near-duplicates.
+    const [open] = await db.select({ id: memoryReviews.id }).from(memoryReviews).where(and(eq(memoryReviews.kind, "procedure"), eq(memoryReviews.status, "pending"))).limit(1);
+    if (open) return;
     const v = await completeJson({ system: PROCEDURE_SYSTEM, prompt: eps.map((e, i) => `${i + 1}. ${String(e.summary)}`).join("\n"), role: "summarize", maxOutputTokens: 500 }, digest);
     const created: number[] = [];
     const reviews: string[] = [];

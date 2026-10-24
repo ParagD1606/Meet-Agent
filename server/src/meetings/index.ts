@@ -74,7 +74,7 @@ export function cleanTitle(raw: string, channelName?: string | null, fallbackDat
   const mention = /<#([A-Z0-9]+)(?:\|([^>]+))?>/.exec(t);
   const channel = (mention?.[2] ?? channelName ?? "").replace(/^#/, "").trim();
   t = t.replace(/<#[A-Z0-9]+(?:\|[^>]+)?>/g, channel ? `#${channel}` : "a channel");
-  const huddle = /^huddle notes\b:?\s*(.*)$/i.exec(t);
+  const huddle = /^huddle (?:notes|transcript)\b:?\s*(.*)$/i.exec(t);
   if (!huddle) return t || "Meeting";
   const m = /(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(huddle[1]!);
   const d = fallbackDate ? new Date(fallbackDate) : null;

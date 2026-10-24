@@ -105,7 +105,7 @@ async function extractAndStore(a: CaptureArgs): Promise<number | null> {
   let facts: Parsed[];
   try {
     const out = await completeJson(
-      { system: EXTRACT_SYSTEM, prompt: `Today is ${at.toISOString().slice(0, 10)}.\n\nCONVERSATION:\n${transcript.slice(-MAX_TRANSCRIPT)}`, role: "extract", maxOutputTokens: 1400 },
+      { system: EXTRACT_SYSTEM, prompt: `Today is ${at.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })} ${at.toISOString().slice(0, 10)}.\n\nCONVERSATION:\n${transcript.slice(-MAX_TRANSCRIPT)}`, role: "extract", maxOutputTokens: 1400 },
       schema,
     );
     facts = parseFacts(out.facts, at)

@@ -80,7 +80,7 @@ const defaultClassifier: DepthClassifier = async (text, signal) =>
     model: getModel("triage"),
     system: "Classify the Slack message by how much work answering needs. Reply with one word: direct (greeting/thanks/chat, no lookup), memory (answerable from company memory), tools (needs live data from apps/web or an action), deep (multi-source research or long deliverable).",
     prompt: text.slice(0, 600),
-    maxOutputTokens: 5,
+    maxOutputTokens: 16, // one word, but a tokenizer may split it (see steering.ts)
     abortSignal: signal,
   })).text;
 

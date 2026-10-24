@@ -2,6 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../db";
 import { memories } from "../db/schema";
 import { deleteMemory, type MemoryRow } from "./graph";
+import { hasSecret } from "./ambient";
 import { scanMemoryText } from "./core-blocks";
 import { clearRecallCache } from "./recall";
 import { searchMemory } from "./search";
@@ -40,6 +41,7 @@ export async function getMemoryHistory(id: number): Promise<MemoryRow[]> {
 export async function rememberFact(a: AddFactInput): Promise<AddFactResult> {
   const bad = scanMemoryText(a.text);
   if (bad) throw new Error(bad);
+  if (hasSecret(a.text)) throw new Error("That looks like it contains a password, token or key, so I won't store it.");
   return addFact(a);
 }
 

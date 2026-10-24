@@ -10,6 +10,7 @@ describe("cleanTitle", () => {
   });
   test("falls back to the end date and leaves other titles alone", () => {
     expect(cleanTitle("Huddle notes", "ops", new Date("2026-10-24T10:00:00Z"))).toBe("Huddle in #ops · Oct 24");
+    expect(cleanTitle("Huddle transcript", "eng", new Date("2026-10-24T10:00:00Z"))).toBe("Huddle in #eng · Oct 24"); // the separate transcript file's title
     expect(cleanTitle("Standup 10:30:15", null)).toBe("Standup 10:30:15");
     expect(cleanTitle("Planning", null)).toBe("Planning");
     expect(cleanTitle(cleanTitle(":headphones: Huddle notes: 10/24/26 in &lt;#C1&gt;", "ops"), "ops")).toBe("Huddle in #ops · Oct 24");
