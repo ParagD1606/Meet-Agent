@@ -1,8 +1,9 @@
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { messageFeedback } from "../db/schema";
 import { log } from "../log";
 import { addReaction, removeReaction } from "./client";
+import { applyFeedback } from "./feedback";
 
 // ---- circuit breaker: at most 30 acknowledgement reactions per hour, then the breaker opens for an hour ----
 const HOUR_MS = 3_600_000;
@@ -66,9 +67,13 @@ export function ratingFor(reaction: string): "up" | "down" | null {
   return UP.has(base) ? "up" : DOWN.has(base) ? "down" : null;
 }
 
-export async function recordFeedback(a: { channelId: string; messageTs: string; userId: string; rating: "up" | "down" }) {
-  await db.insert(messageFeedback).values(a).onConflictDoUpdate({
+export async function recordFeedback(a: { channelId: string; messageTs: string; userId: string; rating: "up" | "down"; threadTs?: string | null }) {
+  const { threadTs, ...row } = a;
+  const [prev] = await db.select({ rating: messageFeedback.rating }).from(messageFeedback)
+    .where(and(eq(messageFeedback.channelId, a.channelId), eq(messageFeedback.messageTs, a.messageTs), eq(messageFeedback.userId, a.userId)));
+  await db.insert(messageFeedback).values(row).onConflictDoUpdate({
     target: [messageFeedback.channelId, messageFeedback.messageTs, messageFeedback.userId],
     set: { rating: a.rating, createdAt: sql`now()` },
   });
+  if (prev?.rating !== a.rating) await applyFeedback({ ...row, threadTs }); // a repeated identical reaction must not count twice
 }

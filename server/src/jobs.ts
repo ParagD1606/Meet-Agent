@@ -1,6 +1,6 @@
 import PgBoss from "pg-boss";
 import { config } from "./config";
-import { executeAutomation, findDue } from "./automations";
+import { executeAutomation, findDue, registerProactiveJobs } from "./automations";
 import { log } from "./log";
 import { failStaleResearch, runResearch } from "./research";
 import { seedBuiltinSkills } from "./skills/skills";
@@ -132,6 +132,8 @@ export async function startJobs(): Promise<void> {
     log.info("members resync", await resyncChannelMembers().catch((e) => ({ error: String(e) })));
   });
   await b.schedule(Q.membersResync, "7 */6 * * *");
+
+  await registerProactiveJobs(b);
 
   const journeyTick = await optionalExport<() => Promise<unknown>>(["./slack/journey", "./slack/onboarding"], "journeyTick");
   if (journeyTick) {

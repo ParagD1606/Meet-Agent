@@ -121,7 +121,10 @@ async function handleReaction(ev: Record<string, any>): Promise<void> {
   const rating = ratingFor(String(ev.reaction ?? ""));
   if (!rating || ev.item?.type !== "message" || !ev.user) return;
   if (ev.user === (await botUserId()) || ev.item_user !== (await botUserId())) return; // only humans rating bot messages
-  await recordFeedback({ channelId: ev.item.channel, messageTs: ev.item.ts, userId: ev.user, rating });
+  // the reaction event does not say which thread the message is in; ask Slack (best effort, falls back to a time window)
+  const threadTs = await slackClient().then((c) => c.reactions.get({ channel: ev.item.channel, timestamp: ev.item.ts }))
+    .then((r) => (r.message as { thread_ts?: string } | undefined)?.thread_ts ?? null).catch(() => null);
+  await recordFeedback({ channelId: ev.item.channel, messageTs: ev.item.ts, userId: ev.user, rating, threadTs });
 }
 
 async function handleMemberJoined(ev: Record<string, any>): Promise<void> {

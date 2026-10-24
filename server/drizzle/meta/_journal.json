@@ -29,6 +29,13 @@
       "when": 1793040000000,
       "tag": "0003_memory_temporal_typed",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793050000000,
+      "tag": "0010_memory_reminders",
+      "breakpoints": true
     }
   ]
 }

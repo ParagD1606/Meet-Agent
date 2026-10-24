@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
 import { channels, turns, users } from "../db/schema";
+import { checkSpendAlert } from "../cost";
 import { acquireTurnSlot, BUSY_MESSAGE, checkRate, CEILING_MESSAGE, dailyCapStatus, getLimits, recordUsage, releaseTurnSlot } from "../limits";
 import { log } from "../log";
 import type { AgentContext } from "../memory/core-blocks";
@@ -175,6 +176,7 @@ async function execute(input: TurnInput): Promise<void> {
       }),
       ...(result.waitingApproval ? { finishedAt: null } : {}),
     });
+    void checkSpendAlert().catch((e) => log.warn("spend alert failed", { error: String(e) }));
     if (input.userId) await recordUsage({ userId: input.userId, inputTokens: result.inputTokens, outputTokens: result.outputTokens }).catch((e) => log.warn("recordUsage failed", { error: String(e) }));
 
     // ---- learn: only primary turns on shared-safe data; never from personal/leased tool use ----

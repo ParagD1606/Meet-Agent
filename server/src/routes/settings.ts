@@ -7,6 +7,7 @@ import { db } from "../db";
 import { channels, settings } from "../db/schema";
 import { ACTION_CLASSES, getApprovalCards, setApprovalCards } from "../mcp/policy";
 import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
+import { FEATURES, featureChannels, setFeatureChannels } from "../slack/proactive-features";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
 import { httpError, readBody, codedError } from "./util";
 
@@ -54,6 +55,19 @@ settingsRoutes.put("/settings/proactivity", requireAuth("admin"), async (c) => {
     if (ids.length) await db.update(channels).set({ proactivity: mode }).where(inArray(channels.id, ids));
   }
   return c.json(await proactivity());
+});
+
+// ---------- proactive features (digest / nudge / deadlines / autoreply), opt-in per channel ----------
+async function proactiveFeatures() {
+  const lists = await Promise.all(FEATURES.map(featureChannels));
+  return Object.fromEntries(FEATURES.map((f, i) => [f, lists[i]!]));
+}
+settingsRoutes.get("/settings/proactive-features", requireAuth("admin"), async (c) => c.json(await proactiveFeatures()));
+settingsRoutes.put("/settings/proactive-features", requireAuth("admin"), async (c) => {
+  const ids = z.array(z.string().min(1).max(40)).max(2000).optional();
+  const body = await readBody(c, z.object({ digest: ids, nudge: ids, deadlines: ids, autoreply: ids }));
+  for (const f of FEATURES) if (body[f]) await setFeatureChannels(f, body[f]!);
+  return c.json(await proactiveFeatures());
 });
 
 // ---------- models ----------
