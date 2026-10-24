@@ -130,7 +130,7 @@ export interface MeetingTask {
 }
 export interface Meeting {
   id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
-  transcript?: string; summary?: string | null; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
+  transcript?: string; summary?: string | null; decisions?: string[]; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
   startedAt?: string | null; endedAt?: string | null; createdAt: string; updatedAt: string
 }
 export type ProactivityMode = "default" | "proactive" | "quiet"

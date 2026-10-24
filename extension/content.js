@@ -37,7 +37,8 @@
 
   function payload() {
     tick();
-    return { externalId, platform: adapter.platform, title: adapter.title(), lines: lines.map((l) => ({ ...l })), startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
+    const participants = [...new Set([...(adapter.roster?.() ?? []), ...lines.map((l) => l.speaker)].filter(Boolean))];
+    return { externalId, platform: adapter.platform, title: adapter.title(), participants, lines: lines.map((l) => ({ ...l })), startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
   }
 
   function upload(manual = false) {

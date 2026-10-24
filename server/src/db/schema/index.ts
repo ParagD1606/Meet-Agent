@@ -176,6 +176,8 @@ export const meetings = pgTable("meetings", {
   summary: text("summary"),
   /** Extracted action items; Jira references are added later when approved/created. */
   tasks: jsonb("tasks").notNull().default([]),
+  /** Decisions made in the meeting (strings). */
+  decisions: jsonb("decisions").notNull().default([]),
   participantIds: jsonb("participant_ids").notNull().default([]),
   status: text("status", { enum: ["processing", "ready", "failed"] }).notNull().default("processing"),
   startedAt: timestamp("started_at", { withTimezone: true }),

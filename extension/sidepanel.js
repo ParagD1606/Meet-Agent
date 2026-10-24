@@ -289,7 +289,7 @@ $("sendNotes").onclick = () => {
   modal(`<h4>Send to Meeting notes?</h4><p>This will save the transcript and:</p><ul><li><b>${tasks.length}</b> task${tasks.length === 1 ? "" : "s"}${tasks.length ? ` (${esc([...new Set(tasks.map((t) => t.assignee || "unassigned"))].join(", "))})` : ""}</li><li><b>${decisions.length}</b> decision${decisions.length === 1 ? "" : "s"}</li></ul>
     <p class="muted">${pending ? `${pending} item${pending === 1 ? " is" : "s are"} still pending and won't be sent. ` : ""}${rejected ? `${rejected} rejected. ` : ""}Open questions aren't sent. Nobody is notified; the notes appear in the Brain web app.</p>`, async () => {
     $("sendMsg").textContent = "Sending…";
-    if (state.manual) await ask({ type: "upload", manual: true, payload: { externalId: state.manual.externalId, platform: "import", title: state.manual.title, lines: state.manual.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: state.manual.startedAt, endedAt: new Date().toISOString() } });
+    if (state.manual) await ask({ type: "upload", manual: true, payload: { externalId: state.manual.externalId, platform: "import", title: state.manual.title, participants: speakers(), lines: state.manual.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: state.manual.startedAt, endedAt: new Date().toISOString() } });
     else { const tab = await activeTab(); try { await chrome.tabs.sendMessage(tab.id, { type: "send" }); } catch { $("sendMsg").textContent = "Couldn't reach the call tab."; return; } }
     setTimeout(async () => {
       const { lastUpload } = await chrome.storage.local.get("lastUpload");

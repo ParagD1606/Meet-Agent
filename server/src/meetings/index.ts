@@ -31,12 +31,13 @@ const taskSchema = z.object({
 });
 const analysisSchema = z.object({
   summary: z.string().trim().min(1).max(8_000),
+  decisions: z.array(z.string().trim().min(1).max(500)).max(30).default([]),
   tasks: z.array(taskSchema).max(50),
 });
 
 const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes.
 Use only the supplied text. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
-Extract only explicit commitments as tasks. Never invent an owner or due date. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
+List every decision that was actually made in "decisions" (short sentences). Extract only explicit commitments as tasks. Never invent an owner or due date. When a participant list is given, set assigneeName to the matching participant's name. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","decisions":["..."],"tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
 const asTasks = (value: unknown): MeetingTask[] => Array.isArray(value) ? value as MeetingTask[] : [];
@@ -81,14 +82,14 @@ async function rowsFor(actor: Actor) {
 /** Meeting list intentionally omits the raw transcript. */
 export async function listMeetings(actor: Actor) {
   const rows = await rowsFor(actor);
-  return rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => ({ ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), tasks: asTasks(meeting.tasks), participantIds: asStrings(meeting.participantIds) }));
+  return rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => ({ ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), decisions: asStrings(meeting.decisions), tasks: asTasks(meeting.tasks), participantIds: asStrings(meeting.participantIds) }));
 }
 
 export async function getMeeting(id: string, actor: Actor) {
   const rows = await rowsFor(actor);
   const found = rows.find((r) => r.meeting.id === id);
   const row = found?.meeting;
-  return row ? { ...row, title: cleanTitle(row.title, found!.channelName, row.endedAt), tasks: asTasks(row.tasks), participantIds: asStrings(row.participantIds) } : null;
+  return row ? { ...row, title: cleanTitle(row.title, found!.channelName, row.endedAt), decisions: asStrings(row.decisions), tasks: asTasks(row.tasks), participantIds: asStrings(row.participantIds) } : null;
 }
 
 const lineText = (v: unknown): string => {
@@ -144,30 +145,37 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
   };
 }
 
-async function analyze(sourceFileId: string, text: string): Promise<void> {
+async function analyze(sourceFileId: string, text: string, participants: string[] = []): Promise<void> {
   try {
-    const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
-    await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    const header = participants.length ? `Participants: ${participants.join(", ")}\n\n` : "";
+    const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-50_000), role: "summarize", maxOutputTokens: 1_800 }, analysisSchema);
+    await db.update(meetings).set({ summary: analysis.summary, decisions: analysis.decisions, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
   }
 }
 
-/** Adds the user's own decisions and tasks to the AI result; their entries win over duplicate AI ones. */
+const words = (t: string) => new Set(t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+function similar(a: string, b: string): boolean {
+  const x = words(a), y = words(b);
+  if (!x.size || !y.size) return a.trim().toLowerCase() === b.trim().toLowerCase();
+  let n = 0; for (const w of x) if (y.has(w)) n++;
+  return n / (x.size + y.size - n) >= 0.6;
+}
+
+/** Adds what the user approved in the side panel to the AI's final pass; the user's wording wins over near-duplicates. */
 async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
-  const [row] = await db.select({ summary: meetings.summary, tasks: meetings.tasks, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
+  const [row] = await db.select({ summary: meetings.summary, tasks: meetings.tasks, decisions: meetings.decisions, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
   if (!row) return;
   const mine: MeetingTask[] = (t.tasks ?? []).map((k) => ({
     title: k.title, description: k.done ? "Marked done during the call." : "",
     assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
   }));
-  const seen = new Set(mine.map((k) => k.title.toLowerCase()));
-  const tasks = [...mine, ...asTasks(row.tasks).filter((k) => !seen.has(k.title.toLowerCase()))];
-  const decisions = (t.decisions ?? []).map((d) => `- ${d}`).join("\n");
-  const section = decisions ? `## Decisions recorded in the call\n${decisions}` : "";
-  const summary = [section, row.summary ?? ""].filter(Boolean).join("\n\n") || null;
-  await db.update(meetings).set({ tasks, summary, status: summary ? "ready" : row.status, updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+  const tasks = [...mine, ...asTasks(row.tasks).filter((k) => !mine.some((m) => similar(m.title, k.title)))];
+  const myDecisions = t.decisions ?? [];
+  const decisions = [...myDecisions, ...asStrings(row.decisions).filter((d) => !myDecisions.some((m) => similar(m, d)))];
+  await db.update(meetings).set({ tasks, decisions, status: row.summary || decisions.length || tasks.length ? "ready" : row.status, updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
 }
 
 export type ExtensionTranscript = {
@@ -180,6 +188,8 @@ export type ExtensionTranscript = {
   endedAt?: Date;
   /** Decisions and tasks the user recorded in the side panel; kept alongside the AI summary. */
   decisions?: string[];
+  /** Display names of everyone seen on the call, so the final pass names owners correctly. */
+  participants?: string[];
   tasks?: { title: string; assignee?: string; due?: string; done?: boolean }[];
 };
 
@@ -195,7 +205,7 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
   const [row] = await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
     .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } })
     .returning({ id: meetings.id });
-  await analyze(sourceFileId, text);
+  await analyze(sourceFileId, text, t.participants ?? []);
   if (t.decisions?.length || t.tasks?.length) await mergeUserNotes(sourceFileId, t);
   return { id: row!.id };
 }

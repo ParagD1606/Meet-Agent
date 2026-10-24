@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { config } from "../../src/config";
 import { memories, channels } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
+import { setMemoryLlm } from "../../src/memory/llm";
 import { app, call, db, login, mkUser, resetDb } from "./helpers";
 
 let admin: string, member: string;
@@ -187,17 +188,41 @@ describe("extension upload", () => {
     expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
   });
 
+  test("final pass fills decisions and named tasks, merged with what the user approved", async () => {
+    setMemoryLlm(async () => JSON.stringify({
+      summary: "Planned the launch.",
+      decisions: ["Launch on Friday", "Use Postgres for storage"],
+      tasks: [
+        { title: "Send the Q3 deck to the finance team", description: "", assigneeName: "Bob", assigneeId: null, dueDate: "2026-10-30" },
+        { title: "Book the offsite venue", description: "", assigneeName: "Priya", assigneeId: null, dueDate: null },
+      ],
+    }));
+    try {
+      const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+      const res = await app.request("/ext/meetings", {
+        method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
+        body: JSON.stringify({ externalId: "fin", platform: "meet", title: "Planning", participants: ["Ana", "Bob", "Priya"],
+          lines: [{ speaker: "Ana", text: "Bob sends the deck." }], decisions: ["Launch on Friday"],
+          tasks: [{ title: "Send Q3 deck to finance", assignee: "Bob", due: "Thu" }] }),
+      });
+      const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
+      expect(m.status).toBe("ready");
+      expect(m.decisions).toEqual(["Launch on Friday", "Use Postgres for storage"]); // user's wording, AI's extra, no duplicate
+      expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Send Q3 deck to finance", "Bob"], ["Book the offsite venue", "Priya"]]);
+    } finally { setMemoryLlm(null); }
+  });
+
   test("keeps the decisions and tasks recorded in the side panel", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const res = await app.request("/ext/meetings", {
       method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
       body: JSON.stringify({ externalId: "n1", platform: "meet", title: "Planning", lines: [{ speaker: "Ana", text: "Bob sends the deck." }],
-        decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
+        participants: ["Ana", "Bob"], decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
     });
     expect(res.status).toBe(201);
     const { id } = await json(res);
     const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
     expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
-    expect(m.summary).toContain("Launch on Friday");
+    expect(m.decisions).toContain("Launch on Friday");
   });
 });
