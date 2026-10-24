@@ -90,6 +90,10 @@ const segment = (v: unknown, name: string) => {
 const positive = (v: unknown, fallback = 30) => typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 100 ? v : fallback;
 const page = (v: unknown) => typeof v === "number" && Number.isInteger(v) && v > 0 ? v : 1;
 const query = (p: Record<string, string | number | undefined>) => { const u = new URLSearchParams(); for (const [k, v] of Object.entries(p)) if (v !== undefined) u.set(k, String(v)); return u.toString() ? `?${u}` : ""; };
+const next = (items: unknown[], currentPage: number, size: number) => items.length === size ? currentPage + 1 : null;
+const repoDetail = (r: any) => ({ full_name: r.full_name, private: r.private, description: r.description, default_branch: r.default_branch, visibility: r.visibility, language: r.language, topics: r.topics, updated_at: r.updated_at, html_url: r.html_url });
+const issueSummary = (r: any) => ({ number: r.number, title: r.title, state: r.state, author: r.user?.login, updated_at: r.updated_at, html_url: r.html_url, pull_request: !!r.pull_request });
+const pullSummary = (r: any) => ({ number: r.number, title: r.title, state: r.state, author: r.user?.login, draft: r.draft, updated_at: r.updated_at, html_url: r.html_url });
 
 const TOOLS: McpToolInfo[] = [
   { name: "whoami", description: "Get the connected GitHub account.", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
@@ -109,13 +113,13 @@ export async function githubCall(conn: ConnectionRow, name: string, args: Record
   const owner = () => segment(args.owner, "owner"); const repo = () => segment(args.repo, "repo");
   switch (name) {
     case "whoami": return githubFetch(token, "/user");
-    case "list_repositories": return githubFetch(token, `/user/repos${query({ affiliation: "owner,collaborator,organization_member", sort: "updated", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_repository": return githubFetch(token, `/repos/${owner()}/${repo()}`);
+    case "list_repositories": { const currentPage = page(args.page); const size = positive(args.per_page, 20); const repos = await githubFetch(token, `/user/repos${query({ affiliation: "owner,collaborator,organization_member", sort: "updated", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, repositories: repos.map((r) => r.full_name).filter((r): r is string => typeof r === "string"), next_page: next(repos, currentPage, size) }; }
+    case "get_repository": return repoDetail(await githubFetch(token, `/repos/${owner()}/${repo()}`));
     case "get_file": { const path = segment(args.path, "path").replace(/%2F/g, "/"); const file = await githubFetch(token, `/repos/${owner()}/${repo()}/contents/${path}${query({ ref: typeof args.ref === "string" ? args.ref : undefined })}`); if (file.type !== "file") throw new Error("path is not a file"); return { name: file.name, path: file.path, sha: file.sha, size: file.size, content: typeof file.content === "string" ? Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8") : null }; }
-    case "list_issues": return githubFetch(token, `/repos/${owner()}/${repo()}/issues${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_issue": return githubFetch(token, `/repos/${owner()}/${repo()}/issues/${segment(args.issue_number, "issue_number")}`);
-    case "list_pull_requests": return githubFetch(token, `/repos/${owner()}/${repo()}/pulls${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_pull_request": return githubFetch(token, `/repos/${owner()}/${repo()}/pulls/${segment(args.pull_number, "pull_number")}`);
+    case "list_issues": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const issues = await githubFetch(token, `/repos/${owner()}/${repo()}/issues${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, issues: issues.map(issueSummary), next_page: next(issues, currentPage, size) }; }
+    case "get_issue": { const issue = await githubFetch(token, `/repos/${owner()}/${repo()}/issues/${segment(args.issue_number, "issue_number")}`); return { ...issueSummary(issue), body: issue.body }; }
+    case "list_pull_requests": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const pulls = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, pull_requests: pulls.map(pullSummary), next_page: next(pulls, currentPage, size) }; }
+    case "get_pull_request": { const pull = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls/${segment(args.pull_number, "pull_number")}`); return { ...pullSummary(pull), body: pull.body, base: pull.base?.ref, head: pull.head?.ref }; }
     default: throw new Error(`unknown GitHub tool: ${name}`);
   }
 }
