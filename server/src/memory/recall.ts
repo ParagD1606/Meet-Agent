@@ -100,9 +100,14 @@ async function loadVectors(ids: number[]): Promise<Map<number, number[]>> {
 
 const clean = (s: string) => s.replace(/<\/?\s*memory-context\s*>/gi, "[memory-context]").replace(/\s+/g, " ").trim();
 const day = (d: Date) => d.toISOString().slice(0, 10);
+/** Citable source tag: only http(s) permalinks, stripped of characters that would break Slack's <url|label> syntax. */
+const cite = (h: MemoryHit) => {
+  const u = h.permalink && /^https?:\/\//.test(h.permalink) ? h.permalink.replace(/[<>|\s]/g, "") : "";
+  return u ? ` <${u}|${h.source === "slack" ? "Slack thread" : h.source}, ${day(h.validAt ?? h.createdAt)}>` : "";
+};
 export const renderHit = (h: MemoryHit) => {
   const t = clean(h.text);
-  return `- ${t.length > ITEM_CHARS ? `${t.slice(0, ITEM_CHARS)}...` : t} (${h.source}, ${day(h.validAt ?? h.createdAt)})`;
+  return `- ${t.length > ITEM_CHARS ? `${t.slice(0, ITEM_CHARS)}...` : t} (${h.source}, ${day(h.validAt ?? h.createdAt)})${cite(h)}`;
 };
 
 const cache = new Map<string, { at: number; val: Recall }>();

@@ -16,6 +16,7 @@ import { steerActive } from "../turn/steering";
 import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 import { ingestHuddleFile } from "../meetings";
+import { captureOwnerReply } from "./teammate";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
@@ -51,6 +52,8 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
       ...(route.kind === "ignore" ? { reason: route.reason } : {}),
     });
   }
+  // an owner answering a question Pixel routed to them is consumed here (stored + relayed), not run as a turn
+  if (ev.type === "message" && !ev.bot_id && ev.user !== me && await captureOwnerReply(ev).catch((e) => { log.warn("owner reply capture failed", { error: String(e) }); return false; })) return;
   if (route.kind === "ignore") return;
   // The same human message can arrive as both `message` and `app_mention`; process it once.
   if (!(await claimEvent(`m:${ev.channel}:${ev.ts}`))) return;

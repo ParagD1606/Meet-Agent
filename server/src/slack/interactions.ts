@@ -4,6 +4,8 @@ import { handleBrainAction } from "./commands";
 import { deps } from "./deps";
 import { setJourneyQuiet } from "./journey/engine";
 import { slackClient } from "./client";
+import { handleResolveAction } from "./resolve";
+import { handleAskAction } from "./teammate";
 
 type Action = { action_id?: string; value?: string };
 type BlockActions = {
@@ -27,6 +29,7 @@ export async function handleInteraction(payload: BlockActions): Promise<void> {
     for (const a of own) {
       if (await handleCommitmentAction(payload, a)) continue;
       if (await handleBrainAction(payload as never, a)) continue;
+      if (await handleResolveAction(payload, a) || await handleAskAction(payload, a)) continue;
       if (a.action_id === "journey_quiet" && payload.user?.id) {
         await setJourneyQuiet(payload.user.id);
         const channel = payload.container?.channel_id ?? payload.channel?.id;

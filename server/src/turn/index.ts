@@ -10,6 +10,7 @@ import type { AgentContext } from "../memory/core-blocks";
 import { breakdown } from "../memory/budget";
 import { scheduleCapture } from "../memory/writeback";
 import { botUserId, getWorkspace } from "../slack/client";
+import { resolveActions } from "../slack/cards";
 import { prepareReply, createReplySink } from "../slack/stream";
 import { buildContext } from "./context";
 import { maybeCompact } from "./compact";
@@ -21,6 +22,7 @@ import { getPersona } from "../persona";
 import { buildDynamicContext, buildSystemMessages, type Trigger } from "./prompt";
 import { serialize } from "./queue";
 import { getSlack } from "./slack";
+import { askTeammateTool } from "./ask-teammate";
 import { assembleTools, type ToolContext } from "./tools";
 
 export { handleBlockAction, resumePending, expireStale } from "./approval";
@@ -121,7 +123,9 @@ async function execute(input: TurnInput): Promise<void> {
     stage = "tools";
     const assembled = plan.tools ? await assembleTools(ctx, { depth, text: input.text, narrate }) : undefined;
     // memory depth: no live tools, but the read-only memory_search so the model can dig past the auto-recalled block
-    const tools = assembled?.tools ?? (plan.memorySearch ? { memory_search: memoryTools(ctx as never).memory_search! } : {});
+    const tools = assembled?.tools ?? (plan.memorySearch
+      ? { memory_search: memoryTools(ctx as never).memory_search!, ...(interactive && !readOnly && input.userId ? { ask_teammate: askTeammateTool(ctx) } : {}) }
+      : {});
 
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
     stage = "context";
@@ -163,7 +167,9 @@ async function execute(input: TurnInput): Promise<void> {
     const cancelled = result.stopped === "cancelled";
     const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
     stage = "reply_finish";
-    if (!quiet) await sink.finish(out);
+    // "Resolved / Not quite" under a real answer (not small talk, errors, cut-off or approval-pending runs)
+    const answered = interactive && !!input.userId && !silent && !result.stopped && !result.waitingApproval && depth !== "direct";
+    if (!quiet) await sink.finish(out, answered ? { actions: resolveActions({ u: input.userId!, q: input.text, t: replyThread }) } : undefined);
     reply = silent ? "" : reply;
 
     await finishRow({

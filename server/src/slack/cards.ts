@@ -83,3 +83,15 @@ export function homeView(o: { botName?: string; name?: string | null; connection
     ],
   };
 }
+
+/** "Resolved / Not quite" buttons under a bot answer. value carries the asker, the question and the thread so the click needs no lookups. */
+export function resolveActions(v: { u: string; q: string; t?: string | null }): unknown[] {
+  const value = JSON.stringify({ u: v.u, q: v.q.slice(0, 400), t: v.t ?? null });
+  return [{ type: "actions", elements: [button("Resolved", "brain_resolve_yes", { value, style: "primary" }), button("Not quite", "brain_resolve_no", { value })] }];
+}
+
+/** Consent card: the asker sees the exact question text that will be sent to the teammate. */
+export function askConfirmCard(a: { id: string; owner: string; question: string }): Card {
+  const text = `I can't answer that from memory. Want me to ask <@${a.owner}>? I'll send only this question: "${escapeSlackText(a.question)}"`;
+  return { text, blocks: [section(text), { type: "actions", elements: [button("Ask them", "brain_ask_yes", { value: a.id, style: "primary" }), button("No thanks", "brain_ask_no", { value: a.id })] }] };
+}

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
-export type RateKind = "turn" | "triage" | "mcp" | "nudge" | "chase";
+export type RateKind = "turn" | "triage" | "mcp" | "nudge" | "chase" | "ask";
 type Bucket = { key: string; capacity: number; perSec: number };
 
 /** Burst capacity + sustained refill. Per-user and per-channel buckets must both have a token. */
@@ -17,6 +17,8 @@ export const BUCKETS: Record<RateKind, (a: { userId: string; channelId: string }
   nudge: ({ userId }) => [{ key: `user:${userId}:nudge`, capacity: 2, perSec: 1 / 1800 }],
   // manager chasing one person about commitments: 3 in a burst, then 3 per day
   chase: ({ userId }) => [{ key: `user:${userId}:chase`, capacity: 3, perSec: 3 / 86_400 }],
+  // questions Pixel routes TO one teammate (userId = the target): 3 per day. Purged after 2 idle days, fine for a daily window.
+  ask: ({ userId }) => [{ key: `user:${userId}:ask`, capacity: 3, perSec: 3 / 86400 }],
 };
 
 export type RateResult = { ok: true } | { ok: false; message: string; retryAfterSec: number };
@@ -27,6 +29,7 @@ const MESSAGES: Record<RateKind, string> = {
   mcp: "Rate limit exceeded. Retry in {s} seconds.",
   nudge: "rate limited",
   chase: "rate limited",
+  ask: "rate limited",
 };
 
 /**

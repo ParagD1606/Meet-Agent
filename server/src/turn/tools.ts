@@ -19,6 +19,7 @@ import { slackSearchTools } from "../slack/search";
 import { extractUrl } from "../tools/web/extract";
 import { webSearch } from "../tools/web/search";
 import { allowedUrls, registerUrls } from "../tools/web";
+import { askTeammateTool } from "./ask-teammate";
 import { grantedLeases } from "./lease";
 import { memoryTools } from "./memory-tools";
 import { readToolResultTool } from "./spill";
@@ -86,6 +87,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
   Object.assign(core, skillTools(ctx));
 
   if (writable) Object.assign(core, teammateAccessTools(ctx, o.text));
+  if (writable && ctx.userId) core.ask_teammate = askTeammateTool(ctx);
   if (writable && !ctx.orgConnectionsOnly) {
     core.request_connection = tool({
       description: "Ask the user to connect an app (github, linear, notion...).",
