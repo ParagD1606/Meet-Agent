@@ -167,7 +167,7 @@ function needReady() {
   return null;
 }
 const failText = (r) => r?.status === 429 ? "Too many requests. Wait a moment." : r?.status === 401 ? "Token rejected. Check Settings." : "Something went wrong reaching the server. Try again.";
-const context = () => ({ title: src()?.title, startedAt: src()?.startedAt, roster: roster() });
+const context = () => ({ title: src()?.title, startedAt: src()?.startedAt, roster: roster(), me: me() || undefined });
 const notes = () => state.store.items.filter((i) => i.status !== "rejected").map((i) => `- [${i.kind}${i.status === "approved" ? ", approved" : ""}] ${i.title}${i.assignee ? ` (${i.assignee}${i.due ? ", " + i.due : ""})` : ""}`).join("\n");
 const workloadNote = () => Object.entries(state.load).map(([n, c]) => `${n}: ${c} open task${c === 1 ? "" : "s"}`).join("; ");
 

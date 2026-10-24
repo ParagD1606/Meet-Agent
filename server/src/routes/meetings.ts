@@ -135,6 +135,7 @@ const liveLines = z.array(z.object({ speaker: z.string().trim().max(120).default
 const liveCtx = z.object({
   title: z.string().max(240).optional(), startedAt: z.string().max(40).optional(),
   roster: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
+  me: z.string().trim().max(120).optional(),
 });
 
 /** Shared by the side panel's live endpoints: bearer auth, rate limit, body validation. */
@@ -155,8 +156,11 @@ extensionRoutes.post("/ask", async (c) => {
   }));
   if ("res" in r) return r.res;
   try {
+    // Who is asking: the name typed in the panel, else the owner of the token.
+    const [asker] = await db.select({ name: users.name }).from(users).where(eq(users.id, r.userId)).limit(1);
+    const ctx = { ...r.data.context, me: r.data.context.me || asker?.name || undefined };
     const mem = await recallForMeeting(r.userId, `${r.data.question}\n${r.data.context.title ?? ""}`.trim(), { rewrite: true });
-    return c.json({ answer: await askLiveMeeting(r.data.lines, r.data.question, r.data.history, r.data.context, mem.text), sources: mem.sources });
+    return c.json({ answer: await askLiveMeeting(r.data.lines, r.data.question, r.data.history, ctx, mem.text), sources: mem.sources });
   }
   catch (err) { log.warn("live ask failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });
