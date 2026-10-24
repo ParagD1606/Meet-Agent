@@ -225,6 +225,10 @@ export const meetings = pgTable("meetings", {
   platform: text("platform").notNull().default("slack"),
   /** Set for extension uploads, which have no Slack channel; only the owner (and admins) can read them. */
   ownerId: text("owner_id"),
+  /** Who started the huddle / uploaded the call: gets the "needs an owner / needs approval" DM. Not a read grant. */
+  organizerId: text("organizer_id"),
+  /** Slack permalink of the huddle notes file (the console link is built from the meeting id). */
+  sourceUrl: text("source_url"),
   title: text("title").notNull(),
   transcript: text("transcript").notNull(),
   summary: text("summary"),
@@ -234,6 +238,8 @@ export const meetings = pgTable("meetings", {
   decisions: jsonb("decisions").notNull().default([]),
   participantIds: jsonb("participant_ids").notNull().default([]),
   status: text("status", { enum: ["processing", "ready", "failed"] }).notNull().default("processing"),
+  /** Why the last analysis failed (shown on the Meeting notes page). */
+  failedReason: text("failed_reason"),
   startedAt: timestamp("started_at", { withTimezone: true }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   createdAt: ts("created_at"),
@@ -250,7 +256,10 @@ export const meetingTaskNotifications = pgTable("meeting_task_notifications", {
   meetingId: text("meeting_id").notNull(),
   taskId: text("task_id").notNull(),
   recipientUserId: text("recipient_user_id").notNull(),
-  status: text("status", { enum: ["sent", "acknowledged", "declined", "failed"] }).notNull(),
+  status: text("status", { enum: ["sent", "acknowledged", "declined", "failed", "skipped"] }).notNull(), // skipped: the task exists but nobody was told (backfill); an admin can still send the recap
+  /** task = recap DM to an owner; organizer = DM about unassigned / proposed items. */
+  kind: text("kind", { enum: ["task", "organizer"] }).notNull().default("task"),
+  attempts: integer("attempts").notNull().default(0),
   dmChannelId: text("dm_channel_id"),
   messageTs: text("message_ts"),
   error: text("error"),
@@ -263,6 +272,17 @@ export const meetingTaskNotifications = pgTable("meeting_task_notifications", {
   uniqueIndex("meeting_task_notification_recipient_uniq").on(t.meetingId, t.taskId, t.recipientUserId),
   index("meeting_task_notification_meeting_idx").on(t.meetingId),
 ]);
+
+/** Who approved / rejected / edited / merged which meeting item, and when (admin-visible audit trail). */
+export const meetingAudit = pgTable("meeting_audit", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  meetingId: text("meeting_id").notNull(),
+  itemId: text("item_id"),
+  action: text("action").notNull(),
+  actorId: text("actor_id"),
+  detail: jsonb("detail").notNull().default({}),
+  createdAt: ts("created_at"),
+}, (t) => [index("meeting_audit_meeting_idx").on(t.meetingId, t.createdAt)]);
 
 export const researchRuns = pgTable("research_runs", {
   id: text("id").primaryKey(),

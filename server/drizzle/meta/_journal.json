@@ -141,6 +141,20 @@
       "when": 1793040020000,
       "tag": "0020_answer_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793040022000,
+      "tag": "0017_meeting_recap",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793040024000,
+      "tag": "0021_github_links",
+      "breakpoints": true
     }
   ]
 }

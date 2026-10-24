@@ -133,6 +133,31 @@ export interface MeetingTask {
   jiraKey?: string | null; jiraUrl?: string | null
   notification?: { status: "needs_assignee" | "pending" | "sent" | "acknowledged" | "declined" | "failed"; error?: string | null }
 }
+
+// ---- meeting-to-execution (review-before-execute) contract
+export type MeetingItemKind = "commitment" | "suggestion" | "question"
+export type MeetingItemLabel = "confirmed" | "tentative" | "suggestion" | "question"
+export type MeetingApproval = "proposed" | "approved" | "rejected"
+export interface MeetingDupe { source: "task" | "meeting"; id: string; meetingId?: string; title: string; ownerName: string | null; dueDate: string | null }
+export interface MeetingConflict { type: "owner" | "due" | "decision"; with: { id: string; title: string; ownerName: string | null; dueDate: string | null } }
+export interface MeetingItem {
+  id: string; itemType: "task" | "decision" | "question"; title: string; description: string
+  assigneeId: string | null; assigneeName: string | null; dueDate: string | null; priority: "normal" | "urgent"
+  kind: MeetingItemKind; label: MeetingItemLabel; confidence: number; reason: string; quote: string; evidence: number[]
+  unverified: boolean; followUp: boolean; approval: MeetingApproval; approvedBy: string | null; approvedAt: string | null
+  ambiguity: { ownerMissing: boolean; ownerAmbiguous: boolean; ownerCandidates: { id: string; name: string; score: number }[]; dueMissing: boolean; duplicateOf: MeetingDupe[]; conflicts: MeetingConflict[] }
+  commitmentId: string | null
+  notification: { status: string; error: string | null; sentAt: string | null } | null
+  externalRefs: { provider: "trello" | "github" | "jira"; id: string; url: string }[]
+}
+export interface MeetingCounts { confirmed: number; tentative: number; suggestions: number; questions: number; unassigned: number; noDue: number; duplicates: number; conflicts: number }
+export interface MeetingRow { id: string; title: string; platform?: string; startedAt?: string | null; status: MeetingStatus; failedReason?: string | null; counts?: Partial<MeetingCounts> }
+export interface MeetingFull extends MeetingRow {
+  summary: string | null; items: MeetingItem[]; transcript: { n: number; speaker: string; text: string }[] | null
+  counts: MeetingCounts; canApprove: boolean; mode: "auto" | "approve"; autoConfidence?: number; createdAt?: string
+}
+export interface NewMeeting { title: string; text?: string; lines?: { speaker?: string; text: string }[]; format?: string; startedAt?: string; channelId?: string }
+export interface MeetingItemPatch { title?: string; description?: string; dueDate?: string | null; assigneeId?: string | null; priority?: "normal" | "urgent"; kind?: MeetingItemKind; approval?: MeetingApproval }
 export interface Meeting {
   id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
   transcript?: string; summary?: string | null; decisions?: string[]; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
@@ -209,6 +234,7 @@ export interface Task {
   assignerId: string | null; assignerName: string | null; assignerAvatar: string | null
   permalink: string | null; channelId: string | null; channelName: string | null; sourceType: string; createdAt: string; completedAt: string | null
   canEdit: boolean; canReassign: boolean
+  externalRefs?: { provider: "trello" | "github" | "jira"; id: string; url: string }[]
 }
 export interface Person { id: string; name: string | null; avatarUrl: string | null; title: string | null }
 export interface TaskPatch { status?: "open" | "in_progress" | "done" | "dropped"; ownerId?: string; due?: string | null; priority?: "normal" | "urgent" }
@@ -221,8 +247,16 @@ export interface Commitment {
 
 export type BoardTarget = "trello" | "github"
 export interface TrelloSettings { configured: boolean; keyLast4: string; boardId: string; listId: string; memberMap: Record<string, string> }
-export interface GithubIssuesSettings { configured: boolean; repo: string; assigneeMap: Record<string, string>; labels: string[] }
-export interface PushResult { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string }
+export interface GithubCredential { kind: "app" | "pat" | "none"; appConfigured: boolean; installations: number; hasPat: boolean; preferPat: boolean; appSlug: string | null }
+export interface GithubIssuesSettings { configured: boolean; repo: string; assigneeMap: Record<string, string>; labels: string[]; milestone: number | null; projectOwner: string; projectNumber: number | null; credential: GithubCredential }
+export interface GithubRepo { fullName: string; private: boolean; hasIssues: boolean }
+export interface GithubRepoPage { credential: "app" | "pat" | null; total: number; repos: GithubRepo[]; page: number; hasMore: boolean }
+export interface GithubSuggestion { userId: string; userName: string | null; login: string; confidence: "high" | "medium" | "low"; reason: string }
+export interface GithubSuggestions { candidates: { login: string; name?: string | null }[]; suggestions: GithubSuggestion[] }
+export interface GithubCheck { name: string; ok: boolean; message: string }
+export interface GithubTest extends BoardTest { credential?: "app" | "pat" | null; checks?: GithubCheck[] }
+export interface ExternalRef { provider: string; id: string; url: string }
+export interface PushResult { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string; warning?: string }
 export interface PushSummary { results: PushResult[]; created: number; existing: number; skipped: number; failed: number }
 export interface NamedId { id: string; name: string }
 export interface BoardTest { ok: boolean; message?: string; username?: string; repo?: string }
@@ -236,8 +270,10 @@ export const api = {
   trelloLists: (board: string) => get<{ lists: NamedId[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/lists`).then((d) => d.lists),
   trelloMembers: (board: string) => get<{ members: (NamedId & { username: string })[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/members`).then((d) => d.members),
   githubSettings: () => get<GithubIssuesSettings>("/api/settings/integrations/github-issues"),
-  saveGithub: (b: { repo: string; token?: string; assigneeMap: Record<string, string>; labels: string[] }) => send<GithubIssuesSettings>("PUT", "/api/settings/integrations/github-issues", b),
-  testGithub: (b: { repo?: string; token?: string }) => send<BoardTest>("POST", "/api/settings/integrations/github-issues/test", b),
+  saveGithub: (b: { repo: string; token?: string; usePat?: boolean; assigneeMap: Record<string, string>; labels: string[]; milestone?: number | null; projectOwner?: string; projectNumber?: number | null }) => send<GithubIssuesSettings>("PUT", "/api/settings/integrations/github-issues", b),
+  testGithub: (b: { repo?: string; token?: string; projectOwner?: string; projectNumber?: number | null }) => send<GithubTest>("POST", "/api/settings/integrations/github-issues/test", b),
+  githubRepos: (q: string, page: number) => get<GithubRepoPage>(`/api/integrations/github/repos?${new URLSearchParams({ q, page: String(page) })}`),
+  githubSuggestions: (repo: string) => get<GithubSuggestions>(`/api/integrations/github/suggestions?${new URLSearchParams({ repo })}`),
   pushTasks: (target: BoardTarget, ids: string[]) => send<PushSummary>("POST", "/api/tasks/push", { target, ids }),
   pushMeeting: (meetingId: string, target: BoardTarget, which: { itemIds: string[] } | { all: "approved" }) => send<PushSummary>("POST", `/api/meetings/${encodeURIComponent(meetingId)}/push`, { target, ...which }),  me: () => get<Me | { user: Me }>("/api/me").then((m) => ("user" in m ? m.user : m)),
   users: () => get<unknown>("/api/users").then((d) => list<UserRow>(d, "users")),
@@ -292,6 +328,18 @@ export const api = {
   runAutomation: (id: string) => send("POST", `/api/automations/${id}/run`),
   meetings: () => get<unknown>("/api/meetings").then((d) => list<Meeting>(d, "meetings")),
   meeting: (id: string) => get<Meeting>(`/api/meetings/${id}`),
+  meetingRows: () => get<unknown>("/api/meetings").then((d) => list<MeetingRow>(d, "meetings")),
+  meetingDetail: (id: string) => get<MeetingFull>(`/api/meetings/${id}`),
+  createMeeting: (m: NewMeeting) => send<{ id: string }>("POST", "/api/meetings", m),
+  reanalyzeMeeting: (id: string) => send("POST", `/api/meetings/${id}/reanalyze`),
+  retryMeeting: (id: string) => send("POST", `/api/meetings/${id}/retry`),
+  patchMeetingItem: (id: string, itemId: string, p: MeetingItemPatch) => send<unknown>("PATCH", `/api/meetings/${id}/items/${itemId}`, p),
+  approveMeetingItems: (id: string, b: { itemIds?: string[]; all?: "confirmed" }) => send<unknown>("POST", `/api/meetings/${id}/approve`, b),
+  mergeMeetingItem: (id: string, itemId: string, intoId: string) => send("POST", `/api/meetings/${id}/items/${itemId}/merge`, { intoId }),
+  dismissMeetingDuplicate: (id: string, itemId: string) => send("POST", `/api/meetings/${id}/items/${itemId}/dismiss-duplicate`),
+  meetingRecap: (id: string, itemIds?: string[]) => send<{ sent?: number; skipped?: number; failed?: number }>("POST", `/api/meetings/${id}/recap`, itemIds ? { itemIds } : {}),
+  meetingSettings: () => get<{ mode: "auto" | "approve"; autoConfidence?: number }>("/api/settings/meetings"),
+  setMeetingSettings: (b: { mode?: "auto" | "approve"; autoConfidence?: number }) => send<{ mode: "auto" | "approve"; autoConfidence?: number }>("PUT", "/api/settings/meetings", b),
   syncMeetings: () => send<{ found: number; imported: number; failed: number }>("POST", "/api/meetings/sync"),
   sendMeetingTaskDms: (id: string, taskIds?: string[]) => send<{ sent: number; skipped: number; failed: number }>("POST", `/api/meetings/${id}/task-dms`, taskIds ? { taskIds } : {}),
   updateMeetingTaskAssignee: (meetingId: string, taskId: string, assigneeId: string | null) => send<Meeting>("PATCH", `/api/meetings/${meetingId}/tasks/${taskId}`, { assigneeId }),

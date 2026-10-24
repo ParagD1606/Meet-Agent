@@ -52,9 +52,10 @@ describe("marketplace REST", () => {
     const member = await login("UM");
     const admin = await login("UA", "admin");
     expect((await call("POST", "/api/marketplace/github/install", { cookie: member, body: { scope: "org", token: "t" } })).status).toBe(403);
+    expect((await call("POST", "/api/marketplace/github/install", { cookie: member, body: { token: "t" } })).status).toBe(400);
     expect((await call("POST", "/api/marketplace/nope-nope/install", { cookie: member, body: { token: "t" } })).status).toBe(404);
     expect((await call("POST", "/api/marketplace/gmail-personal-only/install", { cookie: admin, body: { scope: "org", token: "t" } })).status).toBe(400);
-    expect((await call("POST", "/api/marketplace/github/install", { cookie: admin, body: { scope: "org", token: "t" } })).status).toBe(201);
+    expect((await call("POST", "/api/marketplace/github/install", { cookie: admin, body: { scope: "org", token: "t" } })).status).toBe(400);
   });
 
   test("custom URL is validated; a failed OAuth start leaves no dead pending row", async () => {

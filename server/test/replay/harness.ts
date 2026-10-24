@@ -46,7 +46,7 @@ const realDeps = { runTurn: deps.runTurn, handleBlockAction: deps.handleBlockAct
 export type Post = { method: string; channel: string; thread_ts?: string; text: string; blocks?: any[]; ts?: string };
 export type Slack = ReturnType<typeof fakeSlack> & { posts: () => Post[]; texts: () => string[]; to: (channel: string) => Post[]; reset: () => void };
 
-export async function boot(o: { extractFacts?: string[] } = {}): Promise<Slack> {
+export async function boot(o: { extractFacts?: string[]; slackResponses?: Record<string, (a: any) => any> } = {}): Promise<Slack> {
   await resetDb();
   await db.execute(sql`create table if not exists message_feedback (
     id bigserial primary key, channel_id text not null, message_ts text not null, user_id text not null,
@@ -85,6 +85,7 @@ export async function boot(o: { extractFacts?: string[] } = {}): Promise<Slack> 
     "chat.getPermalink": (a) => ({ ok: true, permalink: `https://acme.slack.com/archives/${a.channel}/p${String(a.message_ts).replace(".", "")}` }),
     "chat.postMessage": (a) => { const ts = nextTs(); ++n; store.push({ channel: a.channel, ts, thread_ts: a.thread_ts, user: BOT, text: String(a.text ?? "") }); return { ok: true, ts, channel: a.channel }; },
     "chat.update": (a) => { const m = store.find((x) => x.channel === a.channel && x.ts === a.ts); if (m) m.text = String(a.text ?? ""); return { ok: true, ts: a.ts, channel: a.channel }; },
+    ...o.slackResponses,
   });
   setSlackClientForTest(fake.client);
   setSlackClient(async () => fake.client as never);

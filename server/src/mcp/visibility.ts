@@ -33,7 +33,9 @@ export async function connectionNotes(ctx: { userId: string | null; orgConnectio
   if (usable.some((u) => u.endsWith("an admin has not allowed writes)")))
     notes.push("writes are disabled for workspace connections: if asked to create, edit or post in such an app, say exactly that (writes are disabled for workspace connections), that an admin can enable them in Integrations settings, or that the asker can connect their own account; never say the tools are \"not exposed\", missing or that you lack the app");
   if (uid) {
-    const others = rows.filter((c) => c.scope === "user" && c.ownerUserId !== uid && c.status === "connected" && !seen.has(groupKey(c)));
+    // A GitHub App user token is private by design. Do not reveal that somebody
+    // else has one, and never offer the normal teammate-access path for it.
+    const others = rows.filter((c) => c.provider !== "github" && c.scope === "user" && c.ownerUserId !== uid && c.status === "connected" && !seen.has(groupKey(c)));
     const names = new Map((await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, [...new Set(others.map((c) => c.ownerUserId!))]))).map((u) => [u.id, u.name ?? u.id]));
     const byApp = new Map<string, Set<string>>();
     for (const c of others) (byApp.get(appLabel(c)) ?? byApp.set(appLabel(c), new Set()).get(appLabel(c))!).add(names.get(c.ownerUserId!) ?? "a teammate");

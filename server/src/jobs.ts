@@ -15,6 +15,7 @@ export const Q = {
   membersResync: "members-resync",
   askDeliver: "ask-deliver",
   mcpHealth: "mcp-health",
+  githubReconcile: "github-reconcile",
 } as const;
 
 let boss: PgBoss | null = null;
@@ -186,6 +187,11 @@ export async function startJobs(): Promise<void> {
     log.info("mcp health", await verifyAllConnections().catch((e) => { log.warn("mcp health failed", { err: String(e) }); throw e; }));
   });
   await b.schedule(Q.mcpHealth, "23 * * * *");
+  await b.work(Q.githubReconcile, async () => {
+    const { reconcileGithub } = await import("./integrations/github-reconcile");
+    log.info("github reconcile", await reconcileGithub().catch((e) => { log.warn("github reconcile failed", { err: String(e).slice(0, 200) }); throw e; }));
+  });
+  await b.schedule(Q.githubReconcile, "41 * * * *");
 
   await registerProactiveJobs(b);
   await (await import("./manager")).registerManagerJobs(b);

@@ -88,7 +88,8 @@ describe("extension memory", () => {
     expect(prompt).toContain("Background");
     expect(prompt).toContain("launch date for the outreach campaign"); // memory reached the model...
     expect(m.decisions).toEqual([]);                                   // ...but its decision was not said in the meeting, so it is dropped
-    expect(m.tasks.map((t: any) => t.title)).toEqual(["Send the deck"]);
+    expect(m.tasks.filter((t: any) => t.itemType === "task").map((t: any) => t.title)).toEqual(["Send the deck"]);
+    expect(m.tasks.find((t: any) => t.itemType === "decision")).toMatchObject({ unverified: true, approval: "proposed" }); // kept for review, never approved by itself
   });
 
   test("a finished extension meeting is remembered privately for the person who held it", async () => {

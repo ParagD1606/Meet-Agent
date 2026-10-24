@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { requireAuth, type AppEnv } from "../auth/session";
 import { pushCommitments, pushMeetingItems, type PushResult, type Target } from "../export/push";
-import { getGithub } from "../integrations/github-issues";
+import { githubReady } from "../integrations/github-issues";
 import { getTrello } from "../integrations/trello";
 import { httpError, readBody } from "./util";
 
@@ -15,8 +15,8 @@ const user = (c: import("hono").Context<AppEnv>) => { const u = c.get("user"); r
 
 /** A clear 409 before anything is attempted when the target has no credentials yet. */
 async function configured(t: Target) {
-  const ok = t === "trello" ? !!(await getTrello())?.listId : !!(await getGithub())?.repo;
-  if (!ok) throw httpError(409, "not_configured", { message: `${t === "trello" ? "Trello" : "GitHub Issues"} is not configured yet: an admin must set it up under Integrations > Task boards` });
+  const ok = t === "trello" ? !!(await getTrello())?.listId : await githubReady();
+  if (!ok) throw httpError(409, "not_configured", { message: `${t === "trello" ? "Trello" : "GitHub"} is not configured yet: an admin must set it up under Integrations > Task boards` });
 }
 
 const summary = (results: PushResult[]) => ({

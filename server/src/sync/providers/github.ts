@@ -2,7 +2,9 @@ import { createPrivateKey, sign } from "node:crypto";
 import { config } from "../../config";
 import { http, json, type DocRef, type SyncAuth, type SyncProvider } from "../types";
 
-const API = "https://api.github.com";
+let API = "https://api.github.com";
+/** Tests only: points installation-token minting at a fake GitHub. */
+export const setGithubAppApiForTest = (url: string | null) => { API = url ?? "https://api.github.com"; };
 const H = { accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" };
 const PAGE = 100;
 const MAX_PAGES_PER_REPO = 10; // ponytail: 1000 issues per repo per call; a capped repo holds the watermark back so the next call resumes
@@ -21,7 +23,7 @@ const privateKey = () => {
 };
 
 /** Short-lived GitHub App JWT used only to mint an installation token. */
-function appJwt(): string {
+export function appJwt(): string {
   const now = Math.floor(Date.now() / 1000);
   const encoded = `${b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${b64url(JSON.stringify({ iat: now - 60, exp: now + 9 * 60, iss: config.GITHUB_APP_ID }))}`;
   return `${encoded}.${sign("RSA-SHA256", Buffer.from(encoded), createPrivateKey(privateKey())).toString("base64url")}`;

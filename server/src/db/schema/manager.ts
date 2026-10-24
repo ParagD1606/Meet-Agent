@@ -69,4 +69,6 @@ export const integrationPushes = pgTable("integration_pushes", {
   externalUrl: text("external_url"),
   status: text("status", { enum: ["ok", "failed"] }).notNull(),
   error: text("error"),
+  lastState: text("last_state", { enum: ["open", "closed"] }), // last state both sides agreed on (GitHub reconcile); null = never checked, treated as open
+  syncedAt: timestamp("synced_at", { withTimezone: true }),
 }, (t) => [index("integration_pushes_task_idx").on(t.target, t.taskRef, t.status)]);

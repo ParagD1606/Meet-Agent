@@ -13,8 +13,10 @@ export class IntegrationError extends Error {
 export type PushPayload = {
   title: string; description: string; sourceUrl: string; quote: string; due: Date | null;
   ownerId: string | null; ownerName: string | null; origin: string; // origin: "meeting <title>" | "Slack"
+  taskId?: string; urgent?: boolean; // GitHub: reconciliation marker + priority label
 };
-export type Created = { id: string; url: string };
+/** `warning`: the card/issue exists but an optional follow-up step (GitHub project) failed. */
+export type Created = { id: string; url: string; warning?: string };
 
 /** Card / issue body shared by both targets. Plain text with markdown links; no secrets by construction. */
 export function describe(p: PushPayload, extra: string[] = []): string {

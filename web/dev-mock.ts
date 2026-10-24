@@ -3,6 +3,7 @@
 // Cookie "role" = owner|member signs you in; GET /auth/slack signs in as owner; /mock/role/member switches role.
 // MOCK_UNCONFIGURED=1 shows the setup wizard. MOCK_GRAPH=5000 sets the graph size (default 5200).
 import { join } from "node:path"
+import { meetingRoutes } from "./dev-mock-meetings"
 
 const dist = join(import.meta.dir, "dist")
 const now = () => new Date().toISOString()
@@ -31,8 +32,9 @@ const db = {
     summary: "## Decisions\nShip the onboarding checklist next Tuesday.\n\n## Discussion\nThe team agreed that the checklist needs review before release.\n\n## Open questions\nThe final release-notes owner is still to be confirmed.",
     tasks: [{ id: "mtask_1", title: "Draft the onboarding checklist", description: "Prepare a reviewable first draft for the product team.", assigneeName: "Max Member", assigneeId: "U2", dueDate: "Friday", jiraKey: null, jiraUrl: null, notification: { status: "sent" } }, { id: "mtask_2", title: "Prepare release notes", description: "Create release notes before the onboarding checklist launch.", assigneeName: null, assigneeId: null, dueDate: "Before launch", jiraKey: null, jiraUrl: null, notification: { status: "needs_assignee" } }] }] as any[],
   mcpWrites: true,
-  trello: { configured: true, keyLast4: "ab12", boardId: "b1", listId: "l1", memberMap: { U2: "m1" } as Record<string, string> },
-  gh: { configured: true, repo: "acme/web", assigneeMap: { U1: "ada" } as Record<string, string>, labels: ["pixel"] },
+  trello: { configured: process.env.MOCK_TRELLO === "1", keyLast4: "ab12", boardId: "b1", listId: "l1", memberMap: { U2: "m1" } as Record<string, string> },
+  gh: { configured: process.env.MOCK_GH !== "none", repo: process.env.MOCK_GH === "none" ? "" : "acme/web", assigneeMap: { U1: "ada" } as Record<string, string>, labels: ["pixel"], milestone: null as number | null, projectOwner: "", projectNumber: null as number | null,
+    credential: { kind: process.env.MOCK_GH === "none" ? "none" : "app", appConfigured: true, installations: 1, hasPat: false, preferPat: false, appSlug: "pixel-app" } as any },
   conns: [{ id: "c1", provider: "notion", label: "Notion", url: "https://mcp.notion.com/mcp", scope: "org", ownerUserId: null, ownerName: null, status: "connected", toolCount: 26, readCount: 18, writeCount: 8, writesEnabled: true, allowWrites: null, connectedAt: ago(9000), lastVerifiedAt: ago(20) },
     { id: "c3", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "user", ownerUserId: "U2", ownerName: "Max Member", status: "connected", toolCount: 41, readCount: 30, writeCount: 11, writesEnabled: true, connectedAt: ago(3000), lastVerifiedAt: ago(35) },
     { id: "c2", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "U1", ownerName: "Ada Lovelace", status: "needs_reauth", error: "Authorization expired or was revoked. Reconnect to continue.", lastError: "Authorization expired or was revoked. Reconnect to continue.", toolCount: 18, readCount: 12, writeCount: 6, writesEnabled: true, connectedAt: ago(20000), lastVerifiedAt: ago(70) },
@@ -149,8 +151,10 @@ Bun.serve({
       if (p === "/api/integrations/trello/boards") { const g = adminOnly(); return g ?? json({ boards: [{ id: "b1", name: "Product roadmap" }, { id: "b2", name: "Support" }] }) }
       if ((x = m("/api/integrations/trello/boards/(\\w+)/lists"))) { const g = adminOnly(); return g ?? json({ lists: [{ id: "l1", name: "Backlog" }, { id: "l2", name: "This sprint" }] }) }
       if ((x = m("/api/integrations/trello/boards/(\\w+)/members"))) { const g = adminOnly(); return g ?? json({ members: [{ id: "m1", name: "Max Member", username: "maxm" }, { id: "m2", name: "Ada Lovelace", username: "ada" }] }) }
-      if (p === "/api/settings/integrations/github-issues") { const g = adminOnly(); if (g) return g; if (req.method === "PUT") Object.assign(db.gh, { configured: true, repo: body.repo, assigneeMap: body.assigneeMap, labels: body.labels }); return json(db.gh) }
-      if (p === "/api/settings/integrations/github-issues/test") { const g = adminOnly(); return g ?? json({ ok: true, repo: body.repo ?? db.gh.repo }) }
+      if (p === "/api/settings/integrations/github-issues") { const g = adminOnly(); if (g) return g; if (req.method === "PUT") Object.assign(db.gh, { configured: true, repo: body.repo, assigneeMap: body.assigneeMap, labels: body.labels, milestone: body.milestone ?? null, projectOwner: body.projectOwner ?? "", projectNumber: body.projectNumber ?? null }); return json(db.gh) }
+      if (p === "/api/settings/integrations/github-issues/test") { const g = adminOnly(); return g ?? json({ ok: false, repo: body.repo ?? db.gh.repo, credential: "app", message: "The GitHub App is missing: Organization projects: Read & write.", checks: [{ name: "credential", ok: true, message: "Using the GitHub App installed for sync" }, { name: "repository", ok: true, message: "Found acme/web" }, { name: "issues access", ok: true, message: "Issues can be read" }, { name: "app permissions", ok: false, message: "The GitHub App is missing: Organization projects: Read & write. Add it at https://github.com/settings/apps/pixel-app/permissions, then an organization owner must approve the updated permissions." }] }) }
+      if (p === "/api/integrations/github/repos") { const g = adminOnly(); if (g) return g; const q = (sp.get("q") ?? "").toLowerCase(); const page = +(sp.get("page") ?? 1); const all = [{ fullName: "acme/web", private: true, hasIssues: true }, { fullName: "acme/api", private: true, hasIssues: true }, { fullName: "acme/docs", private: false, hasIssues: true }, ...Array.from({ length: 60 }, (_, i) => ({ fullName: `acme/service-${i}`, private: i % 3 === 0, hasIssues: true }))].filter((r) => r.fullName.includes(q)); return json({ credential: "app", total: all.length, repos: all.slice((page - 1) * 30, page * 30), page, hasMore: all.length > page * 30 }) }
+      if (p === "/api/integrations/github/suggestions") { const g = adminOnly(); return g ?? json({ candidates: [{ login: "ada", name: "Ada Lovelace" }, { login: "maxm", name: "Max M" }, { login: "priya-p", name: null }], suggestions: [{ userId: "U2", userName: "Max Member", login: "maxm", confidence: "high", reason: "same email" }, { userId: "U3", userName: "Priya Patel", login: "priya-p", confidence: "medium", reason: "GitHub login matches the email name" }] }) }
       if (p === "/api/tasks/push") return json({ results: (body.ids ?? []).map((id: string) => ({ ref: id, title: id, status: "created", url: `https://trello.com/c/${id}` })), created: (body.ids ?? []).length, existing: 0, skipped: 0, failed: 0 })
       if (p === "/api/tasks/export" || /^\/api\/meetings\/\w+\/export$/.test(p)) return new Response("source,title\r\n#eng,Mock\r\n", { headers: { "content-type": "text/csv", "content-disposition": 'attachment; filename="tasks.csv"' } })
       if (p === "/api/people") return json({ people: [...users, { id: "U3", name: "Priya Patel" }].map((u: any) => ({ id: u.id, name: u.name, avatarUrl: null, title: null })) })
@@ -224,11 +228,7 @@ Bun.serve({
       }
       if ((x = m("/api/automations/(\\w+)/run"))) { const a = db.automations.find((a) => a.id === x![1])!; a.lastRunAt = now(); a.lastStatus = "ok"; return json({ ok: true }) }
       if ((x = m("/api/automations/(\\w+)"))) { if (req.method === "DELETE") db.automations = db.automations.filter((a) => a.id !== x![1]); else Object.assign(db.automations.find((a) => a.id === x![1])!, body); return json({ ok: true }) }
-      if ((x = m("/api/meetings/(\\w+)/task-dms"))) return json({ sent: 1, skipped: 1, failed: 0 })
-      if ((x = m("/api/meetings/(\\w+)/assignees"))) return json(users.filter((u) => !sp.get("q") || u.name.toLowerCase().includes(sp.get("q")!.toLowerCase())))
-      if ((x = m("/api/meetings/(\\w+)/tasks/(\\w+)"))) { const meeting = db.meetings.find((m) => m.id === x![1]); const user = users.find((u) => u.id === body.assigneeId); if (meeting) meeting.tasks = meeting.tasks.map((t: any) => t.id === x![2] ? { ...t, assigneeId: user?.id ?? null, assigneeName: user?.name ?? null, notification: { status: user ? "pending" : "needs_assignee" } } : t); return meeting ? json(meeting) : json({ error: "not_found" }, 404) }
-      if (p === "/api/meetings") return json(db.meetings.map(({ transcript: _transcript, ...meeting }) => meeting))
-      if ((x = m("/api/meetings/(\\w+)"))) { const meeting = db.meetings.find((meeting) => meeting.id === x![1]); return meeting ? json(meeting) : json({ error: "not_found" }, 404) }
+      { const r = meetingRoutes(req.method, p, sp, body, admin); if (r) return r }
       if (p === "/api/marketplace") { const q = (sp.get("q") ?? "").toLowerCase(); const items = market.filter((i) => !q || `${i.name} ${i.categories.join(" ")}`.toLowerCase().includes(q)).map((i) => ({ ...i, connected: db.conns.some((c) => c.provider === i.key && c.status === "connected") })); return json({ items, total: items.length }) }
       if ((x = m("/api/marketplace/([\\w-]+)/install"))) {
         if (body.scope === "org" && !admin) return json({ error: "forbidden" }, 403)

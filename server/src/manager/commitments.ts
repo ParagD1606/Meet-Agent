@@ -191,23 +191,19 @@ export async function runExtraction(now = new Date()): Promise<{ created: number
 
   const ms = await db.select().from(meetings).where(and(eq(meetings.status, "ready"), gt(meetings.updatedAt, since), lte(meetings.updatedAt, now))).limit(100);
   for (const m of ms) await guard(() => meetingTasksToCommitments(m));
+  await guard(async () => (await (await import("../meetings/recap")).retryFailedRecaps(), 0)); // failed recap DMs are retried (up to 3 attempts)
 
   if (!failed) await putSetting(CURSOR, now.toISOString());
   return { created, failed };
 }
 
-/** Meeting tasks -> commitments (idempotent by meeting:<id>:<i> and by owner+title+channel). */
+/**
+ * Meeting items -> commitments through the one approval gate (meetings/tasks.ts): idempotent by meeting:<id>:<itemId>, never sends a DM
+ * (used by the hourly extraction and the backfill, so old meetings get tasks without notifying anyone). Returns how many tasks were created.
+ */
 export async function meetingTasksToCommitments(m: typeof meetings.$inferSelect): Promise<number> {
-  const scopeTag = await channelScope(m.channelId);
-  const tasks = Array.isArray(m.tasks) ? (m.tasks as Record<string, unknown>[]) : [];
-  let n = 0;
-  for (const [i, t] of tasks.entries()) {
-    const title = typeof t.title === "string" ? t.title : "";
-    if (!title) continue;
-    const owner = await resolveOwner((t.assigneeId as string) || (t.assigneeName as string) || null, m.channelId);
-    if (await addCommitment({ ownerId: owner.id, ownerName: owner.name, text: title, dueAt: parseDue(t.dueDate), sourceType: "meeting", sourceRef: `meeting:${m.id}:${i}`, channelId: m.channelId, threadTs: m.threadTs, scopeTag })) n++;
-  }
-  return n;
+  const { syncMeetingTasks } = await import("../meetings/tasks");
+  return (await syncMeetingTasks(m.id, { silent: true })).created;
 }
 
 // ---------- status ----------
@@ -222,7 +218,7 @@ export async function resolveCommitment(id: string, status: "done" | "dropped", 
   const [row] = await db.update(commitments).set({ status, completedAt: new Date() })
     .where(and(eq(commitments.id, id), inArray(commitments.status, [...ACTIVE]), by.admin ? undefined : or(eq(commitments.ownerId, by.id), eq(commitments.assignerId, by.id))))
     .returning();
-  if (row) await syncTaskFact(row);
+  if (row) { await syncTaskFact(row); void import("../integrations/github-reconcile").then((m) => m.githubTaskChanged(row.id)).catch(() => {}); }
   return row ?? null;
 }
 
