@@ -9,6 +9,9 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
   - Banners for similar items (Merge / Keep both / Dismiss) and deadline conflicts.
   - Workload chip when someone already has 4+ open approved tasks across your saved meetings, suggesting the lightest teammate.
   - Relative dates ("next Friday") are resolved against the meeting's start time.
+- **Suggest**: for each task, the three people best placed to take it, with the evidence ("Why"), an availability tag and a skill-match bar. **Assign** sets the owner (and approves the task); the person's real Slack identity travels with it, so it shows a proper owner in Meeting notes and can be sent a task DM from the page.
+  - *Skills* come from tasks they completed or are working on that resemble this one, their job title, and team-memory notes that mention them.
+  - *Availability* is estimated from their open, overdue, urgent and due-this-week tasks, who is on this call, and time off mentioned in memory in the last 30 days. **Slack presence and calendars are not connected**, and it only counts tasks and memory you are allowed to see, so treat it as a guide.
 - **Ask**: chat about the meeting ("Who is free to take this?", "What did we decide?").
 - **Settings**: server URL, token (saved automatically), auto-update (notes and items, every 2 minutes), auto-send.
 

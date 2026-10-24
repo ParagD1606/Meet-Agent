@@ -452,9 +452,12 @@ function similar(a: string, b: string): boolean {
 async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
   const [row] = await db.select({ id: meetings.id, summary: meetings.summary, tasks: meetings.tasks, decisions: meetings.decisions, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
   if (!row) return;
+  // An owner picked in the panel from the suggestions carries a Slack user id; only real, active people are linked.
+  const ids = [...new Set((t.tasks ?? []).map((k) => k.assigneeId).filter((v): v is string => !!v))];
+  const real = new Map((ids.length ? await db.select({ id: users.id, name: users.name }).from(users).where(and(inArray(users.id, ids), eq(users.deactivated, false), eq(users.isBot, false))) : []).map((u) => [u.id, u.name]));
   const mine: NewMeetingTask[] = (t.tasks ?? []).map((k) => ({
     title: k.title, description: k.done ? "Marked done during the call." : "",
-    assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
+    assigneeName: (k.assigneeId && real.get(k.assigneeId)) || k.assignee?.trim() || null, assigneeId: k.assigneeId && real.has(k.assigneeId) ? k.assigneeId : null, dueDate: k.due?.trim() || null,
   }));
   const existing = asTasks(row.id, row.tasks);
   const fresh: NewMeetingTask[] = [...mine, ...existing.filter((k) => !mine.some((m) => similar(m.title, k.title))).map(({ id: _id, notification: _notification, ...task }) => task)];
@@ -476,7 +479,7 @@ export type ExtensionTranscript = {
   decisions?: string[];
   /** Display names of everyone seen on the call, so the final pass names owners correctly. */
   participants?: string[];
-  tasks?: { title: string; assignee?: string; due?: string; done?: boolean }[];
+  tasks?: { title: string; assignee?: string; assigneeId?: string; due?: string; done?: boolean }[];
 };
 
 /** Stores a transcript captured by the browser extension and summarizes it. Private to its uploader (and admins). */
@@ -579,7 +582,7 @@ async function syncHuddles(opts: { force?: boolean; maxPages?: number }): Promis
 }
 
 /** The extension acts for one signed-in person, so it reads memory as a DM with them: shared, their own DMs, and private channels they belong to. */
-const personScope = (userId: string): SlackScope => ({ channelId: `ext_${userId}`, isPrivate: false, isIm: true, userId });
+export const personScope = (userId: string): SlackScope => ({ channelId: `ext_${userId}`, isPrivate: false, isIm: true, userId });
 
 export type MemorySource = { text: string; source: string; date: string; url?: string };
 /** What the team already knows (Slack and Brain memory) that this person may read, with its sources. Never throws: no memory just means no background. */

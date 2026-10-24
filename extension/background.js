@@ -34,7 +34,7 @@ async function upload(payload) {
     const who = (n) => (meName && /^you$/i.test(n) ? meName : n);
     const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker: who(speaker), text })), participants: (payload.participants ?? []).map(who).filter((n) => n && !/^you$/i.test(n)) };
     const decisions = approved.filter((i) => i.kind === "decision").map((i) => i.title);
-    const tasks = approved.filter((i) => i.kind === "task").map((i) => ({ title: i.title, assignee: i.assignee || undefined, due: i.due || undefined, done: !!i.done }));
+    const tasks = approved.filter((i) => i.kind === "task").map((i) => ({ title: i.title, assignee: i.assignee || undefined, assigneeId: i.assigneeId || undefined, due: i.due || undefined, done: !!i.done }));
     if (decisions.length) body.decisions = decisions;
     if (tasks.length) body.tasks = tasks;
     const out = await post(body);

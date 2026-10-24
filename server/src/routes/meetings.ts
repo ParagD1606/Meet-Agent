@@ -10,6 +10,7 @@ import { apiTokens, users } from "../db/schema";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
 import { analyzeLiveMeeting, askLiveMeeting, recallForMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
+import { suggestAssignees } from "../meetings/suggest";
 import { httpError, readBody } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
@@ -80,7 +81,7 @@ const extSchema = z.object({
   endedAt: z.coerce.date().optional(),
   decisions: z.array(z.string().min(1)).optional(),
   participants: z.array(z.string().min(1)).optional(),
-  tasks: z.array(z.object({ title: z.string().min(1), assignee: z.string().optional(), due: z.string().optional(), done: z.boolean().optional() })).optional(),
+  tasks: z.array(z.object({ title: z.string().min(1), assignee: z.string().optional(), assigneeId: z.string().optional(), due: z.string().optional(), done: z.boolean().optional() })).optional(),
 });
 
 const clip = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
@@ -97,7 +98,7 @@ function sanitizeUpload(body: any) {
     lines: (list(body.lines, 20_000) ?? []).map((l: any) => ({ speaker: clip(l?.speaker, 120), text: clip(l?.text, 4_000) })).filter((l: any) => l.text),
     participants: list(body.participants, 100)?.map((p) => clip(p, 120)).filter(Boolean),
     decisions: list(body.decisions, 50)?.map((d) => clip(d, 500)).filter(Boolean),
-    tasks: list(body.tasks, 100)?.map((t: any) => ({ title: clip(t?.title, 240), assignee: clip(t?.assignee, 120) || undefined, due: clip(t?.due, 60) || undefined, done: t?.done === true })).filter((t: any) => t.title),
+    tasks: list(body.tasks, 100)?.map((t: any) => ({ title: clip(t?.title, 240), assignee: clip(t?.assignee, 120) || undefined, assigneeId: clip(t?.assigneeId, 80) || undefined, due: clip(t?.due, 60) || undefined, done: t?.done === true })).filter((t: any) => t.title),
   };
 }
 
@@ -176,4 +177,15 @@ extensionRoutes.post("/notes", async (c) => {
   if ("res" in r) return r.res;
   try { return c.json({ notes: await updateLiveNotes(r.data.lines, r.data.offset, r.data.previous, r.data.context) }); }
   catch (err) { log.warn("live notes failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
+});
+
+extensionRoutes.post("/suggest", async (c) => {
+  const r = await live(c, z.object({
+    tasks: z.array(z.object({ id: z.string().min(1).max(80), title: z.string().trim().min(1).max(300) })).min(1).max(12),
+    roster: z.array(z.string().trim().min(1).max(120)).max(100).default([]),
+    context: z.string().max(300).optional(),
+  }));
+  if ("res" in r) return r.res;
+  try { return c.json(await suggestAssignees(r.userId, r.data.tasks, { roster: r.data.roster, context: r.data.context })); }
+  catch (err) { log.warn("assignee suggestions failed", { error: String(err) }); return c.json({ error: "suggest_failed" }, 502); }
 });
