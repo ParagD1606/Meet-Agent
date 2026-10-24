@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { APPS, DriveLogo, GitHubLogo, JiraLogo, MeetLogo, NotionLogo, SlackLogo, TeamsLogo, Tile, TrelloLogo, ZoomLogo } from "./logos"
 
 const AV: Record<string, string> = { Ana: "#e0703a", Bob: "#3b82f6", Parag: "#8b5cf6", You: "#14b8a6", Maya: "#ec4899" }
@@ -70,29 +70,29 @@ export function HeroWindow() {
 }
 
 const CHIPS = [
-  { y: 226, c: "#00ac47", t: "meet: Ana · we decided to launch" },
-  { y: 263, c: "#E01E5A", t: "slack: #launch-plan" },
+  { y: 226, c: "#E01E5A", t: "slack: #launch-plan · decided Friday" },
+  { y: 263, c: "#00ac47", t: "meet: Ana · ads go to Parag" },
   { y: 300, c: "#7B83EB", t: "teams: weekly standup" },
-  { y: 337, c: "#3b82f6", t: "zoom: planning call" },
-  { y: 374, c: "#ffe14d", t: "huddle: AI notes saved" },
+  { y: 337, c: "#e8e6df", t: "notion: Launch plan updated" },
+  { y: 374, c: "#4285F4", t: "drive: Q4 deck synced" },
 ]
 const TICKER = [
-  ["NEW DECISION", "launch on Friday"], ["NEW TASK", "advertisements → Parag"], ["DROPPED", "“AI integration”: nobody said it"],
-  ["REMEMBERED", "AWS until December"], ["OWNER", "Ana · free this week"],
+  ["REMEMBERED", "AWS until December"], ["DECISION", "launch on Friday"], ["TASK", "advertisements → Parag"],
+  ["ANSWERED", "“what did we decide?” · 2 sources"], ["FOLLOW-UP", "reminder sent to Parag"],
 ]
 const CARDS = [
-  { id: "tl", n: "01", h: "CAPTIONS", items: ["Google Meet", "Microsoft Teams", "Zoom (web)", "Slack Huddles"], x: 4, y: 1 },
-  { id: "tr", n: "04", h: "SUGGESTIONS", items: ["Skills", "Deadlines", "Workload", "Evidence"], x: 76, y: 3 },
-  { id: "bl", n: "02", h: "NOTES", items: ["Decisions", "Tasks", "Open questions", "Owners"], x: 3, y: 73 },
+  { id: "tl", n: "01", h: "CONVERSATIONS", items: ["Slack threads", "Huddles", "Meet and Teams", "Zoom (web)"], x: 4, y: 1 },
+  { id: "tr", n: "04", h: "TEAMMATE", items: ["Answers", "Tasks", "Reminders", "Owner suggestions"], x: 76, y: 3 },
+  { id: "bl", n: "02", h: "KNOWLEDGE", items: ["Notion", "Google Drive", "Uploads", "GitHub"], x: 3, y: 73 },
   { id: "br", n: "03", h: "MEMORY", items: ["Shared", "Private channels", "Just you", "Sources"], x: 77, y: 72 },
 ]
 const pct = (v: number, of: number) => `${(v / of) * 100}%`
 
 /** The hero diagram: meeting events flow into the Brain, which writes notes and remembers them. */
 export function BrainField() {
-  const tiles = [{ x: 478, C: <MeetLogo size={30} /> }, { x: 556, C: <TeamsLogo size={32} /> }, { x: 634, C: <ZoomLogo size={34} /> }, { x: 712, C: <SlackLogo size={28} /> }]
+  const tiles = [{ x: 478, C: <SlackLogo size={28} /> }, { x: 556, C: <MeetLogo size={30} /> }, { x: 634, C: <TeamsLogo size={32} /> }, { x: 712, C: <NotionLogo size={30} /> }]
   return (
-    <div className="field" aria-label="Meeting captions flow into Company Brain, which writes the notes and remembers them">
+    <div className="field" aria-label="Slack threads, meetings and documents flow into Company Brain, which remembers them and acts on them">
       <div className="fglow" aria-hidden />
       <svg className="fsvg" viewBox="0 0 1180 560" aria-hidden>
         <g className="rings">
@@ -105,8 +105,8 @@ export function BrainField() {
       <div className="core" style={{ left: pct(590, 1180), top: pct(300, 560) }}>
         <span className="ctag">COMPANY</span><Brain size={40} color="#3ddc84" /><span className="cname">Brain</span>
       </div>
-      <span className="spoke" style={{ left: pct(590, 1180), top: pct(30, 560), transform: "translateX(-50%)" }}>QUOTE-CHECKED<i>{I("tick", 14, 2.8)}</i></span>
-      <span className="spoke" style={{ right: pct(1180 - 462, 1180), top: pct(290, 560) }}>CAPTIONS IN</span>
+      <span className="spoke" style={{ left: pct(590, 1180), top: pct(30, 560), transform: "translateX(-50%)" }}>ALWAYS-SOURCED<i>{I("tick", 14, 2.8)}</i></span>
+      <span className="spoke" style={{ right: pct(1180 - 462, 1180), top: pct(290, 560) }}>CAPTURING</span>
       <span className="spoke" style={{ left: pct(716, 1180), top: pct(290, 560) }}>MEMORY</span>
       {CHIPS.map((c) => <span key={c.t} className="chip" style={{ top: pct(c.y - 13, 560), left: 0 }}><i style={{ background: c.c }} />{c.t}</span>)}
       <div className="ticker" style={{ left: pct(790, 1180), top: pct(290, 560) }}>
@@ -124,8 +124,8 @@ export function BrainField() {
 }
 
 export const PLATFORMS = [
-  { n: "GOOGLE MEET", L: <MeetLogo size={17} /> }, { n: "MICROSOFT TEAMS", L: <TeamsLogo size={18} /> },
-  { n: "ZOOM", L: <ZoomLogo size={18} /> }, { n: "SLACK", L: <SlackLogo size={16} /> },
+  { n: "SLACK", L: <SlackLogo size={16} /> }, { n: "GOOGLE MEET", L: <MeetLogo size={17} /> }, { n: "MICROSOFT TEAMS", L: <TeamsLogo size={18} /> },
+  { n: "ZOOM", L: <ZoomLogo size={18} /> }, { n: "NOTION", L: <NotionLogo size={16} /> },
 ]
 
 export const MiniMeet = () => (
@@ -238,12 +238,46 @@ export const ActivityLog = () => (
 )
 
 export const FAQ: { q: string; a: ReactNode }[] = [
-  { q: "Does it join my meeting?", a: "No. It reads the captions your meeting already shows, from a side panel in your browser. No bot joins the call and no audio is recorded." },
-  { q: "Which meeting tools does it work with?", a: "Google Meet works today. Microsoft Teams, Zoom (in the browser) and Slack Huddles in the browser are supported too, but are newer. Slack Huddles that have AI notes turned on are also picked up on the server." },
-  { q: "Can it make things up?", a: "Every decision and task has to quote words that were really said in the meeting. If it can't point to them, the item is dropped. Nothing is saved until you approve it." },
-  { q: "Who can see my meetings?", a: "You, and workspace admins. A meeting you upload from the extension is private to you unless you choose to share it." },
+  { q: "Is it just a meeting note-taker?", a: "No. Meetings are one source. Company Brain remembers Slack conversations, documents you sync and tasks as well, and answers questions across all of it, with sources." },
+  { q: "Does it join my meetings?", a: "No. In meetings it reads the captions your meeting already shows, from a side panel in your browser. No bot joins the call and no audio is recorded." },
+  { q: "Which tools does it work with?", a: "Slack is the home base. Google Meet works today; Microsoft Teams, Zoom (in the browser) and Slack Huddles in the browser are supported too, but are newer. It also syncs Notion, Google Drive and OneDrive, and connects to tools like GitHub, Jira and Trello." },
+  { q: "Can it make things up?", a: "Answers come with their sources. In meetings, every decision and task has to quote words that were really said, or it is dropped. Nothing is saved until you approve it." },
+  { q: "Who can see what it remembers?", a: "Only what they could already see. Public channels are shared with the workspace, private channels stay with their members, and your DMs and meetings are yours." },
   { q: "Where does my data live?", a: "On your own server. Company Brain is self-hosted on Bun, Hono and Postgres, with no third-party memory service." },
-  { q: "How do I start?", a: "Sign in with the Slack workspace this deployment belongs to. On the Meetings page, press “Get my token”, paste it into the browser extension, and open your next meeting." },
+  { q: "How do I start?", a: "Sign in with the Slack workspace this deployment belongs to. To add meetings, press “Get my token” on the Meetings page, paste it into the browser extension, and open your next call." },
 ]
 
 export { APPS }
+
+const ROLES = [
+  { k: "Founder", d: "Remembers every decision", ch: "#leadership", msgs: [["Ana", "Did we ever settle the AWS vs GCP question?"], ["Raj", "No idea, that was in a call weeks ago."]], ask: "what did we decide about hosting?", ans: "Staying on AWS until December, then revisit. Decided in the 14 Oct call and confirmed in #infra.", src: ["meet: Infra sync", "slack: #infra"] },
+  { k: "Eng lead", d: "Knows why things were built", ch: "#eng", msgs: [["Sam", "Why do we retry uploads three times?"], ["Priya", "Was a fix for flaky Meet captions I think?"]], ask: "why do uploads retry 3 times?", ans: "A retry queue was added after captions failed to upload on bad networks. It's in the PR thread from September.", src: ["slack: #eng thread", "github: PR notes"] },
+  { k: "Head of ops", d: "Keeps follow-ups from slipping", ch: "#ops", msgs: [["Mia", "Who owns the vendor renewal?"], ["Jo", "Parag said he'd take it, due Friday."]], ask: "open tasks for Parag this week", ans: "2 open: vendor renewal (due Fri) and advertisements. A reminder goes out Thursday.", src: ["meet: Weekly standup", "slack: #ops"] },
+  { k: "New hire", d: "Gets up to speed alone", ch: "DM with Brain", msgs: [["You", "Just joined. What is the launch plan?"]], ask: "summarise the launch plan", ans: "Launch on Friday. Ads go to Parag, docs to Ana. Only from channels you can see.", src: ["slack: #launch-plan", "notion: Launch plan"] },
+]
+export function RoleStories() {
+  const [i, setI] = useState(0)
+  const [paused, setPaused] = useState(false)
+  useEffect(() => {
+    if (paused) return
+    const t = setInterval(() => setI((x) => (x + 1) % ROLES.length), 6500)
+    return () => clearInterval(t)
+  }, [paused])
+  const r = ROLES[i]!
+  return (
+    <div className="roles" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div className="rtabs" role="tablist" aria-label="Choose a role">
+        {ROLES.map((x, n) => (
+          <button key={x.k} type="button" role="tab" aria-selected={n === i} className={n === i ? "on" : ""} onClick={() => setI(n)}>
+            <b>{x.k}</b><span>{x.d}</span>{n === i && !paused && <i className="rbar" key={i} />}
+          </button>
+        ))}
+      </div>
+      <div className="rstage" key={i}>
+        <div className="rhead"><SlackLogo size={16} />{r.ch}</div>
+        {r.msgs.map((m, n) => <div className="rmsg" style={{ animationDelay: `${n * 0.25}s` }} key={n}><i>{m[0]![0]}</i><div><b>{m[0]}</b><p>{m[1]}</p></div></div>)}
+        <div className="rmsg" style={{ animationDelay: `${r.msgs.length * 0.25}s` }}><i className="br"><Brain size={13} color="#111" /></i><div><b>@Brain <em>{r.ask}</em></b><p className="rans">{r.ans}</p><div className="rsrc">{r.src.map((x) => <span key={x}>{x}</span>)}</div></div></div>
+      </div>
+    </div>
+  )
+}

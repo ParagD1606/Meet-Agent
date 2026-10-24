@@ -239,5 +239,27 @@ export const css = String.raw`
 .lp .pl > div, .lp .ic > div { flex:1; min-width:0; } .lp .pl span:not(.av), .lp .ic span { display:block; }
 .lp .hero .fine { margin-top:26px; }
 .lp .cta .it { color:var(--hl); }
+
+.lp .roles { display:grid; grid-template-columns:260px 1fr; gap:28px; margin-top:44px; align-items:start; }
+.lp .rtabs { display:flex; flex-direction:column; gap:6px; }
+.lp .rtabs button { position:relative; text-align:left; padding:14px 16px; border-radius:14px; border:1px solid transparent; background:none; color:var(--fg); cursor:pointer; overflow:hidden; opacity:.55; transition:opacity .2s, background .2s; font:inherit; }
+.lp .rtabs button.on, .lp .rtabs button:hover { opacity:1; background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.08); }
+.lp .rtabs b { display:block; font-size:16px; } .lp .rtabs span { display:block; font-size:13px; opacity:.7; margin-top:2px; }
+.lp .rbar { position:absolute; left:0; bottom:0; height:2px; background:var(--hl); animation:rbar 6.5s linear forwards; }
+@keyframes rbar { from { width:0 } to { width:100% } }
+.lp .rstage { border:1px solid rgba(255,255,255,.1); border-radius:18px; background:rgba(255,255,255,.03); padding:18px 20px 22px; min-height:330px; }
+.lp .rhead { display:flex; align-items:center; gap:8px; font-weight:600; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:12px; }
+.lp .rmsg { display:flex; gap:12px; padding:9px 0; opacity:0; animation:rin .5s ease forwards; }
+@keyframes rin { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+.lp .rmsg > i { flex:none; width:32px; height:32px; border-radius:9px; background:#3a3a40; display:grid; place-items:center; font-style:normal; font-weight:700; font-size:13px; }
+.lp .rmsg > i.br { background:var(--hl); }
+.lp .rmsg b { font-size:14px; } .lp .rmsg b em { font-style:normal; color:var(--hl); font-weight:500; }
+.lp .rmsg p { margin:2px 0 0; font-size:15px; opacity:.85; } .lp .rans { opacity:1 !important; }
+.lp .rsrc { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.lp .rsrc span { font-size:11.5px; padding:3px 9px; border-radius:99px; border:1px solid rgba(255,255,255,.15); opacity:.8; }
+.lp .bigline { padding:120px 0 100px; text-align:center; }
+.lp .bigline h2 { font-size:clamp(40px,7vw,92px); line-height:1.02; letter-spacing:-.03em; }
+.lp .bigline .it { color:var(--hl); }
+@media (max-width:900px) { .lp .roles { grid-template-columns:1fr; } .lp .rtabs { flex-direction:row; overflow-x:auto; } .lp .rtabs button { flex:none; min-width:170px; } }
 @media (prefers-reduced-motion:reduce) { .lp *, .lp *::before, .lp *::after { animation:none !important; transition:none !important; } }
 `
