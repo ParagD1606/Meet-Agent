@@ -37,6 +37,13 @@ const mentions = (text: string, name: string) => {
   const first = n.split(/\s+/)[0]!;
   return first.length >= 3 && new RegExp(`\\b${first.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
 };
+const OFF = /\b(vacation|on leave|out of office|ooo|day off|days off|sick|holiday|unavailable|away next|out next)\b/i;
+/** Memory chunks can mention several people; evidence must come from the sentence that is actually about this person. */
+const sentences = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter(Boolean);
+const aboutPerson = (src: MemorySource, name: string, also?: RegExp): MemorySource | null => {
+  const hit = sentences(src.text).find((x) => mentions(x, name) && (!also || also.test(x)));
+  return hit ? { ...src, text: hit.slice(0, 220) } : null;
+};
 const ago = (d: Date, now: number) => { const days = Math.round((now - d.getTime()) / DAY); return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`; };
 const cite = (s: MemorySource) => `“${s.text.length > 110 ? `${s.text.slice(0, 110)}…` : s.text}” (${s.source}, ${s.date})`;
 
@@ -75,8 +82,8 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
     .where(and(inArray(memories.scopeTag, tags), eq(memories.reviewState, "ok"), eq(memories.status, "active"), isNull(memories.invalidAt),
       or(isNull(memories.validUntil), sql`${memories.validUntil} > now()`), gt(memories.createdAt, new Date(now - 30 * DAY)),
       sql`${memories.text} ~* ${"\\m(vacation|on leave|out of office|ooo|day off|days off|sick|holiday|unavailable|away next|out next)\\M"}`))
-    .orderBy(desc(memories.createdAt)).limit(40)).map((r) => ({ text: r.text.slice(0, 240), source: r.source, date: r.createdAt.toISOString().slice(0, 10) })) : [];
-  const awayNotes = (name: string) => awaySources.filter((x) => mentions(x.text, name));
+    .orderBy(desc(memories.createdAt)).limit(40)).map((r) => ({ text: r.text.slice(0, 1_500), source: r.source, date: r.createdAt.toISOString().slice(0, 10) })) : [];
+  const awayNotes = (name: string) => awaySources.map((x) => aboutPerson(x, name, OFF)).filter((x): x is MemorySource => !!x);
 
   const roster = new Set((opts.roster ?? []).map((n) => n.toLowerCase()));
   let usedMemory = awaySources.length > 0;
@@ -86,7 +93,7 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
     const due = task.due && /^\d{4}-\d{2}-\d{2}$/.test(task.due) ? Date.parse(`${task.due}T23:59:59Z`) : NaN;
     const horizon = Number.isFinite(due) && due > now ? due : now + 7 * DAY;
     const horizonLabel = Number.isFinite(due) && due > now ? task.due! : "a week from now";
-    const mem = await recallForMeeting(userId, `${task.title}${opts.context ? `\n${opts.context}` : ""}`, { budgetTokens: 1_500 });
+    const mem = await recallForMeeting(userId, `${task.title}${opts.context ? `\n${opts.context}` : ""}`, { budgetTokens: 1_500, sourceChars: 1_500 });
     usedMemory ||= mem.sources.length > 0;
     const ranked: Candidate[] = named.map((p) => {
       const name = p.name!.trim();
@@ -94,7 +101,7 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
       const similar = history.map((h) => ({ h, s: coverage(want, tokens(h.text)) })).filter((x) => x.s >= 0.34).sort((a, b) => b.s - a.s);
       const best = similar[0];
       const role = p.title ? coverage(want, tokens(p.title)) > 0 : false;
-      const said = mem.sources.filter((s) => mentions(s.text, name)).slice(0, 2);
+      const said = mem.sources.map((x) => aboutPerson(x, name)).filter((x): x is MemorySource => !!x).slice(0, 2);
       const skill = Math.min(1, 0.6 * (best?.s ?? 0) + 0.25 * (said.length ? 1 : 0) + 0.25 * (role ? 1 : 0) + 0.15 * (similar.some((x) => x.h.status === "done") ? 1 : 0));
       const l = load(p.id, horizon);
       // Overdue work is the heaviest; work due before the deadline competes for the same time; later work barely does.

@@ -74,6 +74,18 @@ describe("assignee suggestions", () => {
     expect(far.dee.score).toBe(far.eel.score);
   });
 
+  test("evidence comes from the sentence about each person, even when one note mentions several", async () => {
+    await seedMemory("shared", "Ana Silva wrote the frobnication runbook last month. Bob Stone is on vacation until November. Cara Lee reviews the invoices.");
+    const out = await suggestAssignees("U_ME", [{ id: "t", title: "Update the frobnication runbook" }], { limit: 10 });
+    const by = (n: string) => out.tasks[0]!.candidates.find((c) => c.name === n)!;
+    expect(by("Ana Silva").reasons.join(" ")).toContain("wrote the frobnication runbook");
+    expect(by("Ana Silva").possibleTimeOff).toBe(false);                         // not flagged by Bob's sentence in the same note
+    expect(by("Cara Lee").possibleTimeOff).toBe(false);
+    expect(by("Bob Stone").possibleTimeOff).toBe(true);
+    expect(by("Bob Stone").reasons.join(" ")).toContain("on vacation until November");
+    expect(by("Cara Lee").reasons.join(" ")).not.toContain("frobnication runbook"); // another person's sentence is not her evidence
+  });
+
   test("generic words like 'handle' are not skill evidence", async () => {
     await db.insert(commitments).values(task("U_CARA", "Handle the onboarding emails", { status: "done", completedAt: new Date(Date.now() - 3 * DAY) }));
     const out = await suggestAssignees("U_ME", [{ id: "t", title: "Handle the quarterly invoices" }], { limit: 10 });

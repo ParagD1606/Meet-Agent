@@ -586,12 +586,12 @@ export const personScope = (userId: string): SlackScope => ({ channelId: `ext_${
 
 export type MemorySource = { text: string; source: string; date: string; url?: string };
 /** What the team already knows (Slack and Brain memory) that this person may read, with its sources. Never throws: no memory just means no background. */
-export async function recallForMeeting(userId: string, query: string, opts: { rewrite?: boolean; budgetTokens?: number } = {}): Promise<{ text: string; sources: MemorySource[] }> {
+export async function recallForMeeting(userId: string, query: string, opts: { rewrite?: boolean; budgetTokens?: number; sourceChars?: number } = {}): Promise<{ text: string; sources: MemorySource[] }> {
   try {
     const r = await buildRecall({ scope: personScope(userId), query, budgetTokens: opts.budgetTokens ?? 1_800, rewrite: opts.rewrite ?? false });
     return {
       text: r.text,
-      sources: r.hits.slice(0, 8).map((h) => ({ text: h.text.slice(0, 240), source: h.source, date: (h.validAt ?? h.createdAt).toISOString().slice(0, 10), ...(h.permalink && /^https?:\/\//.test(h.permalink) ? { url: h.permalink } : {}) })),
+      sources: r.hits.slice(0, 8).map((h) => ({ text: h.text.slice(0, opts.sourceChars ?? 240), source: h.source, date: (h.validAt ?? h.createdAt).toISOString().slice(0, 10), ...(h.permalink && /^https?:\/\//.test(h.permalink) ? { url: h.permalink } : {}) })),
     };
   } catch (err) {
     log.warn("meeting memory recall failed", { error: err instanceof Error ? err.message : String(err) });
