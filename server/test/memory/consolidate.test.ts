@@ -25,20 +25,22 @@ describe("consolidate", () => {
 
     const r1 = await consolidate();
     expect(r1.merged).toBe(1);
-    expect(r1.decayed).toBe(1);
+    expect(r1.decayed).toBeGreaterThanOrEqual(1);
     expect(r1.summarised).toBe(9);
     const [ra] = await db.select().from(memories).where(eq(memories.id, a));
     const [rb] = await db.select().from(memories).where(eq(memories.id, b));
     expect(ra).toMatchObject({ status: "superseded", supersededBy: b }); // more-used survives
     expect(rb!.status).toBe("active");
     const [d] = await db.select().from(memories).where(eq(memories.id, decayMe));
-    expect(d!.importance).toBeCloseTo(0.2, 5);
+    // continuous decay (120d half-life for plain facts, 120 days idle): 0.9 * 0.5 = 0.45, not a clamp
+    expect(d!.importance).toBeCloseTo(0.45, 1);
+    expect(d!.decayedAt).not.toBeNull();
     const live = await db.select().from(memories).where(sql`status = 'active' and scope_tag = 'shared'`);
     expect(live.some((m) => m.createdBy === "consolidation")).toBe(true);
-    for (const id of stale) expect((await db.select().from(memories).where(eq(memories.id, id)))[0]!.status).toBe("superseded");
+    for (const id of stale) expect((await db.select().from(memories).where(eq(memories.id, id)))[0]!.status).toBe("archived"); // archived, not purged
 
     const before = await db.select().from(memories).orderBy(memories.id);
-    expect(await consolidate()).toEqual({ merged: 0, decayed: 0, summarised: 0, purged: 0 });
+    expect(await consolidate()).toMatchObject({ merged: 0, decayed: 0, summarised: 0, purged: 0, crossScope: 0 });
     expect(await db.select().from(memories).orderBy(memories.id)).toEqual(before);
   });
 

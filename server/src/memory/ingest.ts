@@ -1,8 +1,12 @@
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { extractText, getDocumentProxy } from "unpdf";
+import { id as newId } from "../crypto";
 import { db } from "../db";
-import { memories, memoryEdges } from "../db/schema";
+import { memories, memoryEdges, memoryReviews } from "../db/schema";
+import { log } from "../log";
 import { embed } from "./embed";
+import { SHARED_TAG } from "./scope";
+import { findContradicted } from "./supersede";
 
 export const CHUNK_CHARS = 3200; // ~800 tokens
 export const CHUNK_OVERLAP = 400; // ~100 tokens
@@ -78,6 +82,37 @@ export function chunkText(text: string, size = CHUNK_CHARS, overlap = CHUNK_OVER
   return out;
 }
 
+/** Chunks at/above this similarity to a live fact are compared with it by the LLM. */
+const CONFLICT_SIM = 0.5;
+const MAX_CONFLICT_CHECKS = 10;
+
+/**
+ * Light contradiction check for NEW document chunks of shared knowledge: each chunk is compared against its nearest live facts;
+ * a conflict is never auto-resolved (documents age and facts can be the wrong side) but queued for an admin as a `doc_conflict`
+ * review on the chunk (approve = keep both, reject = hide the chunk). At most 10 LLM calls per document; failures are ignored.
+ */
+async function flagDocConflicts(tag: string, chunks: { id: number; text: string; embedding: number[] }[]): Promise<number> {
+  if (tag !== SHARED_TAG) return 0; // the review queue is admin-visible: never route private content into it
+  let flagged = 0;
+  for (const c of chunks.slice(0, MAX_CONFLICT_CHECKS)) {
+    const lit = `[${c.embedding.join(",")}]`;
+    const near = await db.select({ id: memories.id, text: memories.text, sim: sql<number>`1 - (${memories.embedding} <=> ${lit}::vector)` }).from(memories)
+      .where(and(eq(memories.scopeTag, tag), eq(memories.kind, "fact"), eq(memories.status, "active"), isNull(memories.invalidAt), eq(memories.reviewState, "ok")))
+      .orderBy(sql`${memories.embedding} <=> ${lit}::vector`).limit(3);
+    const related = near.filter((n) => Number(n.sim) >= CONFLICT_SIM);
+    if (!related.length) continue;
+    const hit = await findContradicted(c.text.replace(/^From [^\n]*:\n/, "").slice(0, 1200), related);
+    if (!hit.length) continue;
+    await db.insert(memoryReviews).values({
+      id: newId("rv_"), kind: "doc_conflict", memoryId: c.id,
+      payload: { text: c.text.slice(0, 500), conflictsWithFactIds: hit, facts: related.filter((r) => hit.includes(r.id)).map((r) => r.text) },
+      requestedBy: "document-ingest",
+    });
+    flagged++;
+  }
+  return flagged;
+}
+
 /**
  * Extracts, chunks, embeds and stores a document as kind='chunk' rows under `tag`.
  * `tag` is the ACL scope (shared | channel_X | user_X; sync passes user_X for personal sources). With a sourceRef, previous chunks of the same (source, sourceRef) are replaced atomically. Returns #chunks.
@@ -98,7 +133,8 @@ export async function ingestDocument(a: {
   const fresh = todo.length ? await embed(todo) : [];
   todo.forEach((p, i) => prior.set(p, fresh[i]!));
   const vectors = pieces.map((p) => prior.get(p)!);
-  return db.transaction(async (tx) => {
+  const changed = new Set(todo);
+  const inserted = await db.transaction(async (tx) => {
     if (a.sourceRef) {
       const old = await tx.select({ id: memories.id }).from(memories)
         .where(and(eq(memories.scopeTag, a.tag), eq(memories.source, a.source), eq(memories.sourceRef, a.sourceRef), eq(memories.kind, "chunk")));
@@ -108,10 +144,13 @@ export async function ingestDocument(a: {
         await tx.delete(memories).where(inArray(memories.id, ids));
       }
     }
-    if (!pieces.length) return 0;
-    await tx.insert(memories).values(pieces.map((t, i) => ({
+    if (!pieces.length) return [];
+    const rows = await tx.insert(memories).values(pieces.map((t, i) => ({
       scopeTag: a.tag, text: t, embedding: vectors[i]!, source: a.source, sourceRef: a.sourceRef ?? null, permalink: a.permalink ?? null, kind: "chunk" as const,
-    })));
-    return pieces.length;
+    }))).returning({ id: memories.id });
+    return rows.map((r, i) => ({ id: r.id, text: pieces[i]!, embedding: vectors[i]! }));
   });
+  // only changed chunks: an unchanged re-sync was already checked
+  await flagDocConflicts(a.tag, inserted.filter((c) => changed.has(c.text))).catch((e) => log.warn("document conflict check failed", { err: String(e) }));
+  return inserted.length;
 }

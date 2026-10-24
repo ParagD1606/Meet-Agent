@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "../db";
 import { memories } from "../db/schema";
 import { embed } from "./embed";
+import { entityFactIds, expansionEnabled, queryEntities } from "./entities";
 
 export type MemoryHit = {
   id: number;
@@ -106,7 +107,20 @@ export async function searchMemory(a: { tags: string[]; query: string; limit?: n
         .limit(pool)
     : [];
 
+  // Entity expansion: facts mentioning an entity the query names (hop 1) and facts bridged to those via a shared entity or
+  // typed edge (hop 2, e.g. "who manages the team that owns Kestrel"). Candidates come from entityFactIds (scope-filtered
+  // at every join); the select below re-applies the full `where` (tags + validity/asOf), so expansion can never widen access.
+  // ponytail: each hop list is capped (20 / 10) and ordered by query similarity, hub entities are bounded by those caps only.
   type Row = (typeof ftsRows)[number];
+  const expanded: Row[][] = [];
+  const ents = expansionEnabled() ? await queryEntities(query).catch(() => []) : [];
+  if (ents.length) {
+    const { hop1, hop2 } = await entityFactIds({ tags: a.tags, entityIds: ents });
+    for (const [ids, n] of [[hop1, 20], [hop2, 10]] as const) {
+      if (ids.length) expanded.push(await db.select(cols).from(memories).where(and(where, inArray(memories.id, ids))).orderBy(dist).limit(n));
+    }
+  }
+
   const fused = new Map<number, { row: Row; s: number }>();
   const add = (row: Row, rank: number) => {
     const cur = fused.get(row.id);
@@ -117,6 +131,7 @@ export async function searchMemory(a: { tags: string[]; query: string; limit?: n
   vectorRows.forEach((r, i) => { const sim = Number(r.sim); if (sim >= STRONG_SIMILARITY || (sim >= SIMILARITY_THRESHOLD && r.lex)) add(r, i); });
   ftsRows.forEach((r, i) => add(r, i));
   trgmRows.forEach((r, i) => add(r, i));
+  for (const list of expanded) list.forEach((r, i) => add(r, i));
 
   const max = 2 / (RRF_K + 1);
   return [...fused.values()]

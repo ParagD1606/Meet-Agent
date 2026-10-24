@@ -2,7 +2,7 @@
 // distractors) through addFact with the fake bag-of-words embedder, so it runs offline. Each case has distinctive vocabulary.
 import type { SlackScope } from "../../src/memory/scope";
 
-export const CATEGORIES = ["single-hop", "multi-session", "temporal", "knowledge-update", "abstention", "scope-leak", "follow-up", "lookup"] as const;
+export const CATEGORIES = ["single-hop", "multi-session", "temporal", "knowledge-update", "abstention", "scope-leak", "follow-up", "lookup", "multi-hop", "alias"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** Who is asking. dm1/dm2 are DMs with U1/U2; U1 belongs to private channel C_PA, U2 to C_PB. */
@@ -30,6 +30,8 @@ export type Seed = {
   at?: string;
   /** Eval-only: the stubbed contradiction check supersedes existing facts whose text includes this. */
   replaces?: string;
+  /** Entity mentions the extractor would have emitted for this fact (resolved by addFact: alias / embedding / tie-break). */
+  ents?: string[];
 };
 export type Case = {
   id: string;
@@ -78,6 +80,18 @@ const lookup = (id: number, a: string, b: string, question: string, first: strin
 /** Time constraint inside the message ("back in February"): the rewrite turns it into asOf. */
 const when = (id: number, date: string, question: string, old: [string, string], neu: [string, string], expect: string, stale: string): Case => ({
   ...asOf(id, date, question, old, neu, expect, stale), asOf: undefined, rewrite: { query: question, asOf: date },
+});
+
+/** Multi-hop: `a` (person -> group) and `b` (group -> thing) are separate sessions; the question names only b's thing and wants a's person. */
+const chain = (id: number, a: [string, string[]], b: [string, string[]], question: string, expect: string): Case =>
+  ({ id: `mhop-${id}`, category: "multi-hop", scope: "pub", seed: [{ tag: S, text: a[0], ents: a[1] }, { tag: S, text: b[0], ents: b[1] }], question, expect: [expect] });
+/** Alias: each fact names the person differently; the question uses a first name only and needs both facts. */
+const alias = (id: number, a: [string, string], b: [string, string], question: string, expect: string[]): Case =>
+  ({ id: `alias-${id}`, category: "alias", scope: "pub", seed: [{ tag: S, text: a[0], ents: [a[1]] }, { tag: S, text: b[0], ents: [b[1]] }], question, expect });
+/** Entity-expansion leak: public facts share an entity with a private one (which must stay hidden, also as a bridge). */
+const entLeak = (id: number, tag: string, text: string, ents: string[], scope: ScopeKey, question: string, secret: string): Case => ({
+  id: `entleak-${id}`, category: "scope-leak", scope, question, forbid: [secret],
+  seed: [{ tag: S, text: "Marlin codename appears in planning docs", ents: ["Marlin", "Selma Okoye", "Oslo Office"] }, { tag, text, ents }, { tag: S, text: "Oslo Office hosts Marlin sales demo room", ents: ["Oslo Office", "Marlin"] }],
 });
 
 export const CASES: Case[] = [
@@ -178,4 +192,25 @@ export const CASES: Case[] = [
   lookup(3, "Deploy ENG-9081 rolled back the payments service at 14:05", "Deploy ENG-9018 promoted the search service at 09:40", "what happened in ENG-9081", "payments service"),
   lookup(4, "Saoirse Gallacher is the escalation contact for Harlow Freight", "Saoirse Gallagher is the escalation contact for Pinecrest Foods", "Who is Saoirse Gallacher the contact for?", "Harlow Freight"),
   lookup(5, "Invoice INV-20877 for Tessellate Corp is overdue by 12 days", "Invoice INV-20778 for Obsidian Corp was paid in full", "INV-20877", "Tessellate Corp"),
+
+  // ---- multi-hop: the answer fact shares no words with the question; it is reachable only through an entity bridge ----
+  chain(1, ["Wanjiru Kamau manages the fieldwork squad", ["Wanjiru Kamau", "Fieldwork Squad"]], ["Fieldwork squad owns Pelican app", ["Fieldwork Squad", "Pelican"]], "Who is responsible for Pelican?", "Wanjiru Kamau"),
+  chain(2, ["Casimir Dvorak leads the resilience guild", ["Casimir Dvorak", "Resilience Guild"]], ["Resilience guild runs Cormorant postmortems", ["Resilience Guild", "Cormorant"]], "Who is behind the Cormorant follow-ups?", "Casimir Dvorak"),
+  chain(3, ["Ayumi Tanabe leads finance for Ember group", ["Ayumi Tanabe", "Ember Group"]], ["Ember group funds Ledger Console", ["Ember Group", "Ledger Console"]], "Who controls the budget for the Ledger Console?", "Ayumi Tanabe"),
+  chain(4, ["Bjorn Halvorsen sponsors the Basalt initiative", ["Bjorn Halvorsen", "Basalt Initiative"]], ["Basalt initiative covers Equinox campaign", ["Basalt Initiative", "Equinox"]], "Which executive stands behind Equinox?", "Bjorn Halvorsen"),
+  chain(5, ["Thandiwe Mokoena handles security for Larkspur Dental", ["Thandiwe Mokoena", "Larkspur Dental"]], ["Larkspur Dental joined Foxglove program", ["Larkspur Dental", "Foxglove Program"]], "Who handles security for the Foxglove Program customers?", "Thandiwe Mokoena"),
+  chain(6, ["Radoslav Petrov holds pager for platform reliability crew", ["Radoslav Petrov", "Platform Reliability Crew"]], ["Platform reliability crew operates Osprey pipeline", ["Platform Reliability Crew", "Osprey"]], "Who gets paged when Osprey breaks?", "Radoslav Petrov"),
+
+  // ---- alias resolution: one person written differently across sessions; both facts must be found from either name ----
+  alias(1, ["Dana Schmidt owns the Orchid vendor contract", "Dana Schmidt"], ["D. Schmidt signed the Orchid renewal for 2027", "D. Schmidt"], "What has Dana done on Orchid?", ["Orchid vendor contract", "Orchid renewal for 2027"]),
+  alias(2, ["Noor Haddad approved the Wisteria billing plan", "Noor Haddad"], ["N. Haddad moved the Wisteria invoice run to Fridays", "N. Haddad"], "What is Noor responsible for at Wisteria?", ["Wisteria billing plan", "invoice run to Fridays"]),
+  alias(3, ["Soren Lindgren carries the ferry pager this month", "Soren Lindgren"], ["S. Lindgren wrote the ferry incident runbook", "S. Lindgren"], "What is Soren doing with the ferry?", ["ferry pager", "incident runbook"]),
+  alias(4, ["Marguerite Dubois owns the tenancy compliance checklist", "Marguerite Dubois"], ["M. Dubois revised the checklist template in Q3", "M. Dubois"], "What does Marguerite handle for tenancy reviews?", ["tenancy compliance checklist", "template in Q3"]),
+  alias(5, ["Chidi Nwosu owns Tern product", "Chidi Nwosu"], ["C. Nwosu cut Tern scope for winter release", "C. Nwosu"], "What has Chidi decided about Tern?", ["owns Tern product", "winter release"]),
+
+  // ---- scope-leak through entity expansion: a private fact shares an entity with public ones; it must not surface, nor bridge ----
+  entLeak(1, "channel_C_PB", "The Marlin takeover price is 14 million dollars", ["Marlin"], "pub", "Tell me about Marlin", "14 million"),
+  entLeak(2, "channel_C_PA", "Selma Okoye will be laid off from the Marlin division in Q3", ["Selma Okoye", "Marlin"], "pub", "What is happening with Selma Okoye?", "laid off"),
+  entLeak(3, "user_U1", "My salary for the Marlin role is 200 thousand", ["Marlin"], "dm2", "What do we know about Marlin?", "200 thousand"),
+  entLeak(4, "channel_C_PB", "Marlin hides a bribery investigation in Oslo", ["Marlin", "Oslo Office"], "privA", "Anything on the Marlin Oslo Office?", "bribery"),
 ];

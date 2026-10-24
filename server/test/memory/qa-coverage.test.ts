@@ -172,7 +172,8 @@ describe("memory tools exposed to the model", () => {
     expect(await db.select().from(memories)).toHaveLength(2);
     expect(await run(t, "forget_memories", { query: "wifi password rotation", dryRun: false })).toContain("Forgot 1");
     const left = await db.select().from(memories);
-    expect(left.map((m) => m.scopeTag)).toEqual(["channel_CPRIV"]);
+    expect(left.filter((m) => m.status === "active").map((m) => m.scopeTag)).toEqual(["channel_CPRIV"]);
+    expect(left.filter((m) => m.status === "deleted").map((m) => m.scopeTag)).toEqual(["shared"]); // soft delete keeps the row
     expect(await run(t, "forget_memories", { query: "nothing like this exists" })).toBe("No matching facts were found.");
   });
 

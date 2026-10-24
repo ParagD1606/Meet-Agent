@@ -8,7 +8,7 @@ import { consolidate } from "./consolidate";
 import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
 import { writeTag } from "./scope";
-import { captureTurn, flushIdleCaptures } from "./writeback";
+import { captureTurn, flushIdleCaptures, recoverCaptures } from "./writeback";
 
 const FIRST_RUN_LOOKBACK_S = 24 * 3600;
 const BATCH_CHARS = 12_000;
@@ -98,6 +98,8 @@ export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-c
 /** Observe every 30 min (opted-in channels), consolidate nightly, flush idle thread captures every 10 min. */
 export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
   for (const name of Object.values(MEMORY_QUEUES)) await boss.createQueue(name, { name, retryLimit: 0, policy: "short" });
+  // timers died with the previous process: flush transcripts still buffered in capture_buffer
+  void recoverCaptures().then((n) => { if (n) log.info("recovered buffered captures", { stored: n }); }).catch((e) => log.warn("capture recovery failed", { err: String(e) }));
   await boss.work(MEMORY_QUEUES.observe, async () => {
     const rows = await db.select({ id: channels.id }).from(channels).where(eq(channels.observe, true));
     for (const r of rows) {

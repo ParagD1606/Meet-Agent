@@ -8,6 +8,8 @@
     "abstention": 0.9,
     "scope-leak": 1,
     "follow-up": 1,
-    "lookup": 1
+    "lookup": 1,
+    "multi-hop": 1,
+    "alias": 1
   }
 }

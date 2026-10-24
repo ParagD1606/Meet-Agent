@@ -72,7 +72,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
 
   // memory: reads always; writes (core_memory, memory_remember, forget_memories) never on readOnly
   const mem = memoryTools(ctx as never);
-  for (const [k, t] of Object.entries(mem)) if (writable || k === "memory_search" || k === "search_threads") core[k] = t;
+  for (const [k, t] of Object.entries(mem)) if (writable || k === "memory_search" || k === "search_threads" || k === "entity_lookup") core[k] = t;
   Object.assign(core, readToolResultTool(ctx));
 
   core.people_search = tool({

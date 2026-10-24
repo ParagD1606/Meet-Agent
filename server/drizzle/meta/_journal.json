@@ -19,22 +19,36 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1792953600000,
+      "when": 1792867201000,
       "tag": "0002_recall_log",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1793040000000,
+      "when": 1792867202000,
       "tag": "0003_memory_temporal_typed",
       "breakpoints": true
     },
     {
-      "idx": 10,
+      "idx": 4,
       "version": "7",
-      "when": 1793050000000,
-      "tag": "0010_memory_reminders",
+      "when": 1792867203000,
+      "tag": "0004_entities_capture",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792867204000,
+      "tag": "0005_consolidation_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792867205000,
+      "tag": "0006_memory_reminders",
       "breakpoints": true
     }
   ]

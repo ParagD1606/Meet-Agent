@@ -44,7 +44,7 @@ export async function rememberFact(a: AddFactInput): Promise<AddFactResult> {
 }
 
 /**
- * Finds (and, unless dryRun, deletes) facts matching `query` within `tags` only. Hard matches: similarity-ranked top hits
+ * Finds (and, unless dryRun, soft-deletes: status 'deleted', history kept) facts matching `query` within `tags` only. Hard matches: similarity-ranked top hits
  * with a high score floor, so a vague query cannot wipe unrelated memories. Returns what matched.
  */
 export async function forgetMemories(a: { tags: string[]; query: string; dryRun?: boolean; max?: number }): Promise<{ id: number; text: string; scopeTag: string }[]> {

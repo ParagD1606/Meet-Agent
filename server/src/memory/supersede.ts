@@ -5,6 +5,7 @@ import { db } from "../db";
 import { memories, memoryEdges, memoryReviews } from "../db/schema";
 import { log } from "../log";
 import type { AgentContext } from "./core-blocks";
+import { attachMentions, type Mention } from "./entities";
 import { embed } from "./embed";
 import { clearRecallCache } from "./recall";
 import { completeJson } from "./llm";
@@ -28,6 +29,20 @@ const SYSTEM = `You maintain a company knowledge base of short facts. Given a NE
 Do NOT list facts that are merely related, more general, or compatible with the new fact.
 Reply with JSON only: {"superseded":[<ids>]}. Use {"superseded":[]} if none.`;
 
+/** Which of `existing` does `text` contradict or replace? Empty on any LLM failure (a failing check never blocks a write). */
+export async function findContradicted(text: string, existing: { id: number; text: string }[]): Promise<number[]> {
+  if (!existing.length) return [];
+  try {
+    const prompt = `NEW: ${text}\n\nEXISTING:\n${existing.map((r) => `[${r.id}] ${r.text}`).join("\n")}`;
+    const v = await completeJson({ system: SYSTEM, prompt, role: "extract", maxOutputTokens: 120 }, verdict);
+    const allowed = new Set(existing.map((r) => r.id));
+    return [...new Set(v.superseded)].filter((id) => allowed.has(id));
+  } catch (e) {
+    log.warn("memory contradiction check failed", { err: String(e) });
+    return [];
+  }
+}
+
 export type AddFactInput = {
   tag: string; text: string; source: string; sourceRef?: string | null;
   createdBy?: string | null; permalink?: string | null; confidence?: number; importance?: number; validAt?: Date;
@@ -40,6 +55,8 @@ export type AddFactInput = {
   contextPrefix?: string | null;
   /** Precomputed embedding (batched by the caller); must already include the context prefix if there is one. */
   embedding?: number[];
+  /** Entities named in the fact; resolved (alias / embedding / LLM tie-break) and linked after the write. */
+  entities?: Mention[];
 };
 export type AddFactResult = { id: number; superseded: number[]; deduped: boolean; heldForReview?: boolean; reviewId?: string };
 
@@ -54,6 +71,13 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
  * A failing contradiction check never blocks the write.
  */
 export async function addFact(a: AddFactInput): Promise<AddFactResult> {
+  const r = await addFactCore(a);
+  // also on a dedupe: a repeat mention may name entities the first one did not (links are idempotent)
+  if (a.entities?.length) await attachMentions(r.id, a.entities, a.text);
+  return r;
+}
+
+async function addFactCore(a: AddFactInput): Promise<AddFactResult> {
   const text = a.text.trim();
   if (!text) throw new Error("addFact: empty text");
   const confidence = clamp01(a.confidence ?? 1);
@@ -82,17 +106,7 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
   if (dup) return { id: dup.id, superseded: [], deduped: true };
 
   const related = near.filter((n) => Number(n.sim) >= RELATED_SIMILARITY);
-  let contradicted: number[] = [];
-  if (related.length) {
-    try {
-      const prompt = `NEW: ${text}\n\nEXISTING:\n${related.map((r) => `[${r.id}] ${r.text}`).join("\n")}`;
-      const v = await completeJson({ system: SYSTEM, prompt, role: "extract", maxOutputTokens: 120 }, verdict);
-      const allowed = new Set(related.map((r) => r.id));
-      contradicted = [...new Set(v.superseded)].filter((id) => allowed.has(id));
-    } catch (e) {
-      log.warn("memory contradiction check failed", { err: String(e) });
-    }
-  }
+  const contradicted = await findContradicted(text, related);
 
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`memory:${a.tag}`}))`);
@@ -126,7 +140,7 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
       superseded = done.map((d) => d.id);
     }
     if (related.length) {
-      await tx.insert(memoryEdges).values(related.map((r) => ({ fromId: id, toId: r.id, weight: Number(r.sim) }))).onConflictDoNothing();
+      await tx.insert(memoryEdges).values(related.map((r) => ({ fromId: id, toId: r.id, weight: Number(r.sim), relation: superseded.includes(r.id) ? "supersedes" : null }))).onConflictDoNothing();
     }
 
     let reviewId: string | undefined;

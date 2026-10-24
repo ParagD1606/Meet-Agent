@@ -19,6 +19,13 @@ export function installEvalFakes() {
       const rw = CASES.find((c) => c.question === q)?.rewrite;
       return JSON.stringify({ query: rw?.query ?? q, asOf: rw?.asOf ?? null });
     }
+    if (a.system.includes("resolve entity mentions")) {
+      // scripted tie-break: same surname (last token) => same entity; the real model is an LLM call
+      const last = (s: string) => s.toLowerCase().replace(/[^a-z ]/g, " ").trim().split(/\s+/).pop();
+      const m = last(/MENTION: (.*) \(/.exec(a.prompt)?.[1] ?? "");
+      const c = [...a.prompt.matchAll(/^(\d+)\. (.*?) \(/gm)].find((x) => last(x[2]!) === m);
+      return JSON.stringify({ match: c ? Number(c[1]) : null });
+    }
     const neu = /NEW: (.*)/.exec(a.prompt)?.[1] ?? "";
     const needle = replacing.find((r) => neu.includes(r.by))?.needle;
     const ids = needle ? [...a.prompt.matchAll(/^\[(\d+)\] (.*)$/gm)].filter((m) => m[2]!.includes(needle)).map((m) => Number(m[1])) : [];
@@ -35,7 +42,7 @@ export async function seedCorpus() {
   }
   replacing = CASES.flatMap((c) => c.seed.filter((x) => x.replaces).map((x) => ({ by: x.text, needle: x.replaces! })));
   for (const c of CASES) {
-    for (const f of c.seed) await addFact({ tag: f.tag, text: f.text, source: "eval", validAt: f.at ? new Date(f.at) : undefined });
+    for (const f of c.seed) await addFact({ tag: f.tag, text: f.text, source: "eval", validAt: f.at ? new Date(f.at) : undefined, entities: f.ents?.map((name) => ({ name })) });
   }
   clearRecallCache();
 }

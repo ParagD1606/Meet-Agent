@@ -5,6 +5,7 @@ import { db } from "../db";
 import { users } from "../db/schema";
 import { coreMemoryEdit, type Actor, type AgentContext, type BlockLabel } from "../memory/core-blocks";
 import { forgetMemories, rememberFact } from "../memory/facts";
+import { entityLookup } from "../memory/entities";
 import { searchThreads } from "../memory/episodes";
 import { readTags, writeTag, type SlackScope } from "../memory/scope";
 import { searchMemory } from "../memory/search";
@@ -61,6 +62,17 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
           : "No matching company memory found.";
       },
     }),
+    entity_lookup: tool({
+      description: "Everything company memory knows about one person, customer, project, product or channel (name or alias, e.g. 'Dana', 'Zephyr Corp'): a summary, current facts and related entities. Use for 'what do we know about X'.",
+      inputSchema: z.object({ name: z.string().min(1).max(200), limit: z.number().int().min(1).max(30).optional() }),
+      execute: async ({ name, limit }) => {
+        const info = await entityLookup({ tags: await readTags(ctx.scope), name, limit });
+        if (!info.entities.length && !info.facts.length) return `No accessible memory about "${name}".`;
+        const head = info.entities.map((e) => `${e.name} (${e.type})${e.summary ? `: ${e.summary}` : ""}`).join("\n");
+        const facts = info.facts.map((f) => `- [${f.source}; ${f.validAt.toISOString().slice(0, 10)}; ${f.scopeTag}${f.factType !== "fact" ? `; ${f.factType}` : ""}] ${f.text}`).join("\n");
+        return [head, facts && `Facts:\n${facts}`, info.related.length ? `Related: ${info.related.join(", ")}` : ""].filter(Boolean).join("\n\n");
+      },
+    }),
     search_threads: tool({
       description: "Search summaries of past threads this conversation may read.",
       inputSchema: z.object({ query: z.string().min(1).max(500), limit: z.number().int().min(1).max(10).optional() }),
@@ -72,7 +84,7 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     forget_memories: tool({
-      description: "Find facts to forget. Use dryRun=true first; delete only when the user explicitly asks.",
+      description: "Find facts to forget. Use dryRun=true first; forget (soft-delete, history is kept) only when the user explicitly asks.",
       inputSchema: z.object({ query: z.string().min(1).max(500), dryRun: z.boolean().optional().default(true) }),
       execute: async ({ query, dryRun }) => {
         const hits = await forgetMemories({ tags: await readTags(ctx.scope), query, dryRun });

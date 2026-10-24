@@ -70,7 +70,8 @@ export const memories = pgTable("memories", {
   source: text("source").notNull().default("slack"), // slack | upload | gdrive | onedrive | notion | research
   sourceRef: text("source_ref"),
   kind: text("kind", { enum: ["fact", "chunk"] }).notNull().default("fact"),
-  status: text("status", { enum: ["active", "superseded"] }).notNull().default("active"),
+  // superseded = replaced by a newer fact; archived = consolidated away (restorable); deleted = forgotten on request. Rows are never hard-deleted.
+  status: text("status", { enum: ["active", "superseded", "archived", "deleted"] }).notNull().default("active"),
   supersededBy: bigint("superseded_by", { mode: "number" }),
   validAt: ts("valid_at"), // when the fact became true (event time)
   invalidAt: timestamp("invalid_at", { withTimezone: true }), // set on supersede; history is kept
@@ -84,6 +85,7 @@ export const memories = pgTable("memories", {
   confidence: real("confidence").notNull().default(1),
   importance: real("importance").notNull().default(0.5),
   lastAccessedAt: timestamp("last_accessed_at", { withTimezone: true }),
+  decayedAt: timestamp("decayed_at", { withTimezone: true }), // importance decay is applied from max(decayed_at, last_accessed_at, valid_at)
   accessCount: integer("access_count").notNull().default(0),
   reviewState: text("review_state", { enum: ["ok", "pending", "rejected"] }).notNull().default("ok"),
   createdAt: ts("created_at"),
@@ -113,6 +115,7 @@ export const memoryEdges = pgTable("memory_edges", {
   fromId: bigint("from_id", { mode: "number" }).notNull(),
   toId: bigint("to_id", { mode: "number" }).notNull(),
   weight: real("weight").notNull().default(1),
+  relation: text("relation"), // null = plain cosine link; otherwise a typed edge (supersedes, owns, part_of, ...)
 }, (t) => [primaryKey({ columns: [t.fromId, t.toId] })]);
 
 // ---------- tools ----------
@@ -317,7 +320,7 @@ export const threadState = pgTable("thread_state", {
 
 export const memoryReviews = pgTable("memory_reviews", {
   id: text("id").primaryKey(),
-  kind: text("kind", { enum: ["supersede", "low_confidence", "core_block", "shared_write"] }).notNull(),
+  kind: text("kind", { enum: ["supersede", "low_confidence", "core_block", "shared_write", "procedure", "doc_conflict"] }).notNull(),
   memoryId: bigint("memory_id", { mode: "number" }),
   payload: jsonb("payload").notNull(),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
@@ -357,3 +360,55 @@ export const embeddingCache = pgTable("embedding_cache", {
   embedding: vector("embedding").notNull(),
   createdAt: ts("created_at"),
 });
+
+// ---------- entity layer ----------
+/** People, channels, customers, projects. `aliases` holds normalised surface forms (canonical name included) for exact lookup. */
+export const entities = pgTable("entities", {
+  id: text("id").primaryKey(),
+  canonicalName: text("canonical_name").notNull(),
+  aliases: text("aliases").array().notNull().default(sql`'{}'::text[]`),
+  type: text("type").notNull().default("other"), // person | channel | org | project | product | other
+  embedding: vector("embedding").notNull(),
+  createdAt: ts("created_at"),
+}, (t) => [
+  index("entities_aliases_idx").using("gin", t.aliases),
+  index("entities_emb_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
+]);
+
+export const factEntities = pgTable("fact_entities", {
+  factId: bigint("fact_id", { mode: "number" }).notNull(),
+  entityId: text("entity_id").notNull(),
+}, (t) => [primaryKey({ columns: [t.factId, t.entityId] }), index("fact_entities_entity_idx").on(t.entityId)]);
+
+/** One summary per (entity, scope): built only from facts readable in that scope, so a summary never widens visibility. */
+export const entitySummaries = pgTable("entity_summaries", {
+  entityId: text("entity_id").notNull(),
+  scopeTag: text("scope_tag").notNull(),
+  summary: text("summary").notNull(),
+  updatedAt: ts("updated_at"),
+}, (t) => [primaryKey({ columns: [t.entityId, t.scopeTag] })]);
+
+// ---------- capture robustness ----------
+/** Debounce buffer of thread transcripts waiting for extraction; survives restarts (flushed on boot and by the idle sweep). */
+export const captureBuffer = pgTable("capture_buffer", {
+  channelId: text("channel_id").notNull(),
+  threadTs: text("thread_ts").notNull(),
+  scope: jsonb("scope").notNull(),
+  chunks: jsonb("chunks").$type<string[]>().notNull().default([]),
+  permalink: text("permalink"),
+  attempts: integer("attempts").notNull().default(0),
+  lastAt: ts("last_at"),
+}, (t) => [primaryKey({ columns: [t.channelId, t.threadTs] })]);
+
+// ---------- consolidation audit ----------
+export const consolidationLog = pgTable("consolidation_log", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  runId: text("run_id").notNull(),
+  action: text("action").notNull(), // merge | cross_scope | decay | summarise | expire | promote | demote | about_block | procedure
+  scopeTag: text("scope_tag"),
+  memoryIds: jsonb("memory_ids").$type<number[]>().notNull().default([]),
+  /** Snapshot needed to undo: { rows: [{id,status,supersededBy,invalidAt,importance,decayedAt}], created: number[], block?: {...} } */
+  details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: ts("created_at"),
+  undoneAt: timestamp("undone_at", { withTimezone: true }),
+}, (t) => [index("consolidation_log_run_idx").on(t.runId)]);

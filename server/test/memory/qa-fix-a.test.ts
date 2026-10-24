@@ -24,9 +24,9 @@ describe("held facts visibility", () => {
     const b = await addFact({ tag: "shared", text: "Billing owner is Dana for this quarter", source: "t" });
     await db.update(memories).set({ reviewState: "pending" }).where((await import("drizzle-orm")).eq(memories.id, a.id));
     await deleteMemory(b.id);
-    const [row] = await db.select().from(memories);
-    expect(row!.status).toBe("superseded");
-    expect(row!.supersededBy).toBeNull();
+    const row = (await db.select().from(memories)).find((m) => m.id === a.id)!;
+    expect(row.status).toBe("superseded");
+    expect(row.supersededBy).toBeNull();
     installFakes();
   });
 });

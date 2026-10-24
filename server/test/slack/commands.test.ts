@@ -54,7 +54,7 @@ describe("/forget", () => {
     expect(JSON.stringify(r.blocks)).toContain("brain_forget_confirm");
     expect(await db.select().from(memories)).toHaveLength(1);
     await click("U1", "brain_forget_confirm", String(id));
-    expect(await db.select().from(memories)).toHaveLength(0);
+    expect((await db.select().from(memories))[0]).toMatchObject({ id, status: "deleted" }); // soft delete, history kept
     expect(posts[0].text).toContain("Deleted 1");
   });
   test("never matches another user's scope; shared only for admins", async () => {
@@ -143,7 +143,7 @@ describe("App Home", () => {
     expect(view).not.toContain("Held own fact");
     expect(view).not.toContain("brain_review_open");
     await click("U1", "brain_home_forget", String(mine));
-    expect(await db.select().from(memories).where(eq(memories.id, mine))).toHaveLength(0);
+    expect((await db.select().from(memories).where(eq(memories.id, mine)))[0]).toMatchObject({ status: "deleted" });
     expect(ctx.fake.count("views.publish")).toBe(2);
   });
   test("a forged home delete for someone else's fact is ignored; admins see the review button", async () => {
