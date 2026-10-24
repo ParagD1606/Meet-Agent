@@ -3,18 +3,19 @@ import { Button } from "./button"
 import { cn } from "./cn"
 
 /** Native <dialog>: focus trap, Esc, inert background and top layer come from the platform. */
-export function Dialog({ open, onClose, title, description, children, footer, width = 480, sheet, bare }: { open: boolean; onClose: () => void; title: string; description?: ReactNode; children?: ReactNode; footer?: ReactNode; width?: number; sheet?: boolean; bare?: boolean }) {
+export function Dialog({ open, onClose, title, description, children, footer, width = 480, height, sheet, bare }: { open: boolean; onClose: () => void; title: string; description?: ReactNode; children?: ReactNode; footer?: ReactNode; width?: number; height?: number; sheet?: boolean; bare?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const d = ref.current!
-    if (open && !d.open) d.showModal()
+    if (open && !d.open) { d.showModal(); requestAnimationFrame(() => bodyRef.current?.scrollTo({ top: 0 })) }
     if (!open && d.open) d.close()
   }, [open])
   return (
     <dialog
       ref={ref}
-      className={cn("dlg", sheet && "sheet")}
-      style={{ ["--w" as string]: `${width}px` }}
+      className={cn("dlg", Boolean(height) && "dlg-fixed", sheet && "sheet")}
+      style={{ ["--w" as string]: `${width}px`, ...(height ? { ["--h" as string]: `${height}px` } : {}) }}
       aria-label={title}
       onClose={onClose}
       onClick={(e) => { if (e.target === ref.current) onClose() }}
@@ -26,7 +27,7 @@ export function Dialog({ open, onClose, title, description, children, footer, wi
             <div><h2 className="text-lg">{title}</h2>{description && <p className="mt-0.5 text-sm text-muted">{description}</p>}</div>
             <Button variant="ghost" size="sm" icon="x" aria-label="Close" onClick={onClose} />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
           {footer && <div className="flex justify-end gap-2 border-t border-line bg-sunken px-5 py-3">{footer}</div>}
         </>
       )}
