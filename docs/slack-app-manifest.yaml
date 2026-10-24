@@ -45,6 +45,10 @@ features:
       usage_hint: "[list | cancel <id> | digest on 09:00 | weekly on]"
       should_escape: true
     -
+      command: "/brain-new"
+      description: "Start a fresh chat (forget this conversation's history, keep memory)"
+      should_escape: true
+    -
       command: "/brain-pause"
       description: "Stop learning from this channel (admins, channel creator)"
       should_escape: true

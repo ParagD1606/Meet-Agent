@@ -3,7 +3,7 @@ import { db } from "../db";
 import { channels, meetings, turns } from "../db/schema";
 import { checkRate } from "../limits/rate";
 import { log } from "../log";
-import { claimEvent } from "./dedupe";
+import { claimEvent, withEventClaim } from "./dedupe";
 import { handleChannelMessage } from "./chime";
 import { botUserId, getWorkspace, postMessage, slackClient } from "./client";
 import { deps } from "./deps";
@@ -15,6 +15,7 @@ import { resolvePrivacy, routeMessage, stripMention, type SlackMessageEvent } fr
 import { onAssistantThreadStarted, noteAssistantMessage, isAssistantThread } from "./assistant";
 import { begin, drain, end, gateKey, mergeInbox, setActiveText, signalOf } from "./active-turn-gate";
 import { steerActive } from "../turn/steering";
+import { FRESH_START_REPLY, hintKey, isResetText, LONG_CHAT_HINT, resetContext, resetKeyOf, takeHint } from "../turn/reset";
 import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 import { ingestHuddleFile } from "../meetings";
@@ -62,8 +63,12 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   if (ev.type === "message" && !ev.bot_id && ev.user !== me && await captureOwnerReply(ev).catch((e) => { log.warn("owner reply capture failed", { error: String(e) }); return false; })) return;
   if (route.kind === "ignore") return;
   // The same human message can arrive as both `message` and `app_mention`; process it once.
-  if (!(await claimEvent(`m:${ev.channel}:${ev.ts}`))) return;
+  // a throw before the work is done gives the claim back so Slack's retry can process the event; a success keeps it
+  await withEventClaim(`m:${ev.channel}:${ev.ts}`, () => handleClaimed(ev, route, me));
+}
 
+async function handleClaimed(ev: SlackMessageEvent, route: ReturnType<typeof routeMessage>, me: string): Promise<void> {
+  if (route.kind === "ignore") return;
   const { isIm, isPrivate } = await privacyOf(ev);
   // A `message` event is only delivered for channels the bot is in, so it doubles as a membership signal.
   if (ev.type === "message" && !isIm) await upsertChannel({ id: ev.channel, isPrivate, isIm: false, botIsMember: true });
@@ -100,6 +105,12 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
   const text = stripMention(ev.text ?? "", me);
   const threadTs = isIm ? ev.thread_ts : (ev.thread_ts ?? ev.ts);
   const key = gateKey(ev.channel, threadTs ?? "dm");
+  // "new chat": drops this conversation's chat history only (see turn/reset.ts); never memories, tasks, notes or open asks
+  if (isResetText(text) && (isIm || ev.thread_ts)) {
+    await resetContext(ev.channel, resetKeyOf(threadTs, isIm) ?? threadTs!, new Date(Number(ev.ts) * 1000));
+    await postMessage({ channel: ev.channel, thread_ts: threadTs, text: FRESH_START_REPLY }).catch((e) => log.warn("fresh start reply failed", { error: (e as Error).message }));
+    return;
+  }
   const assistant = isIm && isAssistantThread(ev.channel, threadTs);
   if (assistant) void noteAssistantMessage(ev.channel, threadTs, text);
 
@@ -122,6 +133,9 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
       ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, abortSignal: signalOf(key), ...(m.files.length ? { files: m.files } : {}) })) && ok;
     }
     await done(ev.channel, ev.ts, ok);
+    if (takeHint(hintKey(ev.channel, isIm ? (threadTs ?? "dm") : threadTs!))) {
+      await postMessage({ channel: ev.channel, thread_ts: threadTs, text: LONG_CHAT_HINT }).catch((e) => log.warn("long chat hint failed", { error: (e as Error).message }));
+    }
   } finally { end(key); }
 }
 

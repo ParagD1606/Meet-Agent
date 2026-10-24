@@ -17,7 +17,7 @@ export const DEPTH_CONFIG: Record<Depth, { maxSteps: number; maxOutputTokens: nu
 const CONTINUE = /^(continue|keep going|go on|carry on|resume)\b/i;
 const URL_RE = /https?:\/\/\S+/i;
 const SMALL_TALK = /^(hi|hey|hello|yo|sup|thanks?|thank you|thx|ty|cheers|ok(ay)?|k|cool|nice|great|awesome|perfect|got it|gotcha|sounds good|lgtm|sgtm|will do|noted|appreciate it|good (morning|night|evening)|gm|gn|bye|cya|np|no worries|you rock|lol|haha|yes|yep|yeah|no|nope|nvm|never ?mind|[+👍🙏🙌✅❤️👌 ]+)([\s!.,)]*(thanks?|thx|ty|all|there|team|brain|again|so much|much))*[\s!.,:;)]*$/i;
-const ACTION_RE = /\b(create|open|file|close|assign|reassign|schedule|remind|send|post|update|merge|deploy|rerun|re-run|review|comment|list|show me|pull up|find|check|look up|look at|what'?s (the )?(status|latest)|status of|how many|count|issues?|tickets?|prs?|pull requests?|repos?|sprint|deploys?|incidents?|alerts?|errors?|dashboard|linear|github|notion|jira|sentry|posthog|gmail|calendar|drive|doc|every (day|week|monday|tuesday|wednesday|thursday|friday)|cron|automation|search the web|google|news|slack|channel|thread)\b/i;
+export const ACTION_RE = /\b(create|open|file|close|assign|reassign|schedule|remind|send|post|update|merge|deploy|rerun|re-run|review|comment|list|show me|pull up|find|check|look up|look at|what'?s (the )?(status|latest)|status of|how many|count|issues?|tickets?|prs?|pull requests?|repos?|sprint|deploys?|incidents?|alerts?|errors?|dashboard|linear|github|notion|jira|sentry|posthog|gmail|calendar|drive|doc|every (day|week|monday|tuesday|wednesday|thursday|friday)|cron|automation|search the web|google|news|slack|channel|thread)\b/i;
 const DEEP_RE = /\b(research|investigate|investigation|analy[sz]e|analysis|deep[- ]dive|compare|comparison|audit|root cause|post-?mortem|write (a |the )?(report|summary|brief|spec|plan)|everything (we|you) (know|have)|comprehensive|end[- ]to[- ]end|step[- ]by[- ]step plan|across (all|every))\b/i;
 const MEMORY_RE = /\b(who|what|when|where|why|how|which|did we|do we|have we|are we|is there|was there|remember|recall|decid|agreed|owner|owns|deadline|due|policy|last time|previously|history|background|context)\b/i;
 /** "who was given X", "who owns Y", "what's due", "my open tasks": answered from tracked tasks (find_tasks), no live app tools needed. */
@@ -28,7 +28,7 @@ const QUESTION_START = /^(what|who|when|where|why|how|which|is|are|does|do|did|c
 const CORRECTION_RE = /^(actually|correction)\b|\bthat'?s (wrong|incorrect|not (right|correct))\b/i;
 
 /** An imperative about another person or an action: needs tools (a model with none can only pretend). */
-const DO_RE = /\b(tell(?! me\b)|inform|notify|message|dm|ping|ask|remind|assign|reassign|say (hi|hello|hey)|let \S+ know|follow[- ]?up|done|completed?|schedule|send|forward|create|make|add)\b/i;
+export const DO_RE = /\b(tell(?! me\b)|inform|notify|message|dm|ping|ask|remind|assign|reassign|say (hi|hello|hey)|let \S+ know|follow[- ]?up|done|completed?|schedule|send|forward|create|make|add)\b/i;
 const STATUS_Q = /^(is|are|was|were|has|have|did|does)\b[^?]*\b(done|completed?)\b[^?]*\?$/i;
 /** A short reply that continues an action thread ("ok", "yes", "do it", "tell him ..."). */
 const REPLY_RE = /^(ok(ay)?|yes|yep|yeah|sure|please( do)?|do it|go ahead|yes please|tell (him|her|them)\b.*|continue|keep going|go on)[\s!.,]*$|^(ok(ay)?|yes|sure)[,. ]+\S/i;

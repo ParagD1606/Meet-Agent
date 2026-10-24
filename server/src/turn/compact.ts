@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db";
 import { threadState } from "../db/schema";
 import { log } from "../log";
@@ -44,7 +44,13 @@ Target about ${budget} tokens. Be concrete. Write only the summary body, no prea
 type CompactState = { ineffective: number; lastSavingsPct: number };
 
 export async function getThreadSummary(channelId: string, threadTs: string): Promise<{ summary: string; uptoTs: string | null; state: CompactState }> {
-  const [r] = await db.select().from(threadState).where(and(eq(threadState.channelId, channelId), eq(threadState.threadTs, threadTs)));
+  // 'dm' holds the reset cutoff of a DM's top level (its summary rows are keyed by message ts)
+  const rows = await db.select().from(threadState).where(and(eq(threadState.channelId, channelId), inArray(threadState.threadTs, [threadTs, "dm"])));
+  const r = rows.find((x) => x.threadTs === threadTs);
+  const reset = Math.max(0, ...rows.map((x) => x.contextResetAt?.getTime() ?? 0));
+  if (r && reset && (r.updatedAt.getTime() <= reset || (r.summaryUptoTs && Number(r.summaryUptoTs) * 1000 <= reset))) {
+    return { summary: "", uptoTs: null, state: { ineffective: 0, lastSavingsPct: 100 } }; // "new chat": a summary of older turns is ignored
+  }
   const snap = (r?.coreSnapshot ?? {}) as { compact?: CompactState };
   return { summary: r?.summary ?? "", uptoTs: r?.summaryUptoTs ?? null, state: snap.compact ?? { ineffective: 0, lastSavingsPct: 100 } };
 }

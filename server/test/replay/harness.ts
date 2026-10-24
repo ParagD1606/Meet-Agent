@@ -71,7 +71,7 @@ export async function boot(o: { extractFacts?: string[] } = {}): Promise<Slack> 
   deps.runTurn = realDeps.runTurn;
   deps.handleBlockAction = realDeps.handleBlockAction;
 
-  const mem = (a: { system: string; prompt: string }) => (a.system.includes("standalone search query") ? JSON.stringify({ query: a.prompt.split("LATEST MESSAGE: ").pop()!.trim() || "x", asOf: null }) // identity rewrite
+  const mem = (a: { system: string; prompt: string }) => (a.system.includes("classify a Slack DM") ? "ANSWER" : a.system.includes("standalone search query") ? JSON.stringify({ query: a.prompt.split("LATEST MESSAGE: ").pop()!.trim() || "x", asOf: null }) // identity rewrite
     : a.system === EXTRACT_SYSTEM ? JSON.stringify({ facts: o.extractFacts ?? [] }) : '{"superseded":[],"facts":[],"commitments":[]}');
   setEmbedder(async (texts) => texts.map(fakeVector)); // deterministic and free, in live mode too
   setMemoryLlm(LIVE ? null : async (a) => mem(a));
@@ -83,7 +83,7 @@ export async function boot(o: { extractFacts?: string[] } = {}): Promise<Slack> 
     "conversations.replies": (a) => ({ ok: true, messages: store.filter((m) => m.channel === a.channel && (m.ts === a.ts || m.thread_ts === a.ts)).map(pub) }),
     "conversations.history": (a) => ({ ok: true, messages: store.filter((m) => m.channel === a.channel && (!m.thread_ts || m.thread_ts === m.ts)).map(pub).reverse() }),
     "chat.getPermalink": (a) => ({ ok: true, permalink: `https://acme.slack.com/archives/${a.channel}/p${String(a.message_ts).replace(".", "")}` }),
-    "chat.postMessage": (a) => { const ts = `${1800000000 + ++n}.000100`; store.push({ channel: a.channel, ts, thread_ts: a.thread_ts, user: BOT, text: String(a.text ?? "") }); return { ok: true, ts, channel: a.channel }; },
+    "chat.postMessage": (a) => { const ts = nextTs(); ++n; store.push({ channel: a.channel, ts, thread_ts: a.thread_ts, user: BOT, text: String(a.text ?? "") }); return { ok: true, ts, channel: a.channel }; },
     "chat.update": (a) => { const m = store.find((x) => x.channel === a.channel && x.ts === a.ts); if (m) m.text = String(a.text ?? ""); return { ok: true, ts: a.ts, channel: a.channel }; },
   });
   setSlackClientForTest(fake.client);

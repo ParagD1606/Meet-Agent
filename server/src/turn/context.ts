@@ -15,6 +15,7 @@ import { getWorkspacePrompt, skillsPromptSection } from "../skills/skills";
 import { botUserId } from "../slack/client";
 import type { TurnInput } from "./index";
 import { getThreadSummary, renderSummary, type HistoryItem } from "./compact";
+import { afterIdleGap, getDmIdleHours, hintKey, HISTORY_CAP, noteHistorySize, resetCutoff, resetKeyOf } from "./reset";
 import { getSlack } from "./slack";
 import type { ToolContext } from "./tools";
 
@@ -47,7 +48,7 @@ const fenceForeign = (text: string) => `<thread-message untrusted>\n(another par
 
 const PLACEHOLDER = /^_(Thinking|Working|Looking)[^_]*_$/;
 
-async function threadHistory(i: TurnInput, selfId: string | null): Promise<HistoryItem[]> {
+async function threadHistory(i: TurnInput, selfId: string | null, cutoff: Date | null): Promise<HistoryItem[]> {
   if (i.trigger === "automation" || i.trigger === "research") return [];
   try {
     const slack = await getSlack();
@@ -64,7 +65,10 @@ async function threadHistory(i: TurnInput, selfId: string | null): Promise<Histo
       if (mine && prev?.role === "assistant" && prev.text === text) continue; // retried/duplicated bot message
       out.push({ ts: m.ts, role: mine ? "assistant" : "user", text: mine ? text : `<@${m.user ?? "unknown"}>: ${text}` });
     }
-    return out.slice(-FETCH_LIMIT);
+    const fresh = cutoff ? out.filter((m) => Number(m.ts) > cutoff.getTime() / 1000) : out; // "new chat": nothing older than the reset
+    // a DM left idle past the window starts fresh on its own (no write: the gap itself is the cutoff)
+    const live = i.isIm && !i.threadTs ? afterIdleGap(fresh, i.ts, await getDmIdleHours()) : fresh;
+    return live.slice(-FETCH_LIMIT);
   } catch (e) {
     log.warn("thread history unavailable", { error: String(e) });
     return [];
@@ -158,10 +162,10 @@ async function frozenBlocks(i: TurnInput, ctx: ToolContext): Promise<{ shared: s
   const threadKey = i.threadTs;
   let snap: Frozen | null = null;
   if (threadKey) {
-    const [r] = await db.select({ s: threadState.coreSnapshot }).from(threadState)
+    const [r] = await db.select({ s: threadState.coreSnapshot, reset: threadState.contextResetAt }).from(threadState)
       .where(sql`${threadState.channelId} = ${i.channelId} and ${threadState.threadTs} = ${threadKey}`);
     const f = (r?.s as { prefix?: Frozen } | null)?.prefix;
-    if (f && Date.now() - f.at < tuning().snapshotTtlMs) snap = f;
+    if (f && Date.now() - f.at < tuning().snapshotTtlMs && !(r?.reset && f.at <= r.reset.getTime())) snap = f; // frozen before a reset: rebuild
   }
   const uid = i.userId ?? "";
   if (snap && (snap.users[uid] !== undefined || !i.userId)) {
@@ -230,7 +234,9 @@ export type BuiltContext = {
 export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall?: boolean; historyTokens?: number }): Promise<BuiltContext> {
   const selfId = await botUserId().catch(() => null);
   const threadKey = i.threadTs ?? i.ts;
-  const historyP = threadHistory(i, selfId);
+  const rk = resetKeyOf(i.threadTs !== i.ts ? i.threadTs : undefined, i.isIm);
+  const cutoff = await resetCutoff(i.channelId, [...new Set([threadKey, ...(rk ? [rk] : [])])]).catch(() => null);
+  const historyP = threadHistory(i, selfId, cutoff);
   // a top-level channel mention arrives with threadTs === ts (the reply thread it starts): that is not "inside a thread"
   const recentLines: string[] & { foreign?: boolean } = ctx.skipRecall || (i.threadTs && i.threadTs !== i.ts) ? [] : await recentChannel(i, selfId).catch((e) => {
     log.warn("recent channel unavailable", { error: String(e) });
@@ -262,7 +268,10 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
     : await getThreadSummary(i.channelId, threadKey).catch(() => ({ summary: "", uptoTs: null }));
   const uncovered = summary.uptoTs ? rawHistory.filter((m) => Number(m.ts) > Number(summary.uptoTs)) : rawHistory;
   const foreignTs = new Set(uncovered.filter((m) => isForeign(m, i.userId)).map((m) => m.ts));
-  const windowed = windowByTokens(uncovered.map((m) => (foreignTs.has(m.ts) ? { ...m, text: fenceForeign(m.text) } : m)), ctx.historyTokens ?? HISTORY_WINDOW_TOKENS);
+  const fenced = uncovered.map((m) => (foreignTs.has(m.ts) ? { ...m, text: fenceForeign(m.text) } : m));
+  const historyBudget = ctx.historyTokens ?? HISTORY_WINDOW_TOKENS;
+  const windowed = windowByTokens(fenced, historyBudget).slice(-HISTORY_CAP[ctx.depth ?? "tools"]);
+  if (i.trigger === "mention" || i.trigger === "dm") noteHistorySize(hintKey(i.channelId, rk ?? threadKey), uncovered.reduce((n, m) => n + estimateTokens(m.text) + 4, 0), historyBudget);
   const messages: ModelMessage[] = [
     ...(summary.summary ? [{ role: "user" as const, content: renderSummary(summary.summary) }] : []),
     ...windowed.map((m) => ({ role: m.role, content: m.text })),

@@ -25,6 +25,7 @@ export const SLACK_SLASH_COMMANDS = [
   { command: "/brain-review", description: "Review pending memory changes (admins)" },
   { command: "/brain-tasks", description: "Your open tasks and the ones you assigned" },
   { command: "/brain-followups", description: "List, cancel and set up follow-up and digest DMs", usage_hint: "[list | cancel <id> | digest on 09:00 | weekly on]" },
+  { command: "/brain-new", description: "Start a fresh chat (forget this conversation's history, keep memory)" },
   { command: "/brain-pause", description: "Stop learning from this channel (admins, channel creator)" },
   { command: "/brain-resume", description: "Resume learning from this channel (admins, channel creator)" },
 ] as const;

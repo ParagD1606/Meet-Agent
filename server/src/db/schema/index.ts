@@ -355,6 +355,8 @@ export const threadState = pgTable("thread_state", {
   summaryUptoTs: text("summary_upto_ts"),
   coreSnapshot: jsonb("core_snapshot"), // frozen core blocks for prompt-cache stability
   turnsSinceReflect: integer("turns_since_reflect").notNull().default(0),
+  /** "New chat": history, summaries and the frozen snapshot older than this are ignored. Key (channel, thread_ts) or (channel, 'dm'). */
+  contextResetAt: timestamp("context_reset_at", { withTimezone: true }),
   updatedAt: ts("updated_at"),
 }, (t) => [primaryKey({ columns: [t.channelId, t.threadTs] })]);
 
