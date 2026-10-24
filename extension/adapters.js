@@ -54,6 +54,25 @@
     },
   };
 
+  // Slack's caption markup is unverified: this looks for any caption-like element and, inside it,
+  // a speaker/text pair, so expect to adjust it after inspecting a real Huddle.
+  adapters.slack = {
+    match: (h) => h === "app.slack.com",
+    title: () => "Slack Huddle",
+    meetingId: () => location.pathname.split("/").filter(Boolean).slice(-2).join("-") || "huddle",
+    read() {
+      if (!/\/huddle\b|\/client\//.test(location.pathname)) return [];
+      const out = [];
+      const boxes = document.querySelectorAll('[data-qa*="caption" i], [class*="caption" i][class*="huddle" i], [class*="huddle" i] [class*="caption" i]');
+      for (const box of boxes) {
+        const speaker = text(box.querySelector('[data-qa*="name" i], [class*="name" i], [class*="speaker" i]'));
+        const words = text(box.querySelector('[data-qa*="text" i], [class*="text" i], [class*="content" i]')) || (!speaker ? text(box) : "");
+        if (words && words !== speaker) out.push({ speaker, text: words });
+      }
+      return out;
+    },
+  };
+
   const key = Object.keys(adapters).find((k) => adapters[k].match(location.hostname));
   globalThis.__brainAdapter = key ? { platform: key, ...adapters[key] } : null;
 })();

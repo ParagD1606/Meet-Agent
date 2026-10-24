@@ -10,7 +10,8 @@
     "https://teams.microsoft.com/*",
     "https://teams.live.com/*",
     "https://*.zoom.us/wc/*",
-    "https://app.zoom.us/*"
+    "https://app.zoom.us/*",
+    "https://app.slack.com/*"
   ],
   "background": { "service_worker": "background.js" },
   "action": { "default_popup": "popup.html", "default_title": "Brain Meeting Notes" },
@@ -21,7 +22,8 @@
         "https://teams.microsoft.com/*",
         "https://teams.live.com/*",
         "https://*.zoom.us/wc/*",
-        "https://app.zoom.us/*"
+        "https://app.zoom.us/*",
+        "https://app.slack.com/*"
       ],
       "js": ["adapters.js", "content.js"],
       "run_at": "document_idle"

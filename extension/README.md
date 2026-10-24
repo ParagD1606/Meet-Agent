@@ -1,6 +1,6 @@
 # Brain Meeting Notes (Chrome extension)
 
-Captures live captions from Google Meet, Microsoft Teams and Zoom (web client) and sends the transcript to your Company Brain, which summarizes it and extracts action items under **Meeting notes**. Slack Huddles are handled server-side and need no extension.
+Captures live captions from Google Meet, Microsoft Teams, Zoom (web client) and Slack Huddles in the browser and sends the transcript to your Company Brain, which summarizes it and extracts action items under **Meeting notes**. Slack Huddles are also handled server-side from Slack's AI notes; the extension's Slack adapter (browser Huddles with captions on) is untested.
 
 ## Install
 1. In Company Brain, create an API token (Configure > API tokens).
