@@ -5,7 +5,7 @@ import { DrawSVGPlugin } from "gsap/DrawSVGPlugin"
 import { MotionPathPlugin } from "gsap/MotionPathPlugin"
 import { useLayoutEffect, useRef } from "react"
 import { APPS, MeetLogo, SlackLogo, TeamsLogo, Tile, ZoomLogo } from "./logos"
-import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, BrainField, Brain, FAQ, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PLATFORMS, PRIVACY } from "./scenes"
+import { ActivityLog, BentoAsk, BentoExport, BentoOwners, BentoTools, BentoToasts, Board, BrainField, Brain, FAQ, HeroWindow, I, MiniChecklist, MiniMeet, MiniSuggest, PLATFORMS, PRIVACY, RoleStories } from "./scenes"
 import { css } from "./styles"
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin, DrawSVGPlugin, MotionPathPlugin)
@@ -248,12 +248,12 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       </div></header>
 
       <section className="hero" id="top"><div className="wrap">
-        <span className="pillb"><b>New</b>Notes from Meet, Teams, Zoom and Slack</span>
+        <span className="pillb"><b>New</b>Your company's memory, in Slack</span>
         <h1 className="h1">
-          <span className="lm"><span className="li">Say it <span className="own"><span className="it">once</span><svg className="squig" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden><path d="M2,12 C28,2 48,19 78,10 S128,3 158,11 S190,16 198,7" fill="none" stroke="#286df8" strokeWidth="4" strokeLinecap="round" /></svg></span>.</span></span>
-          <span className="lm"><span className="li">Your company remembers.</span></span>
+          <span className="lm"><span className="li">Say it once.</span></span>
+          <span className="lm"><span className="li">Your company <span className="own"><span className="it">remembers</span><svg className="squig" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden><path d="M2,12 C28,2 48,19 78,10 S128,3 158,11 S190,16 198,7" fill="none" stroke="#286df8" strokeWidth="4" strokeLinecap="round" /></svg></span>.</span></span>
         </h1>
-        <ul className="bul"><li>{I("tick", 18, 2.6)}One shared memory for Slack, meetings and docs</li><li>{I("tick", 18, 2.6)}Answers with sources, only from what you can see</li><li>{I("tick", 18, 2.6)}Turns conversations into decisions and tasks</li></ul>
+        <ul className="bul"><li>{I("tick", 18, 2.6)}One shared memory for Slack, meetings and docs</li><li>{I("tick", 18, 2.6)}Answers with sources, only from what you can see</li><li>{I("tick", 18, 2.6)}Turns decisions into tasks with owners</li></ul>
         <div className="ctas"><a href={go} className="btn pri"><SlackLogo size={20} /><Roll>{goLabel}</Roll></a><a href="#how" className="btn ghost"><Roll>See how it works</Roll></a></div>
         <p className="fine">Self-hosted. Your data stays on your own server.</p>
         <div className="platforms">{PLATFORMS.map((p) => <span key={p.n}>{p.L}{p.n}</span>)}<span>CHROME EXTENSION</span></div>
@@ -261,23 +261,29 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       </div></section>
 
       <section className="strip" aria-label="Works with">
-        <p className="tag cap2">Works with the tools your team already uses</p>
+        <p className="tag cap2">Connects to the tools your team already uses</p>
         <div className="mrow">{strip.map((a, i) => <span className="mitem" key={i}><Tile size={52}><a.Logo size={30} /></Tile>{a.name}</span>)}</div>
         <div className="mrow">{[...strip].reverse().map((a, i) => <span className="mitem" key={i}><Tile size={52}><a.Logo size={30} /></Tile>{a.name}</span>)}</div>
       </section>
 
       <section className="sec" style={{ paddingBottom: 40 }}><div className="wrap" style={{ textAlign: "center" }}>
-        <p className="tag" data-reveal>In a real meeting</p>
-        <h2 className="big" data-reveal style={{ marginTop: 16 }}>Watch a meeting turn into <span className="it">notes</span>.</h2>
+        <p className="tag" data-reveal>One source of the brain</p>
+        <h2 className="big" data-reveal style={{ marginTop: 16 }}>Even your meetings become <span className="it">memory</span>.</h2>
         <div className="hwrap"><HeroWindow /></div>
+      </div></section>
+
+      <section className="sec" id="roles" style={{ paddingTop: 20 }}><div className="wrap">
+        <p className="tag" data-reveal>One brain. Any job.</p>
+        <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 820 }}>It already knows what happened, <span className="it">just ask</span>.</h2>
+        <RoleStories />
       </div></section>
 
       <section className="sec" id="how" style={{ paddingTop: 20 }}><div className="wrap">
         <p className="tag" data-reveal>How it works</p>
-        <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 760 }}>It does the note-taking, so you can <span className="it">talk</span>.</h2>
-        <div className="frow"><div className="ftxt"><p className="tag">1 · Listen</p><h3>It reads the captions.</h3><p>Turn on captions in your meeting. A side panel in your browser follows who says what, with real names. No bot joins the call and no audio is recorded.</p><a href={go} className="tlink">Try it on a call {I("arrow", 18, 2)}</a></div><MiniMeet /></div>
-        <div className="frow flip"><div className="ftxt"><p className="tag">2 · Write down</p><h3>It writes down what happened.</h3><p>Decisions, tasks and open questions come from the whole meeting, not a guess halfway through. You approve what gets saved.</p><a href={go} className="tlink">See the notes {I("arrow", 18, 2)}</a></div><MiniChecklist /></div>
-        <div className="frow"><div className="ftxt"><p className="tag">3 · Assign</p><h3>It finds the right person.</h3><p>It looks at who has done similar work and who has time before the deadline, and shows you the reasons, so assigning is one click.</p><a href={go} className="tlink">Try the suggestions {I("arrow", 18, 2)}</a></div><MiniSuggest /></div>
+        <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 760 }}>One brain for everything your team <span className="it">knows</span>.</h2>
+        <div className="frow"><div className="ftxt"><p className="tag">1 · Capture</p><h3>It follows the conversation.</h3><p>It lives in Slack, and joins your meetings through the captions you already see. A side panel in your browser follows who says what, with real names. No bot joins the call and no audio is recorded.</p><a href={go} className="tlink">Try it on a call {I("arrow", 18, 2)}</a></div><MiniMeet /></div>
+        <div className="frow flip"><div className="ftxt"><p className="tag">2 · Remember</p><h3>It keeps what matters.</h3><p>Decisions, tasks and open questions come from the whole meeting, not a guess halfway through. You approve what gets saved.</p><a href={go} className="tlink">See the notes {I("arrow", 18, 2)}</a></div><MiniChecklist /></div>
+        <div className="frow"><div className="ftxt"><p className="tag">3 · Act</p><h3>It finds the right person.</h3><p>It looks at who has done similar work and who has time before the deadline, and shows you the reasons, so assigning is one click.</p><a href={go} className="tlink">Try the suggestions {I("arrow", 18, 2)}</a></div><MiniSuggest /></div>
       </div></section>
 
       <section className="sec statement"><div className="wrap">
@@ -290,7 +296,7 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       </div></section>
 
       <section className="sec" id="more" style={{ paddingTop: 20 }}><div className="wrap">
-        <p className="tag" data-reveal>And around the meeting</p>
+        <p className="tag" data-reveal>Beyond remembering</p>
         <h2 className="big" data-reveal style={{ marginTop: 16, maxWidth: 760 }}>It remembers, reminds and <span className="it">connects</span>.</h2>
         <div className="bento">
           <div className="bc c7"><div className="t"><b>Ask your team's memory</b><span>Answers about last week's meeting or last month's thread, with the sources.</span></div><BentoAsk /></div>
@@ -304,7 +310,7 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <section className="sec" id="security" style={{ paddingTop: 20 }}><div className="wrap sec2">
         <div>
           <p className="tag" data-reveal>Security and privacy</p>
-          <h2 className="big" data-reveal style={{ marginTop: 16 }}>Your meetings stay <span className="it">yours</span>.</h2>
+          <h2 className="big" data-reveal style={{ marginTop: 16 }}>Your company's memory stays <span className="it">yours</span>.</h2>
           <ul className="checks" data-reveal>
             <li>{I("tick", 20, 2.6)}Self-hosted: it runs on your server, not ours.</li>
             <li>{I("tick", 20, 2.6)}It only reads what you are allowed to read.</li>
@@ -322,8 +328,12 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <div className="faq" data-reveal>{FAQ.map((f) => <div className="qa" key={f.q}><button type="button" className="q" aria-expanded="false"><span>{f.q}</span><i className="pm" /></button><div className="a"><p>{f.a}</p></div></div>)}</div>
       </div></section>
 
+      <section className="bigline"><div className="wrap">
+        <h2 data-reveal>The best memory is<br />your <span className="it">team's</span> memory.</h2>
+      </div></section>
+
       <section className="cta"><div className="wrap">
-        <h2>Try it on your next <span className="it">meeting</span>.</h2>
+        <h2>Give your team a <span className="it">brain</span>.</h2>
         <p>Sign in with the Slack workspace this deployment belongs to.</p>
         <div className="ctas"><a href={go} className="btn pri"><SlackLogo size={20} /><Roll>{goLabel}</Roll></a></div>
         {works}
@@ -332,7 +342,7 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <footer className="foot"><div className="wrap">
         <div className="fgrid">
-          <div><a href="#top" className="brand" style={{ color: "var(--fg)" }}><i><Brain size={16} color="#fff" /></i>Company Brain</a><p style={{ marginTop: 12, maxWidth: 260 }}>The teammate that remembers what your team says.</p></div>
+          <div><a href="#top" className="brand" style={{ color: "var(--fg)" }}><i><Brain size={16} color="#fff" /></i>Company Brain</a><p style={{ marginTop: 12, maxWidth: 260 }}>The company brain for your Slack workspace.</p></div>
           <div><b>Product</b><a href="#how">How it works</a><a href="#more">What it does</a><a href="#security">Security</a></div>
           <div><b>Account</b><a href={go}>{goLabel}</a><a href="/setup">Set up a deployment</a></div>
           <div><b>Help</b><a href="#faq">FAQ</a></div>

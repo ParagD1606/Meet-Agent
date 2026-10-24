@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
-import { channelMembers, channels, commitments, meetings, meetingTaskNotifications, users } from "../db/schema";
+import { channelMembers, channels, commitments, meetingAudit, meetings, meetingTaskNotifications, users } from "../db/schema";
 import { log } from "../log";
 import { ACTIVE, resolveCommitment, type Commitment } from "../manager/commitments";
 import { notifyAssignerDone, syncTaskFact, userName } from "../manager/task-sync";
@@ -77,6 +77,15 @@ type Layout = { merged: MeetingItem[]; meeting: Meeting; title: string; recipien
 
 const btn = (text: string, action_id: string, value: string, style?: "primary" | "danger") => ({ type: "button", ...(style ? { style } : {}), text: { type: "plain_text", text }, action_id, value });
 const link = (text: string, url: string) => ({ type: "button", text: { type: "plain_text", text }, action_id: "meeting_link", url });
+/** Slack rejects a message whose actions block repeats an action_id (invalid_blocks): suffix repeats with #n, the click handler strips it. */
+const uniq = <T extends unknown[]>(blocks: T): T => blocks.map((b: any) => {
+  if (b?.type !== "actions" || !Array.isArray(b.elements)) return b;
+  const seen = new Map<string, number>();
+  return { ...b, elements: b.elements.map((e: any) => {
+    const n = (seen.get(e.action_id) ?? 0) + 1; seen.set(e.action_id, n);
+    return n > 1 ? { ...e, action_id: `${e.action_id}#${n}` } : e;
+  }) };
+}) as T;
 const section = (text: string) => ({ type: "section", text: { type: "mrkdwn", text: text.slice(0, 2900) } });
 
 function ownState(i: Item): "done" | "dropped" | "declined" | "reassigned" | "acknowledged" | "open" {
@@ -247,7 +256,7 @@ export async function sendMeetingRecaps(meetingId: string, o: { taskIds?: string
       const msg = renderRecap(layout);
       const channel = await openDm(recipient);
       if (!channel) throw new Error("Could not open a Slack DM with the recipient");
-      const posted = await postMessage({ channel, text: msg.text, blocks: msg.blocks });
+      const posted = await postMessage({ channel, text: msg.text, blocks: uniq(msg.blocks) });
       if (!posted.ts) throw new Error("Slack did not return a message timestamp");
       await db.update(meetingTaskNotifications).set({ status: "sent", dmChannelId: channel, messageTs: posted.ts, error: null, sentAt: new Date(), updatedAt: new Date() }).where(inArray(meetingTaskNotifications.id, claimed.map((c) => c.id)));
       res.sent++;
@@ -285,7 +294,7 @@ export async function rerenderMeetingDms(meetingId: string): Promise<void> {
     const first = notes[0]!;
     const layout = await layoutFor(m, first.recipientUserId, notes, firstTs.get(first.recipientUserId) === first.messageTs);
     const msg = renderRecap(layout);
-    await slack.chat.update({ channel: first.dmChannelId!, ts: first.messageTs!, text: msg.text, blocks: msg.blocks as never })
+    await slack.chat.update({ channel: first.dmChannelId!, ts: first.messageTs!, text: msg.text, blocks: uniq(msg.blocks) as never })
       .catch((err: unknown) => log.warn("meeting recap update failed", { meetingId, error: String(err) }));
   }
 }
@@ -296,8 +305,9 @@ type Payload = { user?: { id?: string }; actions?: { action_id?: string; value?:
 
 /** Acknowledge / Done / Not mine (owner) and Approve / Reject / owner choice (organizer or admin). Returns true when the payload was one of ours. */
 export async function handleMeetingTaskAction(payload: Payload): Promise<boolean> {
-  const action = payload.actions?.find((a) => a.action_id && ACTIONS.has(a.action_id));
-  if (!action) return false;
+  const hit = payload.actions?.find((a) => a.action_id && ACTIONS.has(a.action_id.replace(/#\d+$/, "")));
+  if (!hit) return false;
+  const action = { ...hit, action_id: hit.action_id!.replace(/#\d+$/, "") };
   const uid = payload.user?.id;
   if (!uid || !action.value || action.action_id === "meeting_link") return true;
   if (action.action_id === "meeting_item_approve" || action.action_id === "meeting_item_reject" || action.action_id === "meeting_item_owner") {
@@ -346,6 +356,48 @@ async function notifyDeclined(m: Meeting, task: MeetingItem | undefined, decline
     if (!channel) return;
     const who = (await userName(declinedBy)) ?? "A teammate";
     const text = `:raised_hand: ${slackText(who)} says the task *${safe(task.title)}* from the meeting is not theirs. It is now unassigned: assign someone else in Tasks, or on the meeting notes page.`;
-    await postMessage({ channel, text: `${who} says task "${task.title}" is not theirs: assign someone else`, blocks: [section(text), { type: "actions", elements: [link("Assign in Tasks", tasksUrl()), link("Meeting notes", meetingUrl(m.id))] }] });
+    await postMessage({ channel, text: `${who} says task "${task.title}" is not theirs: assign someone else`, blocks: uniq([section(text), { type: "actions", elements: [link("Assign in Tasks", tasksUrl()), link("Meeting notes", meetingUrl(m.id))] }]) });
   } catch (err) { log.warn("decline notice failed", { meetingId: m.id, error: String(err) }); }
+}
+
+/**
+ * One summary post in the channel where the huddle happened (only people already there see it): what was decided, key points, open questions
+ * and who got which task, with a link to the notes. Slack huddles only (never uploads or extension calls), at most once per meeting
+ * (a meeting_audit row is the claim), and never when the workspace requires approval first. Never throws.
+ */
+export async function postChannelSummary(meetingId: string): Promise<boolean> {
+  try {
+    const [m] = await db.select().from(meetings).where(eq(meetings.id, meetingId));
+    if (!m?.summary || m.status !== "ready" || m.platform !== "slack" || m.channelId.startsWith("ext_")) return false;
+    if ((await getApprovalMode()) === "approve") return false;
+    const [done] = await db.select({ id: meetingAudit.id }).from(meetingAudit).where(and(eq(meetingAudit.meetingId, meetingId), eq(meetingAudit.action, "channel_summary"))).limit(1);
+    if (done) return false;
+    const [claim] = await db.insert(meetingAudit).values({ meetingId, action: "channel_summary", detail: { state: "posting" } }).returning({ id: meetingAudit.id });
+    const items = asItems(m.id, m.tasks).filter((i) => i.approval !== "rejected");
+    const decisions = items.filter((i) => i.itemType === "decision" && !i.unverified).map((i) => i.title);
+    const questions = items.filter((i) => i.itemType === "question").map((i) => i.title);
+    const bullets = recapBullets(m.summary, decisions, questions);
+    const tasks = items.filter((i) => i.itemType === "task" && i.approval === "approved" && i.assigneeId).slice(0, MAX_ITEMS);
+    if (!bullets.length && !tasks.length) { await db.delete(meetingAudit).where(eq(meetingAudit.id, claim!.id)); return false; }
+    const title = cleanTitle(m.title, null, m.endedAt);
+    const lines = tasks.map((t) => `• ${safe(t.title)} – <@${t.assigneeId}>${t.dueDate ? `, due ${prettyDue(t.dueDate)}` : ""}`);
+    const blocks: unknown[] = [
+      { type: "header", text: { type: "plain_text", text: `Huddle summary: ${title}`.slice(0, 150) } },
+      ...(bullets.length ? [section(`*What happened*\n${bullets.map((b) => `• ${safe(b)}`).join("\n")}`)] : []),
+      ...(lines.length ? [section(`*Tasks assigned* (${tasks.length})\n${lines.join("\n")}\n_Each person also got a DM._`)] : []),
+      { type: "actions", elements: [link("View notes", meetingUrl(m.id)), link("Open Tasks", tasksUrl())] },
+    ];
+    try {
+      const posted = await postMessage({ channel: m.channelId, text: `Huddle summary: ${title}`, blocks: uniq(blocks) });
+      await db.update(meetingAudit).set({ detail: { state: "posted", ts: posted.ts ?? null } }).where(eq(meetingAudit.id, claim!.id));
+      return true;
+    } catch (err) {
+      await db.delete(meetingAudit).where(eq(meetingAudit.id, claim!.id)); // release so the next sync retries
+      log.warn("huddle channel summary failed", { meetingId, error: err instanceof Error ? err.message : String(err) });
+      return false;
+    }
+  } catch (err) {
+    log.warn("huddle channel summary failed", { meetingId, error: err instanceof Error ? err.message : String(err) });
+    return false;
+  }
 }

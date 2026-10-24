@@ -243,5 +243,27 @@ export const css = String.raw`
 .lp .pl > div, .lp .ic > div { flex:1; min-width:0; } .lp .pl span:not(.av), .lp .ic span { display:block; }
 .lp .hero .fine { margin-top:26px; }
 .lp .cta .it { color:var(--hl); }
+
+.lp .roles { display:grid; grid-template-columns:260px 1fr; gap:28px; margin-top:44px; align-items:start; }
+.lp .rtabs { display:flex; flex-direction:column; gap:6px; }
+.lp .rtabs button { position:relative; text-align:left; padding:14px 16px; border-radius:0; border:1px solid transparent; background:#fff; color:var(--fg); cursor:pointer; overflow:hidden; opacity:.6; transition:opacity .2s, background .2s, border-color .2s; font:inherit; }
+.lp .rtabs button.on, .lp .rtabs button:hover { opacity:1; background:#fff; border-color:var(--line); }
+.lp .rtabs b { display:block; font-size:15px; font-weight:500; letter-spacing:-.01em; } .lp .rtabs span { display:block; font-size:13px; color:var(--mut); margin-top:2px; }
+.lp .rbar { position:absolute; left:0; bottom:0; height:2px; background:var(--fg); animation:rbar 6.5s linear forwards; }
+@keyframes rbar { from { width:0 } to { width:100% } }
+.lp .rstage { border:1px solid var(--line); border-radius:0; background:#fff; padding:18px 20px 22px; min-height:330px; }
+.lp .rhead { display:flex; align-items:center; gap:8px; font-weight:500; padding-bottom:12px; border-bottom:1px solid var(--line); margin-bottom:12px; color:var(--fg); font-size:14px; }
+.lp .rmsg { display:flex; gap:12px; padding:9px 0; opacity:0; animation:rin .5s ease forwards; color:var(--fg); }
+@keyframes rin { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
+.lp .rmsg > i { flex:none; width:30px; height:30px; border-radius:0; background:var(--surface); border:1px solid var(--line); display:grid; place-items:center; font-style:normal; font-weight:500; font-size:12.5px; color:var(--fg); }
+.lp .rmsg > i.br { background:var(--fg); border-color:var(--fg); color:#fff; }
+.lp .rmsg b { font-size:14px; font-weight:500; } .lp .rmsg b em { font-style:normal; color:var(--mut); font-weight:400; }
+.lp .rmsg p { margin:2px 0 0; font-size:14.5px; color:var(--fg); line-height:1.5; } .lp .rans { opacity:1 !important; }
+.lp .rsrc { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.lp .rsrc span { font-size:11.5px; padding:3px 9px; border-radius:0; border:1px solid var(--line); background:var(--surface); color:var(--mut); font-family:"DM Mono", ui-monospace, monospace; }
+.lp .bigline { padding:120px 0 100px; text-align:center; background:var(--surface); }
+.lp .bigline h2 { font-size:clamp(40px,7vw,92px); line-height:1.02; letter-spacing:-.03em; color:var(--fg); font-weight:700; }
+.lp .bigline .it { color:var(--hl); }
+@media (max-width:900px) { .lp .roles { grid-template-columns:1fr; } .lp .rtabs { flex-direction:row; overflow-x:auto; } .lp .rtabs button { flex:none; min-width:170px; } }
 @media (prefers-reduced-motion:reduce) { .lp *, .lp *::before, .lp *::after { animation:none !important; transition:none !important; } }
 `
