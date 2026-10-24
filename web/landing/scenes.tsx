@@ -12,7 +12,7 @@ export const Brain = ({ size = 16, color = "#fff" }: { size?: number; color?: st
 const Check = ({ open = false, size = 22 }: { open?: boolean; size?: number }) => (
   <svg className="cb" width={size} height={size} viewBox="0 0 24 24" aria-hidden>
     <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={open ? "3 3" : undefined} opacity={open ? 0.6 : 0.9} />
-    {!open && <path className="ck" d="M7 12.5l3.2 3.2L17 8.5" fill="none" stroke="#3ddc84" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />}
+    {!open && <path className="ck" d="M7 12.5l3.2 3.2L17 8.5" fill="none" stroke="#16a34a" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />}
   </svg>
 )
 const Svg = ({ d, size = 20, sw = 1.8 }: { d: string[]; size?: number; sw?: number }) => (
@@ -37,7 +37,7 @@ export function HeroWindow() {
   ]
   return (
     <div className="hw">
-      <div className="hw-bar"><i /><i /><i /><span className="url"><MeetLogo size={14} /> meet.google.com/abc-defg-hij</span><span className="ext"><Brain size={13} color="#0b0b0c" /></span></div>
+      <div className="hw-bar"><i /><i /><i /><span className="url"><MeetLogo size={14} /> meet.google.com/abc-defg-hij</span><span className="ext"><Brain size={13} color="#fff" /></span></div>
       <div className="hw-body">
         <div className="call">
           <div className="grid">
@@ -51,7 +51,7 @@ export function HeroWindow() {
           <div className="tools"><i /><i /><i className="cc">CC</i><i /><i className="end" /></div>
         </div>
         <div className="side">
-          <div className="sh"><span className="logo"><Brain size={14} color="#0b0b0c" /></span><div><b>Google Meet · Q4 launch sync</b><small><i className="live" /> live · <span className="cnt">0</span> lines</small></div></div>
+          <div className="sh"><span className="logo"><Brain size={14} color="#fff" /></span><div><b>Google Meet · Q4 launch sync</b><small><i className="live" /> live · <span className="cnt">0</span> lines</small></div></div>
           <div className="stabs"><span className="on" data-t="live">Live</span><span>Notes</span><span data-t="items">Items<em>3</em></span><span>Suggest</span><span>Ask</span></div>
           <div className="sbody">
             <div className="pview vlive">
@@ -103,7 +103,7 @@ export function BrainField() {
         {tiles.map((t, i) => <path key={i} className="fline" d={`M590,424 C590,470 ${t.x + 26},448 ${t.x + 26},478`} />)}
       </svg>
       <div className="core" style={{ left: pct(590, 1180), top: pct(300, 560) }}>
-        <span className="ctag">COMPANY</span><Brain size={40} color="#3ddc84" /><span className="cname">Brain</span>
+        <span className="ctag">COMPANY</span><Brain size={40} color="#1c1c1e" /><span className="cname">Brain</span>
       </div>
       <span className="spoke" style={{ left: pct(590, 1180), top: pct(30, 560), transform: "translateX(-50%)" }}>QUOTE-CHECKED<i>{I("tick", 14, 2.8)}</i></span>
       <span className="spoke" style={{ right: pct(1180 - 462, 1180), top: pct(290, 560) }}>CAPTIONS IN</span>
@@ -167,9 +167,9 @@ export const Board = () => (
       <div key={n.text} className={`sticky ${n.ok ? "ok" : "no"}`} data-r={n.r} style={{ left: `${n.x}%`, top: `${n.y}%`, transform: `rotate(${n.r}deg)` }}>
         {n.text}<span className="q">{n.q}</span>
         {n.ok ? (
-          <svg className="tick" width="30" height="30" viewBox="0 0 30 30" aria-hidden><circle cx="15" cy="15" r="13" fill="#1e9e5a" /><path d="M8.5 15.5l4.2 4.2 8.3-9" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <svg className="tick" width="30" height="30" viewBox="0 0 30 30" aria-hidden><circle cx="15" cy="15" r="13" fill="#16a34a" /><path d="M8.5 15.5l4.2 4.2 8.3-9" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
         ) : (<>
-          <svg className="scrib" viewBox="0 0 220 130" preserveAspectRatio="none" aria-hidden><path d="M8,26 L208,18 L10,52 L210,46 L12,80 L208,74 L16,108 L204,100" fill="none" stroke="#e5484d" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>
+          <svg className="scrib" viewBox="0 0 220 130" preserveAspectRatio="none" aria-hidden><path d="M8,26 L208,18 L10,52 L210,46 L12,80 L208,74 L16,108 L204,100" fill="none" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /></svg>
           <span className="stamp">NOT SAID</span>
         </>)}
       </div>
@@ -188,7 +188,7 @@ export const BentoAsk = () => (
 )
 export const BentoToasts = () => (
   <div className="toasts">
-    <div className="toast"><span className="ti"><Brain size={15} color="#0b0b0c" /></span><div><b>Remembered</b><span>Launch is Friday, ads go to Parag</span></div></div>
+    <div className="toast"><span className="ti"><Brain size={15} color="#fff" /></span><div><b>Remembered</b><span>Launch is Friday, ads go to Parag</span></div></div>
     <div className="toast"><span className="ti g">{I("tick", 15, 2.6)}</span><div><b>Saved to Meeting notes</b><span>2 tasks, 1 decision</span></div></div>
     <div className="toast"><span className="ti y">!</span><div><b>Reminder for Parag</b><span>“Handle the advertisements” is due tomorrow</span><em><u>Done</u><u>Drop</u></em></div></div>
   </div>

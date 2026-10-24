@@ -242,7 +242,7 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <style>{css}</style>
 
       <header className="nav"><div className="wrap">
-        <a href="#top" className="brand"><i><Brain size={16} color="#111" /></i>Company Brain</a>
+        <a href="#top" className="brand"><i><Brain size={16} color="#fff" /></i>Company Brain</a>
         <nav className="links" aria-label="Sections"><a href="#how">How it works</a><a href="#more">What it does</a><a href="#security">Security</a><a href="#faq">FAQ</a></nav>
         <div className="right"><a href={go} className="plain">{signedIn ? "Dashboard" : "Sign in"}</a><a href={go} className="btn pri sm"><Roll>{goLabel}</Roll></a></div>
       </div></header>
@@ -250,10 +250,10 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <section className="hero" id="top"><div className="wrap">
         <span className="pillb"><b>New</b>Notes from Meet, Teams, Zoom and Slack</span>
         <h1 className="h1">
-          <span className="lm"><span className="li">Meetings that write</span></span>
-          <span className="lm"><span className="li">their <span className="own"><span className="it">own</span><svg className="squig" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden><path d="M2,12 C28,2 48,19 78,10 S128,3 158,11 S190,16 198,7" fill="none" stroke="#ffe14d" strokeWidth="5" strokeLinecap="round" /></svg></span> notes.</span></span>
+          <span className="lm"><span className="li">Say it <span className="own"><span className="it">once</span><svg className="squig" viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden><path d="M2,12 C28,2 48,19 78,10 S128,3 158,11 S190,16 198,7" fill="none" stroke="#286df8" strokeWidth="4" strokeLinecap="round" /></svg></span>.</span></span>
+          <span className="lm"><span className="li">Your company remembers.</span></span>
         </h1>
-        <ul className="bul"><li>{I("tick", 18, 2.6)}Decisions and tasks with real owners</li><li>{I("tick", 18, 2.6)}Suggests who should take each task</li><li>{I("tick", 18, 2.6)}Never writes what wasn't said</li></ul>
+        <ul className="bul"><li>{I("tick", 18, 2.6)}One shared memory for Slack, meetings and docs</li><li>{I("tick", 18, 2.6)}Answers with sources, only from what you can see</li><li>{I("tick", 18, 2.6)}Turns conversations into decisions and tasks</li></ul>
         <div className="ctas"><a href={go} className="btn pri"><SlackLogo size={20} /><Roll>{goLabel}</Roll></a><a href="#how" className="btn ghost"><Roll>See how it works</Roll></a></div>
         <p className="fine">Self-hosted. Your data stays on your own server.</p>
         <div className="platforms">{PLATFORMS.map((p) => <span key={p.n}>{p.L}{p.n}</span>)}<span>CHROME EXTENSION</span></div>
@@ -332,7 +332,7 @@ export default function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <footer className="foot"><div className="wrap">
         <div className="fgrid">
-          <div><a href="#top" className="brand" style={{ color: "var(--fg)" }}><i><Brain size={16} color="#111" /></i>Company Brain</a><p style={{ marginTop: 12, maxWidth: 260 }}>The teammate that remembers what your team says.</p></div>
+          <div><a href="#top" className="brand" style={{ color: "var(--fg)" }}><i><Brain size={16} color="#fff" /></i>Company Brain</a><p style={{ marginTop: 12, maxWidth: 260 }}>The teammate that remembers what your team says.</p></div>
           <div><b>Product</b><a href="#how">How it works</a><a href="#more">What it does</a><a href="#security">Security</a></div>
           <div><b>Account</b><a href={go}>{goLabel}</a><a href="/setup">Set up a deployment</a></div>
           <div><b>Help</b><a href="#faq">FAQ</a></div>

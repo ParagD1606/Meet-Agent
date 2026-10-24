@@ -1,4 +1,4 @@
-import { Logo } from "@/lib/icons"
+import { Brain } from "@/landing/scenes"
 import { SlackMark } from "@/ui/connectors"
 
 const REASONS: Record<string, string> = {
@@ -7,23 +7,32 @@ const REASONS: Record<string, string> = {
   denied: "Slack sign-in was cancelled.",
 }
 
+const S = {
+  page: { minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 20px", background: "#ffffff", color: "#1c1c1e", fontFamily: '"Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', WebkitFontSmoothing: "antialiased", letterSpacing: "-0.01em" } as const,
+  card: { width: "100%", maxWidth: 400, padding: "40px 36px", background: "#ffffff", border: "1px solid #e6e6e6", borderRadius: 0, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" } as const,
+  brand: { display: "flex", alignItems: "center", gap: 10, fontWeight: 500, fontSize: 15, letterSpacing: "-0.015em" } as const,
+  brandMark: { width: 28, height: 28, background: "#1c1c1e", display: "grid", placeItems: "center" } as const,
+  h1: { marginTop: 28, fontSize: 26, lineHeight: 1.15, letterSpacing: "-0.025em", fontWeight: 500 } as const,
+  sub: { marginTop: 10, fontSize: 14, color: "rgba(0,0,0,0.55)", lineHeight: 1.5 } as const,
+  err: { marginTop: 20, padding: "10px 12px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", fontSize: 13.5, lineHeight: 1.4 } as const,
+  btn: { marginTop: 24, display: "flex", width: "100%", height: 44, alignItems: "center", justifyContent: "center", gap: 10, background: "#1c1c1c", color: "#ffffff", fontSize: 14, fontWeight: 500, border: "1px solid #1c1c1c", borderRadius: 0, textDecoration: "none", transition: "background 0.18s ease" } as const,
+  link: { marginTop: 20, display: "block", textAlign: "center", fontSize: 13, color: "rgba(0,0,0,0.55)", textDecoration: "underline", textUnderlineOffset: 3 } as const,
+  foot: { marginTop: 28, textAlign: "center", fontSize: 11.5, color: "rgba(0,0,0,0.4)", letterSpacing: "0.08em", textTransform: "uppercase", fontFamily: '"DM Mono", ui-monospace, monospace' } as const,
+}
+
 export function SignIn() {
   const err = new URLSearchParams(location.search).get("error")
   return (
-    <>
-      <div className="auth-bg" aria-hidden />
-      <main className="relative flex min-h-dvh items-center justify-center px-4" style={{ colorScheme: "dark", color: "oklch(0.95 0.004 255)" }}>
-        <div className="auth-card w-full max-w-[360px] p-6">
-          <Logo size={28} />
-          <h1 className="mt-4 text-xl">Sign in to Company Brain</h1>
-          <p className="mt-1.5 text-sm" style={{ color: "oklch(0.74 0.01 255)" }}>Use the Slack workspace this deployment belongs to.</p>
-          {err && <p role="alert" className="mt-4 rounded-md px-3 py-2 text-sm" style={{ background: "oklch(0.28 0.06 25)", color: "oklch(0.85 0.1 25)" }}>{REASONS[err] ?? "Sign-in failed. Try again."}</p>}
-          <a href="/auth/slack" className="mt-6 flex h-10 w-full items-center justify-center gap-2 rounded-[10px] text-sm font-medium transition-colors" style={{ background: "oklch(0.98 0 0)", color: "oklch(0.18 0.01 255)" }}>
-            <SlackMark size={16} />Continue with Slack
-          </a>
-          <a href="/setup" className="mt-5 block text-center text-xs underline-offset-2 hover:underline" style={{ color: "oklch(0.7 0.01 255)" }}>Setting up a new deployment?</a>
-        </div>
-      </main>
-    </>
+    <main style={S.page}>
+      <div style={S.card}>
+        <div style={S.brand}><i style={S.brandMark}><Brain size={16} color="#fff" /></i>Company Brain</div>
+        <h1 style={S.h1}>Sign in</h1>
+        <p style={S.sub}>Use the Slack workspace this deployment belongs to.</p>
+        {err && <p role="alert" style={S.err}>{REASONS[err] ?? "Sign-in failed. Try again."}</p>}
+        <a href="/auth/slack" style={S.btn}><SlackMark size={16} />Continue with Slack</a>
+        <a href="/setup" style={S.link}>Setting up a new deployment?</a>
+        <p style={S.foot}>Self-hosted · Your data stays yours</p>
+      </div>
+    </main>
   )
 }
