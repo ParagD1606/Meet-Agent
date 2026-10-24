@@ -40,4 +40,25 @@ describe("extension lib", () => {
     expect(L.renderNotes("## Decisions\n- Launch **Friday**\n- <img src=x onerror=alert(1)>\n\nplain")).toBe(
       "<h4>Decisions</h4><ul><li>Launch <b>Friday</b></li><li>&lt;img src=x onerror=alert(1)&gt;</li></ul><p>plain</p>");
   });
+  test("mergeCaptions: growth, repeats of older on-screen captions and trimmed starts are one line each", () => {
+    const lines = []; let t = 1000;
+    const feed = (snap) => L.mergeCaptions(lines, snap, (t += 300));
+    feed([{ speaker: "Ana", text: "Let's plan" }]);
+    feed([{ speaker: "Ana", text: "Let's plan the launch." }]);
+    feed([{ speaker: "Bob", text: "We decided" }, { speaker: "Ana", text: "Let's plan the launch." }]); // Ana's old caption still on screen
+    feed([{ speaker: "Bob", text: "We decided to launch on Friday." }, { speaker: "Ana", text: "Let's plan the launch." }]);
+    feed([{ speaker: "Ana", text: "The advertisement will be" }, { speaker: "Bob", text: "We decided to launch on Friday." }, { speaker: "Ana", text: "Let's plan the launch." }]);
+    feed([{ speaker: "Ana", text: "The advertisement will be done by Parag." }, { speaker: "Bob", text: "We decided to launch on Friday." }]);
+    expect(lines.map((l) => `${l.speaker}: ${l.text}`)).toEqual(["Ana: Let's plan the launch.", "Bob: We decided to launch on Friday.", "Ana: The advertisement will be done by Parag."]);
+    // Meet drops the start of a long caption as it grows
+    const long = []; let u = 5000; const f = (text) => L.mergeCaptions(long, [{ speaker: "Ana", text }], (u += 300));
+    f("one two three four five six"); f("four five six seven eight nine"); f("seven eight nine ten eleven twelve");
+    expect(long).toHaveLength(1);
+    expect(long[0].text).toBe("one two three four five six seven eight nine ten eleven twelve");
+  });
+  test("mergeCaptions: the same words said again after the caption left the screen are new speech", () => {
+    const lines = []; L.mergeCaptions(lines, [{ speaker: "Ana", text: "Sounds good." }], 1000);
+    L.mergeCaptions(lines, [{ speaker: "Ana", text: "Sounds good." }], 60_000);
+    expect(lines).toHaveLength(2);
+  });
 });

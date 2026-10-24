@@ -15,7 +15,7 @@ function Task({ task }: { task: MeetingTask }) {
   const who = task.assigneeName ?? (task.assigneeId ? `Slack user ${task.assigneeId}` : "Unassigned")
   return <li className="rounded-lg border border-line bg-sunken px-3 py-3">
     <div className="flex flex-wrap items-start justify-between gap-2"><span className="font-medium">{task.title}</span>{task.jiraUrl ? <a className="text-sm text-accent hover:underline" href={task.jiraUrl} target="_blank" rel="noreferrer">{task.jiraKey ?? "Open in Jira"}</a> : <Badge tone="neutral">Not created in Jira</Badge>}</div>
-    {task.description && <p className="mt-1 text-sm text-muted">{task.description}</p>}
+    {task.description && <p className="mt-1 whitespace-pre-line text-sm text-muted">{task.description}</p>}
     <p className="mt-2 text-xs text-muted">Owner: {who}{task.dueDate ? ` · Due ${task.dueDate}` : ""}</p>
   </li>
 }
@@ -44,7 +44,7 @@ function Detail({ meeting }: { meeting: Meeting }) {
 }
 
 export default function Meetings() {
-  const list = useQuery({ queryKey: ["meetings"], queryFn: api.meetings })
+  const list = useQuery({ queryKey: ["meetings"], queryFn: api.meetings, refetchInterval: (q) => (q.state.data?.some((m) => m.status === "processing") ? 4000 : false) })
   const me = useQuery({ queryKey: ["me"], queryFn: api.me })
   const queryClient = useQueryClient()
   const sync = useMutation({ mutationFn: api.syncMeetings, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["meetings"] }) })

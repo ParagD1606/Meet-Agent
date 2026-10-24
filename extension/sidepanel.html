@@ -29,14 +29,16 @@
   </section>
 
   <section id="items" class="tab">
+    <div id="finalBox" class="card final" hidden></div>
+    <p class="muted hint">Decisions and tasks are made once, from the <b>whole</b> transcript. Generate them when the meeting is over, or just finish: they are generated for you after you send.</p>
     <div class="bar">
-      <button id="detect" class="primary sm">✦ Detect now</button>
+      <button id="detect" class="primary sm">✦ Generate from whole transcript</button>
       <button id="approveAll" class="sm">Approve confirmed</button>
       <span id="detectMsg" class="muted grow"></span>
     </div>
     <div id="itemList"></div>
     <form id="addForm" class="add"><select id="addKind"><option value="task">Task</option><option value="decision">Decision</option></select><input id="addText" placeholder="Add your own…" autocomplete="off"><button class="sm">Add</button></form>
-    <div class="sendbar"><span id="sendMsg" class="muted grow"></span><button id="sendNotes" class="primary">Send to Meeting notes…</button></div>
+    <div class="sendbar"><span id="sendMsg" class="muted grow"></span><button id="sendNotes" class="primary">Finish &amp; send to Meeting notes…</button></div>
   </section>
 
   <section id="ask" class="tab">
@@ -56,7 +58,7 @@
     </div>
     <div class="card">
       <h3>Behavior</h3>
-      <label class="check"><input type="checkbox" id="autoDetect" checked><span>Update notes and items automatically<br><span class="muted">Every 2 minutes during the call, when there is something new. Uses the model.</span></span></label>
+      <label class="check"><input type="checkbox" id="autoDetect" checked><span>Update live notes automatically<br><span class="muted">Topics only, every 2 minutes during the call when there is something new. Uses the model.</span></span></label>
       <label class="check"><input type="checkbox" id="autoSend" checked><span>Send approved items when the call ends</span></label>
     </div>
   </section>

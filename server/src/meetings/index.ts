@@ -6,6 +6,7 @@ import { channelMembers, channels, meetings } from "../db/schema";
 import { log } from "../log";
 import { completeJson, completeText } from "../memory/llm";
 import { slackClient } from "../slack/client";
+import { makeSource, quoteSupported, verifiedOwner } from "./verify";
 
 export type MeetingTask = {
   title: string;
@@ -22,22 +23,31 @@ type HuddleFile = Record<string, any>;
 
 type HuddleSyncResult = { found: number; imported: number; failed: number };
 
+const quoteField = z.string().trim().max(600).default("");
 const taskSchema = z.object({
   title: z.string().trim().min(1).max(240),
   description: z.string().trim().max(4000).default(""),
   assigneeName: z.string().trim().min(1).max(120).nullable().default(null),
   assigneeId: z.string().trim().min(1).max(40).nullable().default(null),
   dueDate: z.string().trim().min(1).max(40).nullable().default(null),
+  quote: quoteField,
 });
 const analysisSchema = z.object({
   summary: z.string().trim().min(1).max(8_000),
-  decisions: z.array(z.string().trim().min(1).max(500)).max(30).default([]),
-  tasks: z.array(taskSchema).max(50),
+  decisions: z.array(z.object({ text: z.string().trim().min(1).max(500), quote: quoteField })).max(40).default([]),
+  tasks: z.array(taskSchema).max(60),
 });
 
-const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes.
-Use only the supplied text. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
-List every decision that was actually made in "decisions" (short sentences). Extract only explicit commitments as tasks. Never invent an owner or due date. When a participant list is given, set assigneeName to the matching participant's name. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","decisions":["..."],"tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
+/** The whole meeting is read, not a tail: 400k characters is roughly a three-hour call. */
+const MAX_SOURCE_CHARS = 400_000;
+
+const SUMMARY_SYSTEM = `You turn a finished meeting (a transcript, or Slack AI Huddle notes) into meeting notes. Work from the WHOLE text, start to end.
+Use only the supplied text. Never use outside knowledge, the company's projects, or what a meeting like this "usually" covers. If something is not written in the text, it does not exist.
+- "summary": concise Markdown with headings for Discussion and Open questions when applicable.
+- "decisions": every decision actually made. Each is {"text": short sentence, "quote": words copied exactly from the text that show the decision}.
+- "tasks": every commitment or assignment, however small ("X will do Y", "I'll ...", "Y is on Z", "Z to handle ..."). Each is {"title", "description", "assigneeName", "assigneeId", "dueDate", "quote"} where quote is words copied exactly from the text. Do not skip small ones, and do not add any without a quote.
+- assigneeName is the person who was named as doing it, matching the participant list when given; otherwise null. Never guess an owner or a due date. If a speaker's Slack user id is shown, keep it as assigneeId.
+Return JSON only: {"summary":"...","decisions":[{"text":"...","quote":"..."}],"tasks":[{"title":"...","description":"","assigneeName":null,"assigneeId":null,"dueDate":null,"quote":"..."}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
 const asTasks = (value: unknown): MeetingTask[] => Array.isArray(value) ? value as MeetingTask[] : [];
@@ -148,8 +158,18 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
 async function analyze(sourceFileId: string, text: string, participants: string[] = []): Promise<void> {
   try {
     const header = participants.length ? `Participants: ${participants.join(", ")}\n\n` : "";
-    const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-50_000), role: "summarize", maxOutputTokens: 1_800 }, analysisSchema);
-    await db.update(meetings).set({ summary: analysis.summary, decisions: analysis.decisions, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    const raw = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-MAX_SOURCE_CHARS), role: "summarize", maxOutputTokens: 2_400 }, analysisSchema);
+    // Keep only what the text itself supports; an unsupported item is dropped, never "fixed".
+    const src = makeSource(text);
+    const firstOfEach = <T,>(items: T[], title: (t: T) => string) => items.filter((it, i) => !items.slice(0, i).some((o) => similar(title(o), title(it))));
+    const decisions = firstOfEach(raw.decisions.filter((d) => quoteSupported(src, d.quote)), (d) => d.text).map((d) => d.text);
+    const tasks = firstOfEach(raw.tasks.filter((k) => quoteSupported(src, k.quote)), (k) => k.title).map(({ quote, ...k }) => ({
+      ...k, assigneeName: verifiedOwner(src, participants, k.assigneeName),
+      description: [k.description, `Said: “${quote}”`].filter(Boolean).join("\n"),
+    }));
+    const dropped = raw.decisions.length + raw.tasks.length - decisions.length - tasks.length; // unsupported or repeated
+    if (dropped) log.warn("meeting items dropped: quote not found in the source", { fileId: sourceFileId, dropped });
+    await db.update(meetings).set({ summary: raw.summary, decisions, tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
@@ -194,20 +214,22 @@ export type ExtensionTranscript = {
 };
 
 /** Stores a transcript captured by the browser extension and summarizes it. Private to its uploader (and admins). */
-export async function ingestExtensionTranscript(userId: string, t: ExtensionTranscript): Promise<{ id: string }> {
+export async function ingestExtensionTranscript(userId: string, t: ExtensionTranscript): Promise<{ id: string; done: Promise<void> }> {
   const text = t.lines.map((l) => (l.speaker ? `${l.speaker}: ${l.text}` : l.text)).join("\n");
   // Namespaced by user so one person's id can never overwrite another's record.
   const sourceFileId = `ext:${userId}:${t.platform}:${t.externalId}`;
   const base = {
-    channelId: `ext_${userId}`, platform: t.platform, ownerId: userId, title: t.title, transcript: text, participantIds: [] as string[],
+    channelId: `ext_${userId}`, platform: t.platform, ownerId: userId, title: t.title, transcript: text, participantIds: (t.participants ?? []).slice(0, 100),
     startedAt: t.startedAt ?? null, endedAt: t.endedAt ?? new Date(), updatedAt: new Date(),
   };
   const [row] = await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
-    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } })
+    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, decisions: [], tasks: [] } })
     .returning({ id: meetings.id });
-  await analyze(sourceFileId, text, t.participants ?? []);
-  if (t.decisions?.length || t.tasks?.length) await mergeUserNotes(sourceFileId, t);
-  return { id: row!.id };
+  // The upload is saved; the model reads the whole transcript afterwards so the request returns at once.
+  const done = analyze(sourceFileId, text, t.participants ?? [])
+    .then(() => (t.decisions?.length || t.tasks?.length ? mergeUserNotes(sourceFileId, t) : undefined))
+    .catch((err) => log.warn("meeting finalize failed", { fileId: sourceFileId, error: String(err) }));
+  return { id: row!.id, done };
 }
 
 /** Ingests a Huddle transcript exposed by Slack's files API. Other files are ignored. */
@@ -267,16 +289,17 @@ export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> 
 const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript and the meeting context provided.
 Be brief and concrete, name people when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
 
-const LIVE_ANALYZE_SYSTEM = `You track a live meeting and flag items for a human to approve. Transcript lines are numbered like [12].
+const LIVE_ANALYZE_SYSTEM = `You read the WHOLE transcript of a meeting and flag items for a human to approve. Transcript lines are numbered like [12]. Use only what is written there; never outside knowledge or what such a meeting "usually" covers.
 Return decisions that were actually made, tasks someone took on or was asked to take, and open questions nobody has answered yet.
 For each item:
 - "kind": "task" | "decision" | "question".
 - "label": "confirmed" (a clear commitment or final decision), "tentative" (maybe/likely/"I'll try"), or "suggestion" (proposed, nobody agreed). Questions use "suggestion".
 - "reason": one short sentence saying why you classified it that way.
+- "quote": words copied exactly from the transcript that support it. No quote, no item.
 - "evidence": the line numbers that support it.
 - "assignee": exactly one name from the provided roster only when the transcript makes the owner clear; otherwise null. Never guess an owner.
 - "due": an ISO date (YYYY-MM-DD) when a date was said and can be resolved from the meeting's start time (for example "next Friday"); otherwise the words that were said; otherwise null. Never invent a date.
-Do not repeat anything listed under "Already tracked". Return JSON only: {"items":[{"kind":"task","label":"confirmed","title":"...","reason":"...","evidence":[3],"assignee":null,"due":null}]}.`;
+Do not repeat anything listed under "Already tracked". Return JSON only: {"items":[{"kind":"task","label":"confirmed","title":"...","reason":"...","quote":"...","evidence":[3],"assignee":null,"due":null}]}.`;
 
 const liveAnalysisSchema = z.object({
   items: z.array(z.object({
@@ -284,6 +307,7 @@ const liveAnalysisSchema = z.object({
     label: z.enum(["confirmed", "tentative", "suggestion"]).default("tentative"),
     title: z.string().trim().min(1).max(300),
     reason: z.string().trim().max(300).default(""),
+    quote: z.string().trim().max(600).default(""),
     evidence: z.array(z.number().int().min(1)).max(6).default([]),
     assignee: z.string().trim().min(1).max(120).nullable().default(null),
     due: z.string().trim().min(1).max(60).nullable().default(null),
@@ -300,7 +324,7 @@ function numbered(lines: LiveLine[]): string {
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i]!;
     const row = `[${i + 1}] ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`;
-    if (size + row.length > 50_000) break;
+    if (size + row.length > MAX_SOURCE_CHARS) break;
     out.push(row); size += row.length + 1;
   }
   return out.reverse().join("\n");
@@ -325,19 +349,27 @@ export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, kn
   const tracked = known.length ? `\nAlready tracked:\n${known.slice(0, 100).map((k) => `- ${k}`).join("\n")}\n` : "";
   const prompt = `${contextBlock(ctx)}\n${tracked}\nTranscript so far:\n${numbered(lines)}`;
   const out = await completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "summarize", maxOutputTokens: 1_800 }, liveAnalysisSchema);
-  // Keep only evidence that points at a real line, and only owners from the roster.
+  // Keep only items whose quote is really in the transcript, evidence that points at a real line, and owners from the roster.
+  const src = makeSource(lines.map((l) => `${l.speaker}: ${l.text}`).join("\n"));
   const roster = new Map((ctx.roster ?? []).map((n) => [n.toLowerCase(), n]));
-  return { items: out.items.map((i) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: i.assignee ? roster.get(i.assignee.toLowerCase()) ?? null : null })) };
+  return { items: out.items.filter((i) => quoteSupported(src, i.quote)).map(({ quote, ...i }) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: i.assignee ? roster.get(i.assignee.toLowerCase()) ?? null : null })) };
 }
 
 const LIVE_NOTES_SYSTEM = `You keep running notes for a live meeting. You get the previous notes and the transcript lines added since (numbered like [12]).
 Return the updated notes in Markdown, replacing the old ones: keep what is still true, fold in the new lines, drop nothing that matters.
-Use these sections when they have content: "## Topics", "## Decisions", "## Action items" (with the owner when it was said), "## Open questions". Short bullets, plain words, no more than about 250 words.
-Use only the transcript. Never invent owners, dates or decisions. Output the notes only, no preamble.`;
+Write ONLY "## Topics" (short bullets of what is being discussed, in the order it came up) and, if something was asked and not answered, "## Open questions". Plain words, no more than about 200 words.
+Do NOT list decisions, tasks, action items or owners: those are produced once, at the end, from the whole transcript.
+Use only the transcript. Never add anything that was not said. Output the notes only, no preamble.`;
 
 /** Rolls the previous live notes forward with the lines added since. `offset` is how many lines came before `lines`. */
 export async function updateLiveNotes(lines: LiveLine[], offset: number, previous: string, ctx: LiveContext): Promise<string> {
   const fresh = lines.map((l, i) => `[${offset + i + 1}] ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`).join("\n").slice(-40_000);
   const prompt = `${contextBlock(ctx)}\n\nPrevious notes:\n${previous.trim() || "(none yet)"}\n\nNew transcript lines:\n${fresh}`;
   return (await completeText({ system: LIVE_NOTES_SYSTEM, prompt, role: "summarize", maxOutputTokens: 900 })).trim();
+}
+
+/** What the extension shows after the final pass: only the uploader's own meeting. */
+export async function getOwnExtensionMeeting(userId: string, id: string) {
+  const [row] = await db.select().from(meetings).where(and(eq(meetings.id, id), eq(meetings.ownerId, userId)));
+  return row ? { id: row.id, title: row.title, status: row.status, summary: row.summary, decisions: asStrings(row.decisions), tasks: asTasks(row.tasks) } : null;
 }

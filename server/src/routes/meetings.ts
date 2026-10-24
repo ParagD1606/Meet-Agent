@@ -4,7 +4,7 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { z } from "zod";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
-import { analyzeLiveMeeting, askLiveMeeting, getMeeting, ingestExtensionTranscript, listMeetings, syncRecentHuddles, updateLiveNotes } from "../meetings";
+import { analyzeLiveMeeting, askLiveMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, syncRecentHuddles, updateLiveNotes } from "../meetings";
 import { httpError } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
@@ -23,19 +23,34 @@ meetingRoutes.get("/meetings/:id", requireAuth(), async (c) => {
 meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles()));
 
 const extSchema = z.object({
-  externalId: z.string().trim().min(1).max(200),
-  platform: z.string().trim().toLowerCase().regex(/^[a-z0-9_-]{1,32}$/),
-  title: z.string().trim().min(1).max(240),
-  lines: z.array(z.object({ speaker: z.string().trim().max(120).default(""), text: z.string().trim().min(1).max(4_000) })).min(1).max(20_000),
+  externalId: z.string().min(1),
+  platform: z.string().toLowerCase().regex(/^[a-z0-9_-]{1,32}$/),
+  title: z.string().min(1),
+  lines: z.array(z.object({ speaker: z.string(), text: z.string().min(1) })).min(1),
   startedAt: z.coerce.date().optional(),
   endedAt: z.coerce.date().optional(),
-  decisions: z.array(z.string().trim().min(1).max(500)).max(50).optional(),
-  participants: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
-  tasks: z.array(z.object({
-    title: z.string().trim().min(1).max(240), assignee: z.string().trim().max(120).optional(),
-    due: z.string().trim().max(60).optional(), done: z.boolean().optional(),
-  })).max(100).optional(),
+  decisions: z.array(z.string().min(1)).optional(),
+  participants: z.array(z.string().min(1)).optional(),
+  tasks: z.array(z.object({ title: z.string().min(1), assignee: z.string().optional(), due: z.string().optional(), done: z.boolean().optional() })).optional(),
 });
+
+const clip = (v: unknown, n: number) => (typeof v === "string" ? v.trim().slice(0, n) : "");
+/**
+ * Cleans an upload before validation. A real call can produce an over-long participant label or an empty caption;
+ * those are trimmed or dropped instead of rejecting a whole meeting.
+ */
+function sanitizeUpload(body: any) {
+  if (!body || typeof body !== "object") return null;
+  const list = (v: unknown, max: number) => (Array.isArray(v) ? v.slice(0, max) : undefined);
+  return {
+    externalId: clip(body.externalId, 200), platform: clip(body.platform, 32), title: clip(body.title, 240) || "Meeting",
+    startedAt: body.startedAt, endedAt: body.endedAt,
+    lines: (list(body.lines, 20_000) ?? []).map((l: any) => ({ speaker: clip(l?.speaker, 120), text: clip(l?.text, 4_000) })).filter((l: any) => l.text),
+    participants: list(body.participants, 100)?.map((p) => clip(p, 120)).filter(Boolean),
+    decisions: list(body.decisions, 50)?.map((d) => clip(d, 500)).filter(Boolean),
+    tasks: list(body.tasks, 100)?.map((t: any) => ({ title: clip(t?.title, 240), assignee: clip(t?.assignee, 120) || undefined, due: clip(t?.due, 60) || undefined, done: t?.done === true })).filter((t: any) => t.title),
+  };
+}
 
 /**
  * Browser-extension upload. Authenticated by an API token (Configure > API tokens), not the session cookie,
@@ -45,9 +60,17 @@ export const extensionRoutes = new Hono();
 extensionRoutes.post("/meetings", async (c) => {
   const userId = await authenticateToken(c.req.header("authorization"));
   if (!userId) return c.json({ error: "unauthorized" }, 401);
-  const parsed = extSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ error: "invalid_body", issues: parsed.error.issues.slice(0, 5) }, 400);
-  return c.json(await ingestExtensionTranscript(userId, parsed.data), 201);
+  const parsed = extSchema.safeParse(sanitizeUpload(await c.req.json().catch(() => null)));
+  if (!parsed.success) return c.json({ error: "invalid_body", issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
+  const { id, done } = await ingestExtensionTranscript(userId, parsed.data);
+  if (c.req.header("x-wait") === "1") await done; // tests and tools can ask to wait for the final pass
+  return c.json({ id }, 201);
+});
+extensionRoutes.get("/meetings/:id", async (c) => {
+  const userId = await authenticateToken(c.req.header("authorization"));
+  if (!userId) return c.json({ error: "unauthorized" }, 401);
+  const m = await getOwnExtensionMeeting(userId, c.req.param("id"));
+  return m ? c.json(m) : c.json({ error: "not_found" }, 404);
 });
 extensionRoutes.get("/ping", async (c) => (await authenticateToken(c.req.header("authorization"))) ? c.json({ ok: true }) : c.json({ error: "unauthorized" }, 401));
 

@@ -89,6 +89,47 @@
     return out.join("");
   }
 
-  const api = { renderNotes, uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
+  const sharedPrefix = (a, b) => {
+    const n = Math.min(a.length, b.length); let k = 0;
+    while (k < n && a[k] === b[k]) k++;
+    return n ? k / Math.max(a.length, b.length) : 0;
+  };
+  /** Longest run where the end of `a` equals the start of `b`, in words (>= 3), as the merged text; else null. */
+  function overlapMerge(a, b) {
+    const x = a.split(/\s+/), y = b.split(/\s+/);
+    for (let n = Math.min(x.length, y.length); n >= 3; n--) {
+      if (x.slice(-n).join(" ") === y.slice(0, n).join(" ")) return [...x, ...y.slice(n)].join(" ");
+    }
+    return null;
+  }
+  const RECENT_MS = 20_000; // a caption not seen for this long has left the screen; the same words again are new speech
+
+  /**
+   * Folds the captions currently on screen into the running transcript. Captions grow in place, older speakers' captions
+   * stay visible for a while, and Meet trims the start of a long caption, so a snapshot line only becomes a new transcript
+   * line when it is not a growth, repeat or trimmed continuation of one of that speaker's recent lines.
+   */
+  function mergeCaptions(lines, snapshot, now = Date.now()) {
+    for (const { speaker, text } of snapshot) {
+      if (!text) continue;
+      let hit = null, newest = true;
+      for (let i = lines.length - 1, seen = 0; i >= 0 && seen < 6; i--) {
+        const l = lines[i];
+        if (l.speaker !== speaker) continue;
+        seen++;
+        if (now - (l.u ?? l.t) > RECENT_MS) { newest = false; continue; }
+        if (text === l.text || text.startsWith(l.text) || l.text.startsWith(text)) { hit = { l, text: text.length >= l.text.length ? text : l.text }; break; }
+        const joined = overlapMerge(l.text, text);
+        if (joined) { hit = { l, text: joined }; break; }
+        if (newest && sharedPrefix(l.text, text) > 0.6) { hit = { l, text: text.length >= l.text.length ? text : l.text }; break; }
+        newest = false;
+      }
+      if (hit) { hit.l.text = hit.text; hit.l.u = now; }
+      else lines.push({ speaker, text, t: now, u: now });
+    }
+    return lines;
+  }
+
+  const api = { mergeCaptions, renderNotes, uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
   if (typeof module !== "undefined") module.exports = api; else globalThis.BrainLib = api;
 })();

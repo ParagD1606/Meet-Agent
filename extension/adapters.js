@@ -7,7 +7,12 @@
   const adapters = {
     meet: {
       match: (h) => h === "meet.google.com",
-      title: () => document.title.replace(/^Meet\s*[-–]\s*/, "").trim() || "Google Meet",
+      title() {
+        const t = document.title.replace(/^Meet\s*[-–]\s*/, "").replace(/\s*[-–]\s*Google Meet$/, "").trim();
+        const day = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        // A bare meeting code says little; a named meeting keeps its name.
+        return !t || /^[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(t) ? `Google Meet · ${t || this.meetingId()} · ${day}` : t;
+      },
       meetingId: () => location.pathname.split("/").filter(Boolean)[0] || location.pathname,
       // Names only: Meet does not put attendee emails in the page.
       roster() {
@@ -29,7 +34,8 @@
         const out = [];
         for (const block of region.querySelectorAll(":scope > div > div, :scope > div")) {
           const kids = [...block.children].filter((k) => text(k));
-          if (kids.length < 2) continue;
+          // A caption is a name and its words, both plain text; a container of several captions is not one.
+          if (kids.length < 2 || kids.slice(-2).some((k) => k.querySelector("div"))) continue;
           const speaker = text(kids[kids.length - 2]);
           const words = text(kids[kids.length - 1]);
           if (words && speaker && speaker !== words) out.push({ speaker, text: words });
@@ -76,7 +82,8 @@
     read() {
       if (!/\/huddle\b|\/client\//.test(location.pathname)) return [];
       const out = [];
-      const boxes = document.querySelectorAll('[data-qa*="caption" i], [class*="caption" i][class*="huddle" i], [class*="huddle" i] [class*="caption" i]');
+      // Only inside a Huddle: "caption" also appears on image captions in ordinary messages.
+      const boxes = document.querySelectorAll('[class*="huddle" i] [data-qa*="caption" i], [data-qa*="huddle" i] [data-qa*="caption" i], [class*="huddle" i] [class*="caption" i], [data-qa*="huddle" i] [class*="caption" i]');
       for (const box of boxes) {
         const speaker = text(box.querySelector('[data-qa*="name" i], [class*="name" i], [class*="speaker" i]'));
         const words = text(box.querySelector('[data-qa*="text" i], [class*="text" i], [class*="content" i]')) || (!speaker ? text(box) : "");

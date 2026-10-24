@@ -146,3 +146,11 @@ label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 50
 .notes h4 { margin: 14px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); }
 .notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 3px 0; } .notes p { margin: 6px 0; }
 .notes:has(.empty) { background: none; border: 0; box-shadow: none; }
+
+.hint { margin: 0 0 10px; }
+.final { border-left: 3px solid var(--ok); }
+.final h3 { margin: 0 0 6px; }
+.final h5 { margin: 10px 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); }
+.final ul { margin: 0; padding-left: 18px; } .final li { margin: 3px 0; }
+.final .who { font-weight: 650; }
+.final a { color: var(--acc); font-weight: 600; }

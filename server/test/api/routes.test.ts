@@ -179,7 +179,7 @@ describe("extension upload", () => {
   test("stores an upload privately for its owner", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const body = { externalId: "abc", platform: "meet", title: "Standup", lines: [{ speaker: "Ana", text: "Ship it Friday." }] };
-    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" }, body: JSON.stringify(b) });
+    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" }, body: JSON.stringify(b) });
     expect((await post({ ...body, lines: [] })).status).toBe(400);
     expect((await post(body)).status).toBe(201);
     expect((await post(body)).status).toBe(201); // same externalId replaces, not duplicates
@@ -188,34 +188,54 @@ describe("extension upload", () => {
     expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
   });
 
-  test("final pass fills decisions and named tasks, merged with what the user approved", async () => {
+  test("final pass builds decisions and tasks from the whole transcript and drops anything it cannot quote", async () => {
     setMemoryLlm(async () => JSON.stringify({
       summary: "Planned the launch.",
-      decisions: ["Launch on Friday", "Use Postgres for storage"],
+      decisions: [
+        { text: "Launch on Friday", quote: "we decided to launch on Friday" },
+        { text: "Build the frontend AI integration", quote: "let's build the frontend AI integration" }, // never said
+      ],
       tasks: [
-        { title: "Send the Q3 deck to the finance team", description: "", assigneeName: "Bob", assigneeId: null, dueDate: "2026-10-30" },
-        { title: "Book the offsite venue", description: "", assigneeName: "Priya", assigneeId: null, dueDate: null },
+        { title: "Run the advertisement campaign", description: "", assigneeName: "Parag", assigneeId: null, dueDate: null, quote: "advertisement will be done by Parag" },
+        { title: "Send the deck", description: "", assigneeName: "Rahul", assigneeId: null, dueDate: null, quote: "Bob sends the deck" }, // Rahul was not on the call
+        { title: "Integrate the frontend AI", description: "", assigneeName: "Bob", assigneeId: null, dueDate: null, quote: "frontend AI integration will be done" }, // never said
       ],
     }));
     try {
       const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
       const res = await app.request("/ext/meetings", {
-        method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
-        body: JSON.stringify({ externalId: "fin", platform: "meet", title: "Planning", participants: ["Ana", "Bob", "Priya"],
-          lines: [{ speaker: "Ana", text: "Bob sends the deck." }], decisions: ["Launch on Friday"],
-          tasks: [{ title: "Send Q3 deck to finance", assignee: "Bob", due: "Thu" }] }),
+        method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
+        body: JSON.stringify({ externalId: "fin", platform: "meet", title: "Planning", participants: ["Ana", "Bob", "Parag"],
+          lines: [{ speaker: "Ana", text: "we decided to launch on Friday." }, { speaker: "Ana", text: "The advertisement will be done by Parag." }, { speaker: "Bob", text: "Bob sends the deck, fine." }] }),
       });
       const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
       expect(m.status).toBe("ready");
-      expect(m.decisions).toEqual(["Launch on Friday", "Use Postgres for storage"]); // user's wording, AI's extra, no duplicate
-      expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Send Q3 deck to finance", "Bob"], ["Book the offsite venue", "Priya"]]);
+      expect(m.decisions).toEqual(["Launch on Friday"]);
+      expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Run the advertisement campaign", "Parag"], ["Send the deck", null]]);
+      expect(m.tasks[0].description).toContain("advertisement will be done by Parag");
     } finally { setMemoryLlm(null); }
+  });
+
+  test("an upload with oversized or empty fields is cleaned, not rejected, and replies before the model finishes", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const res = await app.request("/ext/meetings", {
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
+      body: JSON.stringify({ externalId: "big", platform: "meet", title: "x".repeat(500), participants: ["P".repeat(400), ""],
+        lines: [{ speaker: "S".repeat(300), text: "hello" }, { speaker: "A", text: "   " }] }),
+    });
+    expect(res.status).toBe(201);
+    const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
+    expect(m.title.length).toBe(240);
+    const own = await json(await app.request(`/ext/meetings/${m.id}`, { headers: { authorization: `Bearer ${tok.token}` } }));
+    expect(own.id).toBe(m.id);
+    const other = await json(await call("POST", "/api/tokens", { cookie: member, body: { name: "x" } })); // members cannot mint tokens
+    expect(other.error).toBeDefined();
   });
 
   test("keeps the decisions and tasks recorded in the side panel", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const res = await app.request("/ext/meetings", {
-      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
       body: JSON.stringify({ externalId: "n1", platform: "meet", title: "Planning", lines: [{ speaker: "Ana", text: "Bob sends the deck." }],
         participants: ["Ana", "Bob"], decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
     });

@@ -171,7 +171,7 @@ async function detect(auto = false) {
   const block = needReady();
   if (block) { if (!auto) $("detectMsg").textContent = block; return; }
   state.analyzing = true; if (!auto) { state.lastRun = Date.now(); state.lastCount[src().key] = lines().length; }
-  $("detect").disabled = true; if (!auto) $("detectMsg").textContent = "Reading the transcript…";
+  $("detect").disabled = true; if (!auto) $("detectMsg").textContent = "Reading the whole transcript…";
   const r = await ask({ type: "api", path: "/ext/analyze", body: { lines: lines(), context: context(), known: state.store.items.map((i) => i.title) } });
   state.analyzing = false; $("detect").disabled = false;
   if (!r?.ok) { if (!auto) $("detectMsg").textContent = failText(r); return; }
@@ -182,13 +182,12 @@ async function detect(auto = false) {
   await persist();
 }
 $("detect").onclick = () => detect(false);
-const AUTO_MS = 120_000; // live notes and item detection refresh on this cycle
+const AUTO_MS = 120_000; // live notes refresh on this cycle; decisions and tasks are only made at the end
 function maybeAutoDetect() {
-  if (!state.cfg.autoDetect || !state.connected || state.analyzing || state.updatingNotes || state.manual || !src()) return;
+  if (!state.cfg.autoDetect || !state.connected || state.updatingNotes || state.manual || !src()) return;
   if (lines().length - (state.lastCount[src().key] ?? 0) < 3 || Date.now() - state.lastRun < AUTO_MS) return;
-  refreshCycle();
+  updateNotes(true);
 }
-async function refreshCycle() { await updateNotes(true); await detect(true); }
 
 // ---------- live notes ----------
 function renderNotesTab() {
@@ -280,22 +279,45 @@ $("itemList").addEventListener("change", async (e) => {
   await persist();
 });
 
-// ---------- send ----------
+// ---------- finish & send ----------
+const meetingsUrl = () => `${state.cfg.server}/meetings`;
+function renderFinal(m) {
+  const box = $("finalBox"); box.hidden = false;
+  const link = `<a href="${esc(meetingsUrl())}" target="_blank" rel="noreferrer">Open in Meeting notes ↗</a>`;
+  if (m.error) { box.innerHTML = `<h3>Not saved</h3><p>${esc(m.error)}</p><p class="muted">The transcript is kept on this device and will be retried.</p>`; return; }
+  if (m.status === "processing") { box.innerHTML = `<h3>Saved. Writing the final notes…</h3><p class="muted">Reading the whole transcript for decisions and tasks. This takes a moment.</p>${link}`; return; }
+  if (m.status === "failed") { box.innerHTML = `<h3>Saved, but the final notes failed</h3><p class="muted">The transcript is in Meeting notes. The model could not write the summary.</p>${link}`; return; }
+  const d = (m.decisions ?? []).map((x) => `<li>${esc(x)}</li>`).join(""), t = (m.tasks ?? []).map((k) => `<li><span class="who">${esc(k.assigneeName || "Unassigned")}</span>: ${esc(k.title)}${k.dueDate ? ` <span class="muted">(due ${esc(k.dueDate)})</span>` : ""}</li>`).join("");
+  box.innerHTML = `<h3>Final notes</h3><h5>Decisions</h5>${d ? `<ul>${d}</ul>` : `<p class="muted">No decisions were found in the transcript.</p>`}<h5>Tasks</h5>${t ? `<ul>${t}</ul>` : `<p class="muted">No tasks were found in the transcript.</p>`}<p>${link}</p>`;
+}
+async function followFinal(id) {
+  for (let i = 0; i < 40; i++) {
+    const r = await ask({ type: "api", path: `/ext/meetings/${id}` });
+    if (r?.ok && r.data.status !== "processing") return renderFinal(r.data);
+    renderFinal({ status: "processing" });
+    await new Promise((res) => setTimeout(res, 3000));
+  }
+  renderFinal({ status: "processing" });
+}
+function payloadNow() {
+  const s = src();
+  return { externalId: s.externalId, platform: s.platform, title: s.title, participants: state.manual ? speakers() : (s.participants ?? roster()),
+    lines: s.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: s.startedAt, endedAt: new Date().toISOString() };
+}
 $("sendNotes").onclick = () => {
   const block = needReady(); if (block) { $("sendMsg").textContent = block; return; }
   const ok = state.store.items.filter((i) => i.status === "approved");
-  const tasks = ok.filter((i) => i.kind === "task"), decisions = ok.filter((i) => i.kind === "decision");
-  const pending = state.store.items.filter((i) => i.status === "pending").length, rejected = state.store.items.filter((i) => i.status === "rejected").length;
-  modal(`<h4>Send to Meeting notes?</h4><p>This will save the transcript and:</p><ul><li><b>${tasks.length}</b> task${tasks.length === 1 ? "" : "s"}${tasks.length ? ` (${esc([...new Set(tasks.map((t) => t.assignee || "unassigned"))].join(", "))})` : ""}</li><li><b>${decisions.length}</b> decision${decisions.length === 1 ? "" : "s"}</li></ul>
-    <p class="muted">${pending ? `${pending} item${pending === 1 ? " is" : "s are"} still pending and won't be sent. ` : ""}${rejected ? `${rejected} rejected. ` : ""}Open questions aren't sent. Nobody is notified; the notes appear in the Brain web app.</p>`, async () => {
-    $("sendMsg").textContent = "Sending…";
-    if (state.manual) await ask({ type: "upload", manual: true, payload: { externalId: state.manual.externalId, platform: "import", title: state.manual.title, participants: speakers(), lines: state.manual.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: state.manual.startedAt, endedAt: new Date().toISOString() } });
-    else { const tab = await activeTab(); try { await chrome.tabs.sendMessage(tab.id, { type: "send" }); } catch { $("sendMsg").textContent = "Couldn't reach the call tab."; return; } }
-    setTimeout(async () => {
-      const { lastUpload } = await chrome.storage.local.get("lastUpload");
-      $("sendMsg").textContent = lastUpload?.ok ? "Sent. Open Meeting notes in the web app." : `Failed: ${lastUpload?.error ?? "unknown error"}`;
-    }, 1500);
-  }, "Send");
+  const tasks = ok.filter((i) => i.kind === "task").length, decisions = ok.filter((i) => i.kind === "decision").length;
+  modal(`<h4>Finish and send to Meeting notes?</h4><p>This saves the transcript, then Brain reads the <b>whole</b> of it to write the final decisions and tasks, with owner names.</p>
+    ${tasks || decisions ? `<p>Also included: the <b>${tasks}</b> task${tasks === 1 ? "" : "s"} and <b>${decisions}</b> decision${decisions === 1 ? "" : "s"} you approved.</p>` : ""}
+    <p class="muted">Nobody is notified. You can follow the result here and in the Brain web app.</p>`, async () => {
+    $("sendNotes").disabled = true; $("sendMsg").textContent = "Sending…"; show("items");
+    const r = await ask({ type: "upload", manual: true, payload: payloadNow() });
+    $("sendNotes").disabled = false;
+    if (!r?.ok) { $("sendMsg").textContent = "Failed"; return renderFinal({ error: r?.error ?? "unknown error" }); }
+    $("sendMsg").textContent = "Saved";
+    renderFinal({ status: "processing" }); followFinal(r.id);
+  }, "Finish & send");
 };
 
 // ---------- modal ----------
