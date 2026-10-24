@@ -9,9 +9,11 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
   - Banners for similar items (Merge / Keep both / Dismiss) and deadline conflicts.
   - Workload chip when someone already has 4+ open approved tasks across your saved meetings, suggesting the lightest teammate.
   - Relative dates ("next Friday") are resolved against the meeting's start time.
-- **Suggest**: for each task, the three people best placed to take it, with the evidence ("Why"), an availability tag and a skill-match bar. **Assign** sets the owner (and approves the task); the person's real Slack identity travels with it, so it shows a proper owner in Meeting notes and can be sent a task DM from the page.
-  - *Skills* come from tasks they completed or are working on that resemble this one, their job title, and team-memory notes that mention them.
-  - *Availability* is what each person already has to finish **before this task's deadline**, from their assigned tasks and due dates (overdue work weighs most, work due after the deadline barely counts), plus who is on this call and time off mentioned in memory in the last 30 days. Set a deadline on the card (one tap) and the ranking updates. It does not see calendars or Slack presence, and it only counts tasks and memory you are allowed to see, so treat it as a guide.
+- **Suggest**: for each task, the three people best placed to take it, with a "Why" list, an availability tag and a skill-match bar. **Assign** sets the owner (and approves the task); the person's real Slack identity travels with it, so it shows a proper owner in Meeting notes and can be sent a task DM from the page.
+  - The **facts** come from the task tracker: each person's assigned tasks, their deadlines and the counts before this task's deadline (shown as numbers, e.g. "4 open · 2 overdue · 3 more due before 2026-10-30"). Set a deadline on the card (one tap) and it re-ranks.
+  - The **judging** is done by the model, which reads those facts plus team memory: who has done similar work (by meaning, not shared words), who can realistically finish in time, and who is away (including time off described in any wording).
+  - **Every claim must cite evidence that was actually supplied** (one of that person's own tasks, or a memory note about that person). A claim whose citation doesn't check out is dropped and the card says "No evidence of related experience found". If the model is unavailable it says so and orders by workload only.
+  - It only sees tasks and memory you are allowed to see, and it does not see calendars or Slack presence, so treat it as a guide.
 - **Ask**: chat about the meeting ("Who is free to take this?", "What did we decide?").
 - **Settings**: server URL, token (saved automatically), auto-update (notes and items, every 2 minutes), auto-send.
 

@@ -314,6 +314,7 @@ const AVAIL = { light: "Light load", busy: "Busy", overloaded: "Overloaded" };
 function renderSuggest() {
   const items = state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected");
   const data = state.suggest.data, byTask = Object.fromEntries((data?.tasks ?? []).map((t) => [t.id, t]));
+  $("suggestBasis").className = data?.basis?.degraded ? "warn" : "muted";
   $("suggestBasis").textContent = data?.basis ? `${data.basis.note} Based on ${data.basis.people} people and ${data.basis.tasksSeen} tasks you can see${data.basis.usedMemory ? ", plus team memory" : ""}.` : "";
   if (!items.length) { $("suggestList").innerHTML = `<div class="empty"><b>No tasks yet</b>Generate decisions and tasks first (Items tab), then come back to see who is best placed to take each one.</div>`; return; }
   $("suggestList").innerHTML = items.map((i) => {
@@ -325,7 +326,7 @@ function renderSuggest() {
         <div><div class="nm">${esc(c.name)}</div>${c.title ? `<div class="tt">${esc(c.title)}</div>` : ""}</div>
         <button class="sm go ${mine ? "" : "primary"}" data-act="assign" ${mine ? "disabled" : ""}>${mine ? "Assigned ✓" : "Assign"}</button>
         <div class="match" title="Skill match"><i style="width:${Math.round(c.skill * 100)}%"></i></div>
-        <div class="pills"><span class="pill ${c.availability}">${AVAIL[c.availability]}</span>${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}<span class="pill">${c.skill > 0 ? `Skill match ${Math.round(c.skill * 100)}%` : "No skill signal"}</span></div>
+        <div class="pills">${c.availability ? `<span class="pill ${c.availability}">${AVAIL[c.availability]}</span>` : ""}${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}<span class="pill">${c.skill > 0 ? `Skill match ${Math.round(c.skill * 100)}%` : "No skill signal"}</span></div>
         <details><summary>Why</summary><ul>${c.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details></div>`;
     }).join("") + (t?.noSkillSignal ? `<p class="muted">Nobody has a clear track record for this, so these are ranked by availability.</p>` : "");
     const iso = isoDue(i.due);
