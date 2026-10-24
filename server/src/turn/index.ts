@@ -26,6 +26,7 @@ import { askTeammateTool } from "./ask-teammate";
 import { openAsksFor } from "../slack/teammate";
 import { isActionAck } from "../slack/resolve";
 import { assembleTools, type ToolContext } from "./tools";
+import { connectionNotes } from "../mcp/visibility";
 
 export { handleBlockAction, resumePending, expireStale } from "./approval";
 export { buildTools, type ToolContext } from "./tools";
@@ -149,7 +150,7 @@ async function execute(input: TurnInput): Promise<void> {
     ]);
     const dynamic = buildDynamicContext({
       now: new Date(), botUserId: self, asker, channelName: chan?.name, trigger: input.trigger, isIm: input.isIm, isPrivate: input.isPrivate,
-      readOnly, depth, connectionNotes: assembled?.notes ?? [],
+      readOnly, depth, connectionNotes: assembled?.notes ?? (depth === "direct" ? [] : await connectionNotes(ctx).then((r) => r.notes).catch(() => [])),
     });
     const open = input.userId && interactive ? await openAsksFor(input.userId).catch(() => []) : [];
     const pending = open.map((a) => `\nYou asked this user a question for <@${a.asker}>: "${a.question}". Their message may be the answer, but you cannot relay it from here, so never say you passed anything on.`).join("");

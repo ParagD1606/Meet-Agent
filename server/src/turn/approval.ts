@@ -6,6 +6,7 @@ import { approvals, turns } from "../db/schema";
 import { log, redactError } from "../log";
 import { callConnectionTool } from "../mcp/client";
 import { getConnection } from "../mcp/connections";
+import { connWritable, getOrgWrites } from "../mcp/writes";
 import { approvalFollowUpText, followUp } from "./followup";
 import { sweepStaleTurns } from "../lifecycle";
 import { expireLeases, handleLeaseAction } from "./lease";
@@ -143,10 +144,15 @@ export async function executeApproved(row: ApprovalRow): Promise<string> {
     result = await runAutomationOp(row, args);
   } else {
     const conn = await getConnection(args.connectionId);
-    if (!conn || conn.status !== "connected" || conn.scope !== "user" || conn.ownerUserId !== row.requesterId) {
-      result = "ERROR: the connection is no longer available under the requester's account.";
+    const ownConn = conn?.scope === "user" && conn.ownerUserId === row.requesterId;
+    const orgConn = conn?.scope === "org" && connWritable(conn, await getOrgWrites().catch(() => false));
+    if (!conn || conn.status !== "connected" || !(ownConn || orgConn)) {
+      result = "ERROR: the connection is no longer available for this write (removed, disconnected, or workspace writes were turned off).";
     } else {
-      try { result = await callConnectionTool(conn, args.mcpTool, args.input); }
+      try {
+        result = await callConnectionTool(conn, args.mcpTool, args.input);
+        if (result.startsWith("ERROR: ")) result = `ERROR: ${conn.label} rejected ${args.mcpTool}: ${result.slice(7)}`;
+      }
       catch (e) { result = `ERROR: ${String(e instanceof Error ? e.message : e)}`; log.warn("approved call failed", { id: row.id, error: redactError(e) }); }
     }
   }

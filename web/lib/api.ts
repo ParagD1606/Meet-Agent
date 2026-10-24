@@ -114,8 +114,12 @@ export interface Review {
 export interface Preset { key: string; label: string; url: string; authType?: string; personalOnly?: boolean }
 export interface Connection {
   id: string; provider: string; label: string; url: string; scope: "org" | "user"
-  ownerUserId?: string | null; status: "pending" | "connected" | "error"; error?: string | null; lastError?: string | null; reason?: string | null; toolCount?: number | null; connectedAt?: string | null
+  ownerUserId?: string | null; ownerName?: string | null; status: "pending" | "connected" | "error" | "needs_reauth"; error?: string | null; lastError?: string | null; reason?: string | null
+  toolCount?: number | null; readCount?: number | null; writeCount?: number | null; connectedAt?: string | null; lastVerifiedAt?: string | null
+  /** Workspace connections: per-connection override (null = follow the workspace setting). */
+  allowWrites?: boolean | null; writesEnabled?: boolean
 }
+export interface ConnectionTest { ok: boolean; needsReauth: boolean; toolCount: number; readCount: number; writeCount: number; latencyMs: number; error?: string }
 export interface MarketItem { key: string; name: string; url: string; categories: string[]; connectMode: "oauth" | "apikey"; personalOnly?: boolean; iconDomain?: string; connected?: boolean }
 export interface MarketPage { items: MarketItem[]; total: number }
 export interface Skill { id: string; name: string; description: string; body: string; enabled: boolean; scope?: "org" | "user"; version?: number; ownerUserId?: string | null }
@@ -266,6 +270,11 @@ export const api = {
   createConnection: (c: { provider?: string; url?: string; label?: string; scope: "org" | "user" }) => send<Connection>("POST", "/api/mcp/connections", c),
   deleteConnection: (id: string) => send("DELETE", `/api/mcp/connections/${id}`),
   connect: (id: string) => send<{ authUrl: string }>("POST", `/api/mcp/connections/${id}/connect`),
+  testConnection: (id: string) => send<ConnectionTest>("POST", `/api/mcp/connections/${id}/test`, {}),
+  makeWorkspaceWide: (id: string) => send<Connection>("POST", `/api/mcp/connections/${id}/workspace`, {}),
+  setAllowWrites: (id: string, allowWrites: boolean | null) => send<Connection>("PATCH", `/api/mcp/connections/${id}`, { allowWrites }),
+  mcpWrites: () => get<{ enabled: boolean }>("/api/settings/mcp-writes"),
+  saveMcpWrites: (enabled: boolean) => send<{ enabled: boolean }>("PUT", "/api/settings/mcp-writes", { enabled }),
   turns: (f: TurnFilters = {}) => get<unknown>(`/api/turns${qs({ ...f, limit: f.limit ?? 100 })}`).then((d) => list<Turn>(d, "turns")),
   turn: (id: string) => get<Turn>(`/api/turns/${encodeURIComponent(id)}`),
   tokens: () => get<unknown>("/api/tokens").then((d) => list<ApiToken>(d, "tokens")),

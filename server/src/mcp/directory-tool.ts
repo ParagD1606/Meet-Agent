@@ -14,12 +14,12 @@ export const connectLandingUrl = (connectionId: string) => `${base()}/mcp-connec
 export const integrationsUrl = (key?: string) => `${base()}/configure/integrations${key ? `?connect=${encodeURIComponent(key)}` : ""}`;
 
 /** Reuses the user's unfinished connection for this app, else creates a pending personal one. Throws if already connected. */
-export async function ensureUserConnection(item: MarketItem, userId: string): Promise<PublicConnection> {
+export async function ensureUserConnection(item: MarketItem, userId: string): Promise<Pick<PublicConnection, "id" | "label" | "status">> {
   const mine = await db.select().from(mcpConnections).where(and(eq(mcpConnections.ownerUserId, userId), eq(mcpConnections.scope, "user")));
   const same = mine.filter((c) => (item.curated ? c.provider === item.key : c.url.replace(/\/+$/, "").toLowerCase() === item.url.replace(/\/+$/, "").toLowerCase()));
   if (same.some((c) => c.status === "connected")) throw new Error(`${item.name} is already connected`);
   const stale = same[0];
-  if (stale) { const { authEnc: _a, ...pub } = stale; return pub; }
+  if (stale) return stale;
   return createConnection({ provider: item.curated ? item.key : undefined, url: item.curated ? undefined : item.url, label: item.name, scope: "user", ownerUserId: userId });
 }
 
@@ -54,7 +54,7 @@ export function directoryTools(ctx: Ctx): ToolSet {
       if (item.connectMode === "apikey") {
         return { status: "needs_key", message: `${item.name} uses an API key, which only the user can enter.`, setupUrl: integrationsUrl(item.key) };
       }
-      let conn: PublicConnection;
+      let conn: Pick<PublicConnection, "id" | "label" | "status">;
       try { conn = await ensureUserConnection(item, userId); }
       catch (e) { return { status: "error", message: e instanceof Error ? e.message : String(e) }; }
       try {

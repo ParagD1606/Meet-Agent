@@ -81,7 +81,7 @@ describe("prompt", () => {
   test("static prompt has no volatile data and the system messages are identical across calls", () => {
     expect(STATIC_SYSTEM).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
     expect(JSON.stringify(buildSystemMessages(["a"]))).toBe(JSON.stringify(buildSystemMessages(["a"])));
-    expect(STATIC_SYSTEM.length / 4).toBeLessThan(1590); // compact: token budget (1590 after the status-question rule and the assign/update/notify task guidance; was 1545 / 1550 separately, 1520 before assign_task guidance, 1500 before the grounded-awareness rule)
+    expect(STATIC_SYSTEM.length / 4).toBeLessThan(1640); // compact: token budget (1640 after status-question, task-tool and MCP-write guidance)
   });
 });
 

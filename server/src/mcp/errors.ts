@@ -24,6 +24,10 @@ export const isTransientError = (e: unknown): boolean =>
     typeof e === "string" ? e : text(e),
   );
 
+const REAUTH = /McpReauthRequired|UnauthorizedError|Unauthorized|\b401\b|invalid_token|invalid_grant|needs to be reconnected/i;
+/** A 401 / revoked or unrefreshable OAuth grant: only the user reconnecting can fix it. (403 is a permission problem, not a dead login.) */
+export const isReauthError = (e: unknown): boolean => REAUTH.test(typeof e === "string" ? e : text(e));
+
 export function classifyError(e: unknown): ToolErrorKind {
   const t = typeof e === "string" ? e : text(e);
   if (/McpReauthRequired|Unauthorized|\b401\b|\b403\b|invalid_token|reconnect/i.test(t)) return "reauth";

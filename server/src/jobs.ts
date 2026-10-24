@@ -13,6 +13,7 @@ export const Q = {
   purge: "purge-old",
   membersResync: "members-resync",
   askDeliver: "ask-deliver",
+  mcpHealth: "mcp-health",
 } as const;
 
 let boss: PgBoss | null = null;
@@ -142,6 +143,11 @@ export async function startJobs(): Promise<void> {
     log.info("members resync", await resyncChannelMembers().catch((e) => ({ error: String(e) })));
   });
   await b.schedule(Q.membersResync, "7 */6 * * *");
+  await b.work(Q.mcpHealth, async () => {
+    const { verifyAllConnections } = await import("./mcp/health");
+    log.info("mcp health", await verifyAllConnections().catch((e) => ({ error: String(e) })));
+  });
+  await b.schedule(Q.mcpHealth, "23 * * * *");
 
   await registerProactiveJobs(b);
   await (await import("./manager")).registerManagerJobs(b);

@@ -1,6 +1,6 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
-import { toolError } from "./errors";
+import { isToolError, toolError } from "./errors";
 import type { McpToolInfo } from "./client";
 
 /** A callable MCP tool known to this turn but NOT listed in the model's tool schemas. */
@@ -75,6 +75,30 @@ export function shortDesc(d: string | undefined, max = 110): string {
   return (sentence.length > max ? sentence.slice(0, max - 1) + "…" : sentence).trim();
 }
 
+const DROP_SCHEMA_KEYS = new Set(["$schema", "title", "examples", "$id"]);
+/** Smaller schema, same meaning: drops decoration and caps property descriptions. */
+export function minSchema(s: unknown, names = false): unknown {
+  if (Array.isArray(s)) return s.map((x) => minSchema(x));
+  if (!s || typeof s !== "object") return s;
+  const o: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(s)) {
+    // `names`: these keys are PROPERTY NAMES (inside "properties"), so a property called "title" or "description" is data, never decoration
+    if (!names && (DROP_SCHEMA_KEYS.has(k) || (k === "additionalProperties" && v === false) || (k === "required" && Array.isArray(v) && !v.length))) continue;
+    o[k] = !names && k === "description" && typeof v === "string" ? shortDesc(v, 100) : minSchema(v, !names && k === "properties");
+  }
+  return o;
+}
+
+const MAX_SCHEMA_CHARS = 2000;
+/** Compact JSON input schema for the model; null when it would be too large to inline. */
+export const schemaText = (t: McpToolInfo): string | null => {
+  const s = JSON.stringify(minSchema(t.inputSchema?.type ? t.inputSchema : { type: "object", properties: {} }));
+  return s.length <= MAX_SCHEMA_CHARS ? s : null;
+};
+
+const writeMark = (e: Pick<LazyEntry, "kind" | "gated">) =>
+  e.kind !== "write" ? "" : e.gated !== false ? " [WRITE: needs approval]" : " [WRITE: runs immediately]";
+
 /** `name(a*, b, c)` with * on required params; enough for the model to call without the full schema. */
 export function signature(t: McpToolInfo, key: string): string {
   const props = Object.keys((t.inputSchema?.properties as Record<string, unknown> | undefined) ?? {});
@@ -94,6 +118,8 @@ function parseArgs(raw: unknown): Record<string, unknown> | null {
 }
 
 const NAME_LIST_CHARS = 1800;
+const MAX_SEARCHES = 3;
+const INLINE_SCHEMAS = 3;
 
 /** `search_tools` + `call_tool` over the lazy (unlisted) tools of this turn. Empty set when nothing is lazy. */
 export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
@@ -102,14 +128,22 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
   // Names alone are cheap (about 5 tokens each) and let the model call the right tool without a search round trip.
   let names = "";
   for (const e of entries) { if (names.length + e.name.length > NAME_LIST_CHARS) { names += ", ..."; break; } names += (names ? ", " : "") + e.name; }
+  let searches = 0;
+  let lastNames: string[] = [];
   return {
     search_tools: tool({
-      description: `Find tools in large connected apps (${apps.join(", ")}) by keyword. Returns name(params*) lines; run one with call_tool. Tool names: ${names}.`,
+      description: `Find tools in large connected apps (${apps.join(", ")}) by keyword. Returns the best matches WITH their input schemas (writes included, marked), so you can call_tool right away; do not search again. Tool names: ${names}.`,
       inputSchema: z.object({ query: z.string().min(1).max(200), limit: z.number().int().min(1).max(15).optional() }),
       execute: async ({ query, limit }) => {
+        if (++searches > MAX_SEARCHES) return `Search limit reached. Pick from: ${lastNames.join(", ") || names}, call it with call_tool now, or tell the user what you could not find.`;
         const hits = rankTools(query, entries, limit ?? 8);
         if (!hits.length) return "No matching tools. Try other keywords (verbs like list, create, search and nouns like issue, page).";
-        return hits.map((h) => `${signature(h.info, h.name)}${h.kind === "write" && h.gated !== false ? " [write: needs approval]" : h.kind === "write" ? " [write: runs immediately]" : ""} - ${shortDesc(h.info.description)}`).join("\n");
+        lastNames = hits.map((h) => h.name);
+        return hits.map((h, i) => {
+          const head = `${signature(h.info, h.name)}${writeMark(h)} - ${shortDesc(h.info.description)}`;
+          const schema = i < INLINE_SCHEMAS ? schemaText(h.info) : null;
+          return schema ? `${head}\n  schema: ${schema}` : head;
+        }).join("\n");
       },
     }),
     call_tool: tool({
@@ -122,8 +156,12 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
         const a = parseArgs(args);
         if (!a) return toolError(name, "args must be a JSON object string", "invalid_input");
         const miss = missingRequired(e.info, a);
-        if (miss.length) return toolError(name, `missing required: ${miss.join(", ")}. Signature: ${signature(e.info, e.name)}`, "invalid_input");
-        return e.run(a, fields);
+        const schema = schemaText(e.info);
+        if (miss.length) return toolError(name, `missing required: ${miss.join(", ")}. Input schema: ${schema ?? signature(e.info, e.name)}`, "invalid_input");
+        const out = await e.run(a, fields);
+        // the app rejected the arguments: hand back the schema so the retry is right the first time
+        if (isToolError(out) && out.kind === "invalid_input" && schema) return { ...out, message: `${out.message} Input schema: ${schema}`.slice(0, 2600) };
+        return out;
       },
     }),
   };

@@ -7,7 +7,8 @@ import { McpReauthRequired } from "../../src/mcp/oauth";
 import { buildMcpTools, type McpToolCtx } from "../../src/mcp/tools";
 import { classifyError, isTransientError, toolError } from "../../src/mcp/errors";
 import { createSerialOperationQueue, runForConnection } from "../../src/mcp/operation-queue";
-import { withResetRetry } from "../../src/mcp/reset-retry";
+import { retryPolicy, withResetRetry } from "../../src/mcp/reset-retry";
+retryPolicy.backoffMs = 0;
 import { requesterLacksPersonalAppAccess, teammateAccessTools } from "../../src/mcp/access-intent";
 import { classifyTool } from "../../src/mcp/policy";
 import { seedTurn, seedUsers, fakeSlack } from "../turn/helpers";
@@ -62,7 +63,7 @@ describe("reset retry", () => {
     expect(n).toBe(2);
   });
 
-  test("through the tool: a dropped connection is retried once transparently; a persistent one is a structured error", async () => {
+  test("through the tool: a dropped connection is retried transparently; a persistent one is a structured error", async () => {
     await resetDb(); await seedUsers(); await seedTurn(); fakeSlack();
     let n = 0, mode: "flaky" | "down" = "flaky";
     setMcpFactory(async () => ({
@@ -77,7 +78,7 @@ describe("reset retry", () => {
     mode = "down"; n = 0;
     const err = await run(tools, "github__list_things");
     expect(err).toMatchObject({ status: "error", kind: "transient", retryable: true });
-    expect(n).toBe(2);
+    expect(n).toBe(3) // one call + two backed-off retries;
   });
 });
 

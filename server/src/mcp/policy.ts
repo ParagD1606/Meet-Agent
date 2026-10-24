@@ -56,7 +56,8 @@ const PROVIDER_CLASS: Record<string, ActionClass> = { "gmail-personal-only": "em
 
 /** Pure and fail-closed: destructive => "other"; else name hints (email/calendar first: irreversible), then the app, else "other". */
 export function actionClass(name: string, provider: string, annotations?: ToolAnnotations): ActionClass {
-  const t = tokens(name);
+  // plural names ("create-pages", "create-events", "update-issues") must classify like the singular; keep both forms
+  const t = tokens(name).flatMap((x) => (x.length > 3 && x.endsWith("s") && !x.endsWith("ss") ? [x, x.slice(0, -1)] : [x]));
   if (annotations?.destructiveHint === true || t.some((x) => DESTRUCTIVE.has(x)) || (t.includes("create") && t.includes("or") && t.includes("update"))) return "other";
   if (t.some((x) => EMAIL_CAL.has(x))) return "email_calendar";
   if ((!PROVIDER_CLASS[provider] || provider === "slack") && t.some((x) => SLACK.has(x))) return "slack_post";

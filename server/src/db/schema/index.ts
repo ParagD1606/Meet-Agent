@@ -129,8 +129,17 @@ export const mcpConnections = pgTable("mcp_connections", {
   scope: text("scope", { enum: ["org", "user"] }).notNull(),
   ownerUserId: text("owner_user_id"), // null for org
   authEnc: text("auth_enc"), // encrypted JSON {accessToken, refreshToken, expiresAt, clientInfo}
-  status: text("status", { enum: ["pending", "connected", "error"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "connected", "error", "needs_reauth"] }).notNull().default("pending"),
   createdAt: ts("created_at"),
+  /** Per-connection override of the workspace `mcp_org_writes` setting (org connections only); null = inherit. */
+  allowWrites: boolean("allow_writes"),
+  /** Cached tool catalogue from the last successful verification: [{name, kind, cls}] (no schemas, no secrets). */
+  toolMeta: jsonb("tool_meta").$type<{ name: string; kind: "read" | "write"; cls: string }[]>(),
+  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  connectedAt: timestamp("connected_at", { withTimezone: true }),
+  /** One-time "needs reconnect" notice already sent; reset when the connection recovers. */
+  reauthNotified: boolean("reauth_notified").notNull().default(false),
 });
 
 export const approvals = pgTable("approvals", {

@@ -6,6 +6,7 @@ import { config } from "../config";
 import { db } from "../db";
 import { channels, settings } from "../db/schema";
 import { ACTION_CLASSES, getApprovalCards, setApprovalCards } from "../mcp/policy";
+import { getOrgWrites, setOrgWrites } from "../mcp/writes";
 import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
 import { FEATURES, featureChannels, setFeatureChannels } from "../slack/proactive-features";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
@@ -47,6 +48,11 @@ settingsRoutes.put("/settings/approvals", requireAuth("admin"), async (c) => {
 
 // ---------- memory freshness: 'normal' (cheap cadence) or 'fast' (demo: learn within seconds) ----------
 const freshness = () => ({ mode: getFreshness(), tuning: TUNING[getFreshness()], options: Object.keys(TUNING) });
+settingsRoutes.get("/settings/mcp-writes", requireAuth("admin"), async (c) => c.json({ enabled: await getOrgWrites() }));
+settingsRoutes.put("/settings/mcp-writes", requireAuth("admin"), async (c) => {
+  const b = await readBody(c, z.object({ enabled: z.boolean() }));
+  return c.json({ enabled: await setOrgWrites(b.enabled) });
+});
 settingsRoutes.get("/settings/memory-freshness", requireAuth("admin"), async (c) => c.json(freshness()));
 settingsRoutes.put("/settings/memory-freshness", requireAuth("admin"), async (c) => {
   const { mode } = await readBody(c, z.object({ mode: z.enum(["normal", "fast"]) }));

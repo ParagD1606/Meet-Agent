@@ -12,13 +12,15 @@ import { cn } from "@/ui/cn"
 import { ConnectorIcon } from "@/ui/connectors"
 import { Dialog, confirmDialog } from "@/ui/dialog"
 import { EmptyState } from "@/ui/empty"
-import { FormField, Input, Select } from "@/ui/fields"
+import { FormField, Input, Select, SettingRow, Switch } from "@/ui/fields"
+import { useToast } from "@/ui/toast"
 import { Async, ErrorState, PageHeader, Panel } from "@/ui/page"
 import { SkeletonRows } from "@/ui/skeleton"
 import { Tabs } from "@/ui/tabs"
 import { Table } from "@/ui/table"
 
-const TONE = { connected: "ok", pending: "warn", error: "danger" } as const
+const TONE = { connected: "ok", pending: "warn", error: "danger", needs_reauth: "danger" } as const
+const STATUS_LABEL = { connected: "connected", pending: "pending", error: "error", needs_reauth: "needs reconnect" } as const
 const go = (r: { authUrl?: string }) => { if (r.authUrl) window.location.href = r.authUrl }
 interface Target { item?: MarketItem; custom?: boolean }
 
@@ -92,6 +94,19 @@ function Marketplace({ admin, onInstall }: { admin: boolean; onInstall: (t: Targ
   )
 }
 
+/** Workspace switch: may members trigger write tools through workspace connections (still subject to the approval cards in Pixel settings). */
+function WriteSetting() {
+  const q = useQuery({ queryKey: ["mcp-writes"], queryFn: api.mcpWrites })
+  const save = useAction(api.saveMcpWrites, { invalidate: [["mcp-writes"], ["connections"]] })
+  return (
+    <Panel className="mb-4 px-4">
+      <SettingRow title="Let the bot act through workspace connections" desc="When on, members can ask the bot to create or update things in workspace-wide apps. Approval cards still apply. A connection can override this.">
+        <Switch label="Allow writes through workspace connections" checked={q.data?.enabled ?? true} disabled={q.isPending || save.isPending} onChange={(v) => save.mutate(v)} />
+      </SettingRow>
+    </Panel>
+  )
+}
+
 export default function Integrations() {
   const { me, admin } = useMe()
   const [tab, setTab] = useState<"connected" | "browse">("connected")
@@ -100,24 +115,46 @@ export default function Integrations() {
   const inv = { invalidate: [["connections"], ["marketplace"], ["overview"]] }
   const connect = useAction(api.connect, { ...inv, onSuccess: go })
   const remove = useAction(api.deleteConnection, { ...inv, ok: "Connection removed" })
+  const toast = useToast()
   const can = (c: Connection) => admin || c.ownerUserId === me?.id
   const del = async (c: Connection) => { if (await confirmDialog({ title: `Remove ${c.label}?`, body: "The bot loses access to it right away.", confirmLabel: "Remove", danger: true })) remove.mutate(c.id) }
+  const test = useAction(api.testConnection, {
+    ...inv,
+    onSuccess: (r, id) => {
+      const label = conns.data?.find((c) => c.id === id)?.label ?? "Connection"
+      if (r.ok) toast.push({ kind: "success", title: `${label} works`, body: `${r.toolCount} tools (${r.readCount} read, ${r.writeCount} write) in ${r.latencyMs} ms` })
+      else toast.push({ kind: "error", title: r.needsReauth ? `${label} needs to be reconnected` : `${label} failed the test`, body: r.error })
+    },
+  })
+  const share = useAction(api.makeWorkspaceWide, { ...inv, ok: "Now available to the whole workspace" })
+  const allow = useAction((v: { id: string; allow: boolean }) => api.setAllowWrites(v.id, v.allow), { ...inv })
+  const wide = async (c: Connection) => {
+    if (await confirmDialog({ title: `Make ${c.label} workspace-wide?`, body: `Everyone in the workspace will be able to use ${c.ownerName ? `${c.ownerName}'s` : "this"} ${c.label} connection through the bot, with the same approval rules as other writes. Their account is used, so only do this if they agree.`, confirmLabel: "Make workspace-wide" })) share.mutate(c.id)
+  }
   const n = conns.data?.length
   return (
     <>
       <PageHeader title="Integrations" desc="Connect tools over MCP so the bot can read from, and with your approval act in, your other apps." />
       <div className="mb-4"><Tabs label="Integrations view" value={tab} onChange={setTab} items={[{ id: "connected", label: n != null ? `Connected (${n})` : "Connected" }, { id: "browse", label: "Browse apps" }]} /></div>
+      {tab === "connected" && admin && <WriteSetting />}
       {tab === "browse" ? <Marketplace admin={admin} onInstall={setTarget} /> : (
         <Async q={conns} rows={3}>{(rows) => rows.length === 0 ? (
           <Panel><EmptyState icon="plug" title="Nothing connected yet" action={<Button variant="primary" onClick={() => setTab("browse")}>Browse apps</Button>}>Connect GitHub, Linear, Notion or any MCP server to let the bot look things up.</EmptyState></Panel>
         ) : (
           <Panel><Table caption="Connections" rows={rows} rowKey={(c) => c.id} columns={[
-            { key: "n", header: "App", primary: true, cell: (c: Connection) => <span className="flex items-center gap-2.5 py-1"><ConnectorIcon id={c.provider} label={c.label} size={18} /><span><span className="block font-medium">{c.label}</span><span className="block max-w-xs truncate text-xs text-muted">{c.url}</span></span></span> },
-            { key: "scope", header: "Scope", hideSm: true, cell: (c) => <Badge>{c.scope === "org" ? "Workspace" : "Personal"}</Badge> },
-            { key: "tools", header: "Tools", num: true, hideSm: true, cell: (c) => c.toolCount ?? "-" },
-            { key: "st", header: "Status", cell: (c) => <span title={c.error ?? c.lastError ?? c.reason ?? undefined}><Badge tone={TONE[c.status] ?? "neutral"} dot>{c.status}</Badge></span> },
-            { key: "since", header: "Connected", hideSm: true, cell: (c) => <span className="text-muted">{c.connectedAt ? ago(c.connectedAt) : "-"}</span> },
-            { key: "a", header: <span className="sr-only">Actions</span>, end: true, cell: (c) => can(c) && <span className="flex justify-end gap-2">{c.status !== "connected" && <Button size="sm" variant="primary" loading={connect.isPending && connect.variables === c.id} onClick={() => connect.mutate(c.id)}>{c.status === "error" ? "Reconnect" : "Connect"}</Button>}<Button size="sm" variant="danger" aria-label={`Remove ${c.label}`} onClick={() => del(c)}>Remove</Button></span> },
+            { key: "n", header: "App", primary: true, cell: (c: Connection) => <span className="flex items-center gap-2.5 py-1"><ConnectorIcon id={c.provider} label={c.label} size={18} /><span><span className="block font-medium">{c.label}</span><span className="block max-w-36 truncate text-xs text-muted" title={c.url}>{new URL(c.url).host}</span></span></span> },
+            { key: "scope", header: "Scope", hideSm: true, cell: (c) => <span><Badge>{c.scope === "org" ? "Workspace" : "Personal"}</Badge>{c.scope === "user" && <span className="mt-0.5 block text-xs text-muted">{c.ownerUserId === me?.id ? "Yours" : `Owner: ${c.ownerName ?? c.ownerUserId ?? "unknown"}`}</span>}
+              {admin && c.scope === "user" && c.status === "connected" && <button type="button" className="mt-0.5 block text-xs text-accent-text hover:underline" disabled={share.isPending} onClick={() => wide(c)}>Make workspace-wide</button>}
+              {admin && c.scope === "org" && <button type="button" className="mt-0.5 block text-xs text-accent-text hover:underline" disabled={allow.isPending} onClick={() => allow.mutate({ id: c.id, allow: c.writesEnabled === false })}>{c.writesEnabled === false ? "Allow writes" : "Disable writes"}</button>}
+            </span> },
+            { key: "tools", header: "Tools", hideSm: true, cell: (c) => c.toolCount == null ? <span className="text-muted" title="Not checked yet. Use Test.">-</span> : <span><span className="block tabular-nums">{c.toolCount}</span><span className="block text-xs text-muted">{c.readCount ?? 0} read, {c.writeCount ?? 0} write{c.scope === "org" && c.writesEnabled === false ? " (writes off)" : ""}</span></span> },
+            { key: "st", header: "Status", cell: (c) => <span><Badge tone={TONE[c.status] ?? "neutral"} dot>{STATUS_LABEL[c.status] ?? c.status}</Badge>{c.status !== "connected" && (c.error ?? c.lastError ?? c.reason) && <span className="mt-0.5 block w-56 whitespace-normal text-xs text-danger">{c.error ?? c.lastError ?? c.reason}</span>}{c.status === "connected" && c.lastError && <span className="mt-0.5 block w-56 whitespace-normal text-xs text-warn">Last check failed: {c.lastError}</span>}</span> },
+            { key: "since", header: "Connected", hideSm: true, cell: (c) => <span className="text-muted"><span className="block">{c.lastVerifiedAt ? `Verified ${ago(c.lastVerifiedAt)}` : "Not verified yet"}</span><span className="block text-xs">{c.connectedAt ? `Connected ${ago(c.connectedAt)}` : ""}{c.scope === "user" && c.ownerName ? ` by ${c.ownerName}` : ""}</span></span> },
+            { key: "a", header: <span className="sr-only">Actions</span>, end: true, cell: (c) => <span className="flex justify-end gap-1.5">
+              <Button size="sm" loading={test.isPending && test.variables === c.id} disabled={c.status === "pending"} onClick={() => test.mutate(c.id)}>Test</Button>
+              {can(c) && c.status !== "connected" && <Button size="sm" variant="primary" loading={connect.isPending && connect.variables === c.id} onClick={() => connect.mutate(c.id)}>{c.status === "pending" ? "Connect" : "Reconnect"}</Button>}
+              {can(c) && <Button size="sm" variant="danger" aria-label={`Remove ${c.label}`} onClick={() => del(c)}>Remove</Button>}
+            </span> },
           ]} /></Panel>
         )}</Async>
       )}

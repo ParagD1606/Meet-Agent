@@ -3,6 +3,7 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { resetDb } from "../db";
 import { invalidateApprovalCards } from "../../src/mcp/policy";
 import { createConnection } from "../../src/mcp/connections";
+import { setOrgWrites } from "../../src/mcp/writes";
 import { setMcpFactory, type McpToolInfo } from "../../src/mcp/client";
 import { buildMcpTools, minSchema, toolKey, type McpToolCtx } from "../../src/mcp/tools";
 import { rankTools, shortDesc } from "../../src/mcp/tool-search";
@@ -71,6 +72,7 @@ describe("lazy tool threshold", () => {
 
   test("lazy tools respect scope rules: org-only providers hide writes, readOnly turns hide them everywhere", async () => {
     mcp(BIG);
+    await setOrgWrites(false);
     await createConnection({ provider: "github", scope: "org", token: "t" });
     const { tools } = await buildMcpTools(ctx());
     const all = String(await run(tools, "search_tools", { query: "issue pull request", limit: 15 }));

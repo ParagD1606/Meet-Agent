@@ -1,5 +1,5 @@
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
 import { mcpConnections, users } from "../db/schema";
@@ -7,15 +7,38 @@ import { log } from "../log";
 import { assertPublicUrl, guardedFetch } from "../tools/web/ssrf";
 import { getPreset } from "./catalog";
 import { clearToolCache, type ConnectionRow } from "./client";
+import { groupKey } from "./group";
+import { connWritable, getOrgWrites } from "./writes";
 import { type AuthState, AuthDecryptError, DbOAuthProvider, readAuth, writeAuth } from "./oauth";
 
 /** Reconnecting is how an unreadable blob gets repaired, so startConnect treats it as empty. */
 const readAuthOrEmpty = (id: string): Promise<AuthState> => readAuth(id).catch((e) => (e instanceof AuthDecryptError ? ({} as AuthState) : Promise.reject(e)));
 
 export type Role = "owner" | "admin" | "member";
-export type PublicConnection = Omit<ConnectionRow, "authEnc">;
+export type PublicConnection = Omit<ConnectionRow, "authEnc" | "toolMeta"> & {
+  ownerName: string | null;
+  /** From the last health check; null until one ran. */
+  toolCount: number | null; readCount: number | null; writeCount: number | null;
+  /** Can write tools run through this connection right now (personal: always; workspace: override or the workspace setting). */
+  writesEnabled: boolean;
+  /** The real reason it is not healthy, if any. */
+  error: string | null;
+};
 
-const strip = ({ authEnc: _a, ...rest }: ConnectionRow): PublicConnection => rest;
+const strip = ({ authEnc: _a, toolMeta, ...rest }: ConnectionRow, ownerName: string | null = null, orgWrites = true): PublicConnection => {
+  const writes = toolMeta?.filter((t) => t.kind === "write").length ?? null;
+  return {
+    ...rest, ownerName, toolCount: toolMeta?.length ?? null, writeCount: writes, readCount: toolMeta ? toolMeta.length - (writes ?? 0) : null,
+    writesEnabled: connWritable(rest, orgWrites), error: rest.status === "connected" ? null : rest.lastError,
+  };
+};
+
+async function withOwners(rows: ConnectionRow[]): Promise<PublicConnection[]> {
+  const ids = [...new Set(rows.map((r) => r.ownerUserId).filter((x): x is string => !!x))];
+  const names = new Map((ids.length ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids)) : []).map((u) => [u.id, u.name]));
+  const orgWrites = await getOrgWrites();
+  return rows.map((r) => strip(r, r.ownerUserId ? (names.get(r.ownerUserId) ?? null) : null, orgWrites));
+}
 
 export async function getConnection(connectionId: string): Promise<ConnectionRow | undefined> {
   const [row] = await db.select().from(mcpConnections).where(eq(mcpConnections.id, connectionId));
@@ -27,7 +50,27 @@ export async function listConnections(userId: string, role: Role): Promise<Publi
   const rows = role === "member"
     ? await db.select().from(mcpConnections).where(or(eq(mcpConnections.scope, "org"), eq(mcpConnections.ownerUserId, userId)))
     : await db.select().from(mcpConnections);
-  return rows.map(strip);
+  return withOwners(rows);
+}
+
+/** Admin action: turn someone's personal connection into a workspace one (everyone can use it; writes follow the workspace setting). */
+export async function makeWorkspaceWide(connectionId: string): Promise<PublicConnection> {
+  const conn = await getConnection(connectionId);
+  if (!conn) throw new Error("connection not found");
+  if (conn.scope === "org") throw new Error("already workspace-wide");
+  if (getPreset(conn.provider)?.personalOnly) throw new Error(`${conn.label} can only be connected personally`);
+  const dup = (await db.select().from(mcpConnections).where(eq(mcpConnections.scope, "org"))).find((c) => groupKey(c) === groupKey(conn));
+  if (dup) throw new Error(`${dup.label} is already connected workspace-wide; remove one of them first`);
+  await db.update(mcpConnections).set({ scope: "org", ownerUserId: null, allowWrites: null }).where(eq(mcpConnections.id, connectionId));
+  return (await withOwners([(await getConnection(connectionId))!]))[0]!;
+}
+
+/** Admin action: per-connection override of the workspace write setting; null = inherit. */
+export async function setAllowWrites(connectionId: string, allow: boolean | null): Promise<PublicConnection> {
+  const conn = await getConnection(connectionId);
+  if (!conn) throw new Error("connection not found");
+  await db.update(mcpConnections).set({ allowWrites: allow }).where(eq(mcpConnections.id, connectionId));
+  return (await withOwners([(await getConnection(connectionId))!]))[0]!;
 }
 
 export async function createConnection(a: {
@@ -55,11 +98,11 @@ export async function createConnection(a: {
     scope: a.scope,
     ownerUserId: a.scope === "user" ? a.ownerUserId! : null,
     status: a.token ? ("connected" as const) : ("pending" as const),
+    connectedAt: a.token ? new Date() : null,
   };
   await db.insert(mcpConnections).values(row);
   if (a.token) await writeAuth(row.id, { accessToken: a.token, bearer: true }, true);
-  const created = (await getConnection(row.id))!;
-  return strip(created);
+  return (await withOwners([(await getConnection(row.id))!]))[0]!;
 }
 
 /** Begins OAuth 2.1 (DCR + PKCE). Resolves with the URL the user must visit. */

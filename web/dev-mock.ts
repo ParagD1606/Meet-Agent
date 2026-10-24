@@ -30,8 +30,11 @@ const db = {
     transcript: "Ada Lovelace: We should ship the new onboarding checklist next Tuesday.\nMax Member: I will draft the checklist and share it for review by Friday.\nAda Lovelace: Great. We also need the release notes ready before launch.",
     summary: "## Decisions\nShip the onboarding checklist next Tuesday.\n\n## Discussion\nThe team agreed that the checklist needs review before release.\n\n## Open questions\nThe final release-notes owner is still to be confirmed.",
     tasks: [{ id: "mtask_1", title: "Draft the onboarding checklist", description: "Prepare a reviewable first draft for the product team.", assigneeName: "Max Member", assigneeId: "U2", dueDate: "Friday", jiraKey: null, jiraUrl: null, notification: { status: "sent" } }, { id: "mtask_2", title: "Prepare release notes", description: "Create release notes before the onboarding checklist launch.", assigneeName: null, assigneeId: null, dueDate: "Before launch", jiraKey: null, jiraUrl: null, notification: { status: "needs_assignee" } }] }] as any[],
-  conns: [{ id: "c1", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "org", ownerUserId: null, status: "connected", toolCount: 24, connectedAt: ago(9000) },
-    { id: "c2", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "U1", status: "error", error: "Token expired", toolCount: 0 }] as any[],
+  mcpWrites: true,
+  conns: [{ id: "c1", provider: "notion", label: "Notion", url: "https://mcp.notion.com/mcp", scope: "org", ownerUserId: null, ownerName: null, status: "connected", toolCount: 26, readCount: 18, writeCount: 8, writesEnabled: true, allowWrites: null, connectedAt: ago(9000), lastVerifiedAt: ago(20) },
+    { id: "c3", provider: "github", label: "GitHub", url: "https://api.githubcopilot.com/mcp/", scope: "user", ownerUserId: "U2", ownerName: "Max Member", status: "connected", toolCount: 41, readCount: 30, writeCount: 11, writesEnabled: true, connectedAt: ago(3000), lastVerifiedAt: ago(35) },
+    { id: "c2", provider: "linear", label: "Linear", url: "https://mcp.linear.app/mcp", scope: "user", ownerUserId: "U1", ownerName: "Ada Lovelace", status: "needs_reauth", error: "Authorization expired or was revoked. Reconnect to continue.", lastError: "Authorization expired or was revoked. Reconnect to continue.", toolCount: 18, readCount: 12, writeCount: 6, writesEnabled: true, connectedAt: ago(20000), lastVerifiedAt: ago(70) },
+    { id: "c4", provider: "sentry", label: "Sentry", url: "https://mcp.sentry.dev/mcp", scope: "org", ownerUserId: null, status: "connected", toolCount: null, writesEnabled: false, allowWrites: false, connectedAt: ago(500), lastVerifiedAt: null }] as any[],
   tokens: [{ id: "t1", name: "Cursor", createdAt: ago(5000), lastUsedAt: ago(30) }] as any[],
   sync: [{ id: "y1", provider: "notion", lastSyncAt: ago(90), status: "idle", selection: { mode: "all" } }] as any[],
   prompt: "We are Acme. Be concise.",
@@ -197,6 +200,10 @@ Bun.serve({
       if (p === "/api/mcp/presets") return json([])
       if (p === "/api/mcp/connections") { if (req.method === "POST") { const c = { id: `c${nid++}`, provider: body.provider ?? "custom", label: body.label, url: body.url ?? "https://x", scope: body.scope, ownerUserId: "U1", status: "pending" }; db.conns.push(c); return json(c) } return json(db.conns) }
       if ((x = m("/api/mcp/connections/(\\w+)/connect"))) return json({ authUrl: "/?connected=1" })
+      if ((x = m("/api/mcp/connections/(\\w+)/test"))) { const c = db.conns.find((c) => c.id === x![1]); return c?.status === "needs_reauth" ? json({ ok: false, needsReauth: true, toolCount: 0, readCount: 0, writeCount: 0, latencyMs: 180, error: c.error }) : json({ ok: true, needsReauth: false, toolCount: c?.toolCount ?? 12, readCount: c?.readCount ?? 9, writeCount: c?.writeCount ?? 3, latencyMs: 412 }) }
+      if ((x = m("/api/mcp/connections/(\\w+)/workspace"))) { const g = adminOnly(); if (g) return g; const c = db.conns.find((c) => c.id === x![1]); if (c) { c.scope = "org"; c.ownerUserId = null; c.ownerName = null } return json(c) }
+      if (p === "/api/settings/mcp-writes") { const g = adminOnly(); if (g) return g; if (req.method === "PUT") db.mcpWrites = body.enabled; return json({ enabled: db.mcpWrites }) }
+      if (req.method === "PATCH" && (x = m("/api/mcp/connections/(\\w+)"))) { const g = adminOnly(); if (g) return g; const c = db.conns.find((c) => c.id === x![1]); if (c) { c.allowWrites = body.allowWrites; c.writesEnabled = body.allowWrites ?? db.mcpWrites } return json(c) }
       if ((x = m("/api/mcp/connections/(\\w+)"))) { db.conns = db.conns.filter((c) => c.id !== x![1]); return json({ ok: true }) }
       if ((x = m("/api/turns/(\\w+)"))) { const g = adminOnly(); if (g) return g; const t = turns.find((t) => t.id === x![1]); return t ? json(t) : json({ error: "not_found" }, 404) }
       if (p === "/api/turns") {

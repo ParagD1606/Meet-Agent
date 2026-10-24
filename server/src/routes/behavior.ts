@@ -5,7 +5,8 @@ import {
   AutomationError, createAutomation, deleteAutomation, listAutomations, updateAutomation, type Actor,
 } from "../automations/automations";
 import { runNow } from "../automations/run";
-import { PRESETS, createConnection, deleteConnection, getConnection, listConnections, startConnect } from "../mcp";
+import { PRESETS, createConnection, deleteConnection, getConnection, listConnections, makeWorkspaceWide, setAllowWrites, startConnect } from "../mcp";
+import { verifyAllConnections, verifyConnection } from "../mcp/health";
 import { createSkill, deleteSkill, listSkills, updateSkill } from "../skills/skills";
 import { codedError, httpError, readBody } from "./util";
 
@@ -79,6 +80,29 @@ behavior.delete("/mcp/connections/:id", requireAuth(), async (c) => {
   }
   return c.json({ ok: true });
 });
+/** Visible to the caller: workspace connections and their own; admins see all. Anything else is a neutral 404. */
+async function visibleConn(c: { req: { param(k: string): string }; get(k: "user"): AppEnv["Variables"]["user"] }) {
+  const u = c.get("user");
+  const conn = await getConnection(c.req.param("id"));
+  if (!conn || (conn.scope === "user" && conn.ownerUserId !== u.id && !isAdmin(u.role))) throw httpError(404, "not_found");
+  return conn;
+}
+behavior.post("/mcp/connections/:id/test", requireAuth(), async (c) => {
+  const conn = await visibleConn(c);
+  const r = await verifyConnection(conn);
+  return c.json({ ...r, connection: (await listConnections(c.get("user").id, "admin")).find((x) => x.id === conn.id) });
+});
+behavior.post("/mcp/connections/:id/workspace", requireAuth("admin"), async (c) => {
+  const conn = await visibleConn(c);
+  try { return c.json(await makeWorkspaceWide(conn.id)); }
+  catch (e) { throw httpError(400, "cannot_share", { message: e instanceof Error ? e.message : String(e) }); }
+});
+behavior.patch("/mcp/connections/:id", requireAuth("admin"), async (c) => {
+  const conn = await visibleConn(c);
+  const b = await readBody(c, z.object({ allowWrites: z.boolean().nullable() }));
+  return c.json(await setAllowWrites(conn.id, b.allowWrites));
+});
+behavior.post("/mcp/health/run", requireAuth("admin"), async (c) => c.json(await verifyAllConnections()));
 behavior.post("/mcp/connections/:id/connect", requireAuth(), async (c) => {
   const u = c.get("user");
   const conn = await getConnection(c.req.param("id"));

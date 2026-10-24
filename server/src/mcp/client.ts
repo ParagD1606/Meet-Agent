@@ -1,4 +1,5 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
@@ -6,6 +7,7 @@ import { mcpConnections } from "../db/schema";
 import { log } from "../log";
 import { assertPublicUrl, guardedFetch } from "../tools/web/ssrf";
 import { getPreset } from "./catalog";
+import { isReauthError } from "./errors";
 import { AuthDecryptError, DbOAuthProvider, McpReauthRequired, readAuth } from "./oauth";
 
 export type ConnectionRow = typeof mcpConnections.$inferSelect;
@@ -34,6 +36,11 @@ async function realFactory(conn: ConnectionRow): Promise<McpSession> {
   const transport = auth.bearer && auth.accessToken
     ? new StreamableHTTPClientTransport(url, { fetch: guardedFetch, requestInit: { headers: { authorization: `Bearer ${auth.accessToken}` } } }) // static bearer token
     : new StreamableHTTPClientTransport(url, { fetch: guardedFetch, authProvider: new DbOAuthProvider(conn.id, false) });
+  return connectSession(transport);
+}
+
+/** Connects an SDK client over `transport` and wraps it as an McpSession. Exported so tests can speak real MCP to a fake server. */
+export async function connectSession(transport: Transport): Promise<McpSession> {
   const client = new Client({ name: "company-brain", version: "1.0.0" });
   try {
     await client.connect(transport, { timeout: CONNECT_TIMEOUT_MS, signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS) });
@@ -72,15 +79,12 @@ async function withSession<T>(conn: ConnectionRow, fn: (s: McpSession) => Promis
     s = await factory(conn);
     return await fn(s);
   } catch (e) {
-    if (e instanceof AuthDecryptError) {
-      // unreadable credentials can never work again: surface it as "needs reconnect", never as a silent unauthenticated call
-      await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, conn.id));
+    // unreadable credentials, a revoked/expired token or a failed refresh can never work again: "needs reconnect",
+    // never a silent unauthenticated call. (A bearer token the server rejects with 401 is the same situation.)
+    if (e instanceof AuthDecryptError || isReauthError(e)) {
+      await db.update(mcpConnections).set({ status: "needs_reauth", lastError: "Authorization expired or was revoked. Reconnect to continue." }).where(eq(mcpConnections.id, conn.id));
       toolCache.delete(conn.id);
-      throw new McpReauthRequired(conn.id);
-    }
-    if (e instanceof McpReauthRequired || (e as Error)?.name === "UnauthorizedError") {
-      await db.update(mcpConnections).set({ status: "error" }).where(eq(mcpConnections.id, conn.id));
-      toolCache.delete(conn.id);
+      void import("./health").then((m) => m.notifyReauth(conn.id)).catch((err) => log.warn("reauth notice failed", { error: String(err) }));
       throw new McpReauthRequired(conn.id);
     }
     throw e;
@@ -89,9 +93,10 @@ async function withSession<T>(conn: ConnectionRow, fn: (s: McpSession) => Promis
   }
 }
 
-export async function listConnectionTools(conn: ConnectionRow): Promise<McpToolInfo[]> {
+/** `fresh` skips the TTL cache (health checks must hit the server). */
+export async function listConnectionTools(conn: ConnectionRow, fresh = false): Promise<McpToolInfo[]> {
   const hit = toolCache.get(conn.id);
-  if (hit && Date.now() - hit.at < TTL) return hit.tools;
+  if (!fresh && hit && Date.now() - hit.at < TTL) return hit.tools;
   const tools = await withSession(conn, (s) => s.listTools());
   toolCache.set(conn.id, { at: Date.now(), tools });
   return tools;

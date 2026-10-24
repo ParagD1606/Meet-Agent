@@ -118,7 +118,12 @@ export class DbOAuthProvider implements OAuthClientProvider {
       state: undefined,
       stateExpiresAt: undefined,
     }));
-    await db.update(mcpConnections).set({ status: "connected" }).where(eq(mcpConnections.id, this.connectionId));
+    await db.update(mcpConnections).set({ status: "connected", lastError: null, reauthNotified: false, connectedAt: new Date() }).where(eq(mcpConnections.id, this.connectionId));
+  }
+  /** The SDK calls this when a refresh is rejected (invalid_grant): drop the dead tokens so the next call asks for a clean reconnect instead of replaying them. */
+  async invalidateCredentials(scope: "all" | "client" | "tokens" | "verifier" | "discovery") {
+    if (scope === "all" || scope === "tokens") await writeAuth(this.connectionId, { accessToken: undefined, refreshToken: undefined, expiresAt: undefined });
+    if (scope === "all" || scope === "client") await writeAuth(this.connectionId, { clientInfo: undefined });
   }
   async saveCodeVerifier(v: string) { await writeAuth(this.connectionId, { codeVerifier: v }); }
   async codeVerifier() {

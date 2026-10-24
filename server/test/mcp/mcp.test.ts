@@ -9,6 +9,7 @@ import { createConnection, deleteConnection, handleOAuthCallback, listConnection
 import { DbOAuthProvider, readAuth, writeAuth } from "../../src/mcp/oauth";
 import { buildMcpTools, type McpToolCtx } from "../../src/mcp/tools";
 import { invalidateApprovalCards, setApprovalCards } from "../../src/mcp/policy";
+import { setOrgWrites } from "../../src/mcp/writes";
 import { decideLease } from "../../src/turn/lease";
 import { fakeMcp, fakeSlack, seedTurn, seedUsers, type ToolCall } from "../turn/helpers";
 import { users } from "../../src/db/schema";
@@ -65,11 +66,11 @@ describe("connections", () => {
     expect(c.status).toBe("pending");
     const p = new DbOAuthProvider(c.id, true);
     await p.saveTokens({ access_token: "a1", refresh_token: "r1", token_type: "Bearer", expires_in: 3600 });
-    await p.saveTokens({ access_token: "a2", token_type: "Bearer", expires_in: 3600 });
+    await p.saveTokens({ access_token: "access-token-two", token_type: "Bearer", expires_in: 3600 });
     const t = await p.tokens();
-    expect(t).toMatchObject({ access_token: "a2", refresh_token: "r1" });
+    expect(t).toMatchObject({ access_token: "access-token-two", refresh_token: "r1" });
     const [raw] = await db.select().from(mcpConnections).where(eq(mcpConnections.id, c.id));
-    expect(raw!.authEnc).not.toContain("a2");
+    expect(raw!.authEnc).not.toContain("access-token-two");
     expect(raw!.status).toBe("connected");
     const state = await p.state();
     expect((await readAuth(c.id)).state).toBe(state);
@@ -87,7 +88,8 @@ describe("tool exposure", () => {
     expect(Object.keys(tools).sort()).toEqual(["github__list_issues", "linear__list_issues"]);
   });
 
-  test("writes only from the asker's own connection: org-only providers expose reads only", async () => {
+  test("with workspace writes off, org-only providers expose reads only; the asker's own account still writes", async () => {
+    await setOrgWrites(false);
     await createConnection({ provider: "linear", scope: "org", token: "t" });
     expect(Object.keys((await buildMcpTools(ctx())).tools)).toEqual(["linear__list_issues"]);
     await createConnection({ provider: "github", scope: "user", ownerUserId: "UASK", token: "t" });
@@ -102,8 +104,8 @@ describe("tool exposure", () => {
 
   test("a teammate's connection is invisible; unauthenticated automation sees org only", async () => {
     await createConnection({ provider: "github", scope: "user", ownerUserId: "UOWN", token: "t" });
-    expect((await buildMcpTools(ctx())).tools).toEqual({});
-    const org = await createConnection({ provider: "linear", scope: "org", token: "t" });
+    expect(Object.keys((await buildMcpTools(ctx())).tools)).toEqual(["request_teammate_access"]); // only the way to ask the owner
+    const org =await createConnection({ provider: "linear", scope: "org", token: "t" });
     expect(Object.keys((await buildMcpTools(ctx({ userId: null }))).tools)).toEqual(["linear__list_issues"]);
     expect(org.id).toBeTruthy();
   });
@@ -149,10 +151,10 @@ describe("tool exposure", () => {
     const ownerConn = await createConnection({ provider: "github", scope: "user", ownerUserId: "UOWN", token: "t" });
     const lease = { id: "lease1", connectionId: ownerConn.id, ownerUserId: "UOWN", requesterId: "UASK", turnId: "turn1", status: "pending" as const, expiresAt: new Date(Date.now() + 60_000) };
     await db.insert(leases).values(lease);
-    expect((await buildMcpTools(ctx())).tools).toEqual({}); // not granted yet
+    expect(Object.keys((await buildMcpTools(ctx())).tools)).toEqual(["request_teammate_access"]); // not granted yet
     await decideLease("lease1", "UOWN", true);
     const { tools } = await buildMcpTools(ctx());
-    expect(Object.keys(tools)).toEqual(["github__list_issues"]); // reads only, never writes
+    expect(Object.keys(tools).filter((k) => k !== "request_teammate_access")).toEqual(["github__list_issues"]); // reads only, never writes
     expect(await run(tools, "github__list_issues")).toBe("ok:list_issues");
     expect(calls[0]!.connectionId).toBe(ownerConn.id);
     expect(String(await run(tools, "github__list_issues"))).toContain("already been used");
