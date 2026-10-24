@@ -1,0 +1,294 @@
+{"_header": true, "set": "drift-3", "version": 1, "date": "2026-10-24", "theme": "people", "days": 84, "startAgoDays": 90, "facts": 244, "entities": 40}
+{"day": 0, "op": "add", "key": "Vanxanus|desk zone", "entity": "Vanxanus", "attr": "desk zone", "value": "amber zone", "text": "Vanxanus desk zone is amber zone"}
+{"day": 0, "op": "add", "key": "Quinexyn|mentor", "entity": "Quinexyn", "attr": "mentor", "value": "Pia Jensen", "text": "Quinexyn mentor is Pia Jensen"}
+{"day": 0, "op": "add", "key": "Osttalor|office", "entity": "Osttalor", "attr": "office", "value": "Austin", "text": "Osttalor office is Austin"}
+{"day": 0, "op": "add", "key": "Zeltreor|team", "entity": "Zeltreor", "attr": "team", "value": "design", "text": "Zeltreor team is design"}
+{"day": 0, "op": "add", "key": "Savnexor|mentor", "entity": "Savnexor", "attr": "mentor", "value": "Hugo Lambert", "text": "Savnexor mentor is Hugo Lambert"}
+{"day": 0, "op": "add", "key": "Zubyaria|level", "entity": "Zubyaria", "attr": "level", "value": "L4", "text": "Zubyaria level is L4"}
+{"day": 0, "op": "add", "key": "Xankoryn|level", "entity": "Xankoryn", "attr": "level", "value": "L7", "text": "Xankoryn level is L7"}
+{"day": 0, "op": "add", "key": "Brolumon|manager", "entity": "Brolumon", "attr": "manager", "value": "Esme Walker", "text": "Brolumon manager is Esme Walker"}
+{"day": 1, "op": "add", "key": "Fentreyn|team", "entity": "Fentreyn", "attr": "team", "value": "design", "text": "Fentreyn team is design"}
+{"day": 1, "op": "add", "key": "Wynzelar|team", "entity": "Wynzelar", "attr": "team", "value": "finance", "text": "Wynzelar team is finance"}
+{"day": 1, "op": "add", "key": "Wynzelar|manager", "entity": "Wynzelar", "attr": "manager", "value": "Farid Nasser", "text": "Wynzelar manager is Farid Nasser"}
+{"day": 1, "op": "add", "key": "Pryvanar|office", "entity": "Pryvanar", "attr": "office", "value": "Dublin", "text": "Pryvanar office is Dublin"}
+{"day": 1, "op": "add", "key": "Prymirus|desk zone", "entity": "Prymirus", "attr": "desk zone", "value": "blue zone", "text": "Prymirus desk zone is blue zone"}
+{"day": 1, "op": "add", "key": "Prymirus|team", "entity": "Prymirus", "attr": "team", "value": "growth", "text": "Prymirus team is growth"}
+{"day": 1, "op": "add", "key": "Quitreia|office", "entity": "Quitreia", "attr": "office", "value": "Dublin", "text": "Quitreia office is Dublin"}
+{"day": 1, "op": "add", "key": "Mirwynia|mentor", "entity": "Mirwynia", "attr": "mentor", "value": "Mona Eid", "text": "Mirwynia mentor is Mona Eid"}
+{"day": 2, "op": "add", "key": "Ulmxania|level", "entity": "Ulmxania", "attr": "level", "value": "L3", "text": "Ulmxania level is L3"}
+{"day": 2, "op": "add", "key": "Talpryia|desk zone", "entity": "Talpryia", "attr": "desk zone", "value": "amber zone", "text": "Talpryia desk zone is amber zone"}
+{"day": 2, "op": "add", "key": "Vanxanus|mentor", "entity": "Vanxanus", "attr": "mentor", "value": "Sven Lund", "text": "Vanxanus mentor is Sven Lund"}
+{"day": 2, "op": "add", "key": "Prytalar|level", "entity": "Prytalar", "attr": "level", "value": "L7", "text": "Prytalar level is L7"}
+{"day": 2, "op": "add", "key": "Quidrayn|team", "entity": "Quidrayn", "attr": "team", "value": "support", "text": "Quidrayn team is support"}
+{"day": 2, "op": "add", "key": "Wynpryyn|manager", "entity": "Wynpryyn", "attr": "manager", "value": "Tara Singh", "text": "Wynpryyn manager is Tara Singh"}
+{"day": 2, "op": "add", "key": "Savsavor|mentor", "entity": "Savsavor", "attr": "mentor", "value": "Ines Moreau", "text": "Savsavor mentor is Ines Moreau"}
+{"day": 2, "op": "add", "key": "Brolumon|office", "entity": "Brolumon", "attr": "office", "value": "Berlin", "text": "Brolumon office is Berlin"}
+{"day": 2, "op": "add", "key": "Mirwynia|manager", "entity": "Mirwynia", "attr": "manager", "value": "Esme Walker", "text": "Mirwynia manager is Esme Walker"}
+{"day": 3, "op": "add", "key": "Fentreyn|level", "entity": "Fentreyn", "attr": "level", "value": "L6", "text": "Fentreyn level is L6"}
+{"day": 3, "op": "add", "key": "Nexfenex|mentor", "entity": "Nexfenex", "attr": "mentor", "value": "Jonas Berg", "text": "Nexfenex mentor is Jonas Berg"}
+{"day": 3, "op": "add", "key": "Prytalar|team", "entity": "Prytalar", "attr": "team", "value": "finance", "text": "Prytalar team is finance"}
+{"day": 3, "op": "add", "key": "Yarzubar|desk zone", "entity": "Yarzubar", "attr": "desk zone", "value": "red zone", "text": "Yarzubar desk zone is red zone"}
+{"day": 3, "op": "add", "key": "Savnexor|manager", "entity": "Savnexor", "attr": "manager", "value": "Opal Reyes", "text": "Savnexor manager is Opal Reyes"}
+{"day": 3, "op": "add", "key": "Zubyaria|manager", "entity": "Zubyaria", "attr": "manager", "value": "Quentin Roy", "text": "Zubyaria manager is Quentin Roy"}
+{"day": 4, "op": "add", "key": "Ulmxania|desk zone", "entity": "Ulmxania", "attr": "desk zone", "value": "green zone", "text": "Ulmxania desk zone is green zone"}
+{"day": 4, "op": "add", "key": "Ulmwynyn|manager", "entity": "Ulmwynyn", "attr": "manager", "value": "Carmen Ortiz", "text": "Ulmwynyn manager is Carmen Ortiz"}
+{"day": 4, "op": "add", "key": "Vanxanus|office", "entity": "Vanxanus", "attr": "office", "value": "Berlin", "text": "Vanxanus office is Berlin"}
+{"day": 4, "op": "add", "key": "Pryvanar|team", "entity": "Pryvanar", "attr": "team", "value": "support", "text": "Pryvanar team is support"}
+{"day": 4, "op": "add", "key": "Yarzubar|mentor", "entity": "Yarzubar", "attr": "mentor", "value": "Farid Nasser", "text": "Yarzubar mentor is Farid Nasser"}
+{"day": 4, "op": "add", "key": "Savnexor|team", "entity": "Savnexor", "attr": "team", "value": "data", "text": "Savnexor team is data"}
+{"day": 4, "op": "add", "key": "Brofenor|level", "entity": "Brofenor", "attr": "level", "value": "L5", "text": "Brofenor level is L5"}
+{"day": 4, "op": "add", "key": "Xanzubex|manager", "entity": "Xanzubex", "attr": "manager", "value": "Keira Doyle", "text": "Xanzubex manager is Keira Doyle"}
+{"day": 4, "op": "add", "key": "Korulmex|team", "entity": "Korulmex", "attr": "team", "value": "support", "text": "Korulmex team is support"}
+{"day": 4, "op": "add", "key": "Bropryon|manager", "entity": "Bropryon", "attr": "manager", "value": "Farid Nasser", "text": "Bropryon manager is Farid Nasser"}
+{"day": 5, "op": "add", "key": "Fentreyn|mentor", "entity": "Fentreyn", "attr": "mentor", "value": "Quentin Roy", "text": "Fentreyn mentor is Quentin Roy"}
+{"day": 5, "op": "add", "key": "Xantreor|mentor", "entity": "Xantreor", "attr": "mentor", "value": "Hugo Lambert", "text": "Xantreor mentor is Hugo Lambert"}
+{"day": 5, "op": "add", "key": "Ulmwynyn|level", "entity": "Ulmwynyn", "attr": "level", "value": "L6", "text": "Ulmwynyn level is L6"}
+{"day": 5, "op": "add", "key": "Prysavus|level", "entity": "Prysavus", "attr": "level", "value": "L5", "text": "Prysavus level is L5"}
+{"day": 5, "op": "add", "key": "Brokoror|team", "entity": "Brokoror", "attr": "team", "value": "design", "text": "Brokoror team is design"}
+{"day": 5, "op": "add", "key": "Brokoror|desk zone", "entity": "Brokoror", "attr": "desk zone", "value": "green zone", "text": "Brokoror desk zone is green zone"}
+{"day": 5, "op": "add", "key": "Osttalor|team", "entity": "Osttalor", "attr": "team", "value": "finance", "text": "Osttalor team is finance"}
+{"day": 5, "op": "add", "key": "Wyndraus|team", "entity": "Wyndraus", "attr": "team", "value": "data", "text": "Wyndraus team is data"}
+{"day": 5, "op": "add", "key": "Zubyaria|office", "entity": "Zubyaria", "attr": "office", "value": "Dublin", "text": "Zubyaria office is Dublin"}
+{"day": 5, "op": "add", "key": "Quitreia|mentor", "entity": "Quitreia", "attr": "mentor", "value": "Farid Nasser", "text": "Quitreia mentor is Farid Nasser"}
+{"day": 5, "op": "add", "key": "Savsavor|manager", "entity": "Savsavor", "attr": "manager", "value": "Nils Persson", "text": "Savsavor manager is Nils Persson"}
+{"day": 5, "op": "add", "key": "Mirwynia|team", "entity": "Mirwynia", "attr": "team", "value": "support", "text": "Mirwynia team is support"}
+{"day": 6, "op": "add", "key": "Ulmxania|office", "entity": "Ulmxania", "attr": "office", "value": "Pune", "text": "Ulmxania office is Pune"}
+{"day": 6, "op": "add", "key": "Kornexon|desk zone", "entity": "Kornexon", "attr": "desk zone", "value": "red zone", "text": "Kornexon desk zone is red zone"}
+{"day": 6, "op": "add", "key": "Nexyarex|team", "entity": "Nexyarex", "attr": "team", "value": "platform", "text": "Nexyarex team is platform"}
+{"day": 6, "op": "add", "key": "Quidrayn|level", "entity": "Quidrayn", "attr": "level", "value": "L5", "text": "Quidrayn level is L5"}
+{"day": 6, "op": "add", "key": "Yarzubar|manager", "entity": "Yarzubar", "attr": "manager", "value": "Hugo Lambert", "text": "Yarzubar manager is Hugo Lambert"}
+{"day": 6, "op": "add", "key": "Quinexyn|manager", "entity": "Quinexyn", "attr": "manager", "value": "Esme Walker", "text": "Quinexyn manager is Esme Walker"}
+{"day": 6, "op": "add", "key": "Quinexyn|team", "entity": "Quinexyn", "attr": "team", "value": "growth", "text": "Quinexyn team is growth"}
+{"day": 6, "op": "add", "key": "Zeltreor|level", "entity": "Zeltreor", "attr": "level", "value": "L6", "text": "Zeltreor level is L6"}
+{"day": 6, "op": "add", "key": "Vanvania|mentor", "entity": "Vanvania", "attr": "mentor", "value": "Sven Lund", "text": "Vanvania mentor is Sven Lund"}
+{"day": 6, "op": "add", "key": "Savsavor|override", "entity": "Savsavor", "attr": "override", "value": "temp-941", "forgetAfterDay": 20, "text": "Savsavor has a temporary override code temp-941 until day 20"}
+{"day": 7, "op": "add", "key": "Xantreor|team", "entity": "Xantreor", "attr": "team", "value": "platform", "text": "Xantreor team is platform"}
+{"day": 7, "op": "add", "key": "Nexyarex|mentor", "entity": "Nexyarex", "attr": "mentor", "value": "Aiko Tanaka", "text": "Nexyarex mentor is Aiko Tanaka"}
+{"day": 7, "op": "add", "key": "Yarnexia|team", "entity": "Yarnexia", "attr": "team", "value": "support", "text": "Yarnexia team is support"}
+{"day": 7, "op": "add", "key": "Lumwynon|mentor", "entity": "Lumwynon", "attr": "mentor", "value": "Farid Nasser", "text": "Lumwynon mentor is Farid Nasser"}
+{"day": 8, "op": "add", "key": "Vanxanus|level", "entity": "Vanxanus", "attr": "level", "value": "L6", "text": "Vanxanus level is L6"}
+{"day": 8, "op": "add", "key": "Quidrayn|manager", "entity": "Quidrayn", "attr": "manager", "value": "Quentin Roy", "text": "Quidrayn manager is Quentin Roy"}
+{"day": 8, "op": "add", "key": "Quitalia|team", "entity": "Quitalia", "attr": "team", "value": "finance", "text": "Quitalia team is finance"}
+{"day": 8, "op": "add", "key": "Yarzubar|team", "entity": "Yarzubar", "attr": "team", "value": "growth", "text": "Yarzubar team is growth"}
+{"day": 8, "op": "add", "key": "Prymirus|office", "entity": "Prymirus", "attr": "office", "value": "Toronto", "text": "Prymirus office is Toronto"}
+{"day": 8, "op": "add", "key": "Zeltreor|office", "entity": "Zeltreor", "attr": "office", "value": "Dublin", "text": "Zeltreor office is Dublin"}
+{"day": 8, "op": "add", "key": "Korvania|desk zone", "entity": "Korvania", "attr": "desk zone", "value": "red zone", "text": "Korvania desk zone is red zone"}
+{"day": 8, "op": "add", "key": "Vanvania|team", "entity": "Vanvania", "attr": "team", "value": "support", "text": "Vanvania team is support"}
+{"day": 8, "op": "add", "key": "Bropryon|level", "entity": "Bropryon", "attr": "level", "value": "L5", "text": "Bropryon level is L5"}
+{"day": 8, "op": "add", "key": "Brofenor|override", "entity": "Brofenor", "attr": "override", "value": "temp-343", "forgetAfterDay": 15, "text": "Brofenor has a temporary override code temp-343 until day 15"}
+{"day": 9, "op": "add", "key": "Ulmxania|team", "entity": "Ulmxania", "attr": "team", "value": "design", "text": "Ulmxania team is design"}
+{"day": 9, "op": "add", "key": "Xantreor|manager", "entity": "Xantreor", "attr": "manager", "value": "Farid Nasser", "text": "Xantreor manager is Farid Nasser"}
+{"day": 9, "op": "add", "key": "Nexfenex|team", "entity": "Nexfenex", "attr": "team", "value": "data", "text": "Nexfenex team is data"}
+{"day": 9, "op": "add", "key": "Quitalia|desk zone", "entity": "Quitalia", "attr": "desk zone", "value": "blue zone", "text": "Quitalia desk zone is blue zone"}
+{"day": 9, "op": "add", "key": "Xankoryn|office", "entity": "Xankoryn", "attr": "office", "value": "Toronto", "text": "Xankoryn office is Toronto"}
+{"day": 9, "op": "add", "key": "Brofenor|office", "entity": "Brofenor", "attr": "office", "value": "Berlin", "text": "Brofenor office is Berlin"}
+{"day": 9, "op": "add", "key": "Xanzubex|level", "entity": "Xanzubex", "attr": "level", "value": "L6", "text": "Xanzubex level is L6"}
+{"day": 9, "op": "add", "key": "Quitreia|manager", "entity": "Quitreia", "attr": "manager", "value": "Greta Olsen", "text": "Quitreia manager is Greta Olsen"}
+{"day": 9, "op": "add", "key": "Savsavor|office", "entity": "Savsavor", "attr": "office", "value": "Toronto", "text": "Savsavor office is Toronto"}
+{"day": 9, "op": "add", "key": "Korulmex|manager", "entity": "Korulmex", "attr": "manager", "value": "Quentin Roy", "text": "Korulmex manager is Quentin Roy"}
+{"day": 9, "op": "add", "key": "Bropryon|desk zone", "entity": "Bropryon", "attr": "desk zone", "value": "red zone", "text": "Bropryon desk zone is red zone"}
+{"day": 9, "op": "add", "key": "Quitalia|override", "entity": "Quitalia", "attr": "override", "value": "temp-519", "forgetAfterDay": 17, "text": "Quitalia has a temporary override code temp-519 until day 17"}
+{"day": 10, "op": "add", "key": "Fentreyn|manager", "entity": "Fentreyn", "attr": "manager", "value": "Tara Singh", "text": "Fentreyn manager is Tara Singh"}
+{"day": 10, "op": "add", "key": "Xantreor|office", "entity": "Xantreor", "attr": "office", "value": "Pune", "text": "Xantreor office is Pune"}
+{"day": 10, "op": "add", "key": "Ulmwynyn|mentor", "entity": "Ulmwynyn", "attr": "mentor", "value": "Greta Olsen", "text": "Ulmwynyn mentor is Greta Olsen"}
+{"day": 10, "op": "add", "key": "Quitalia|level", "entity": "Quitalia", "attr": "level", "value": "L3", "text": "Quitalia level is L3"}
+{"day": 10, "op": "add", "key": "Zubyaria|mentor", "entity": "Zubyaria", "attr": "mentor", "value": "Pia Jensen", "text": "Zubyaria mentor is Pia Jensen"}
+{"day": 10, "op": "add", "key": "Yarnexia|manager", "entity": "Yarnexia", "attr": "manager", "value": "Ines Moreau", "text": "Yarnexia manager is Ines Moreau"}
+{"day": 10, "op": "add", "key": "Yarnexia|office", "entity": "Yarnexia", "attr": "office", "value": "Berlin", "text": "Yarnexia office is Berlin"}
+{"day": 10, "op": "add", "key": "Vanvania|desk zone", "entity": "Vanvania", "attr": "desk zone", "value": "amber zone", "text": "Vanvania desk zone is amber zone"}
+{"day": 10, "op": "add", "key": "Mirwynia|desk zone", "entity": "Mirwynia", "attr": "desk zone", "value": "blue zone", "text": "Mirwynia desk zone is blue zone"}
+{"day": 11, "op": "add", "key": "Kornexon|manager", "entity": "Kornexon", "attr": "manager", "value": "Carmen Ortiz", "text": "Kornexon manager is Carmen Ortiz"}
+{"day": 11, "op": "add", "key": "Nexyarex|level", "entity": "Nexyarex", "attr": "level", "value": "L5", "text": "Nexyarex level is L5"}
+{"day": 11, "op": "add", "key": "Nexyarex|desk zone", "entity": "Nexyarex", "attr": "desk zone", "value": "blue zone", "text": "Nexyarex desk zone is blue zone"}
+{"day": 11, "op": "add", "key": "Fenxanex|manager", "entity": "Fenxanex", "attr": "manager", "value": "Mona Eid", "text": "Fenxanex manager is Mona Eid"}
+{"day": 11, "op": "add", "key": "Vansavia|desk zone", "entity": "Vansavia", "attr": "desk zone", "value": "green zone", "text": "Vansavia desk zone is green zone"}
+{"day": 11, "op": "add", "key": "Wyndraus|desk zone", "entity": "Wyndraus", "attr": "desk zone", "value": "red zone", "text": "Wyndraus desk zone is red zone"}
+{"day": 11, "op": "add", "key": "Korvania|office", "entity": "Korvania", "attr": "office", "value": "Dublin", "text": "Korvania office is Dublin"}
+{"day": 11, "op": "add", "key": "Korvania|mentor", "entity": "Korvania", "attr": "mentor", "value": "Pia Jensen", "text": "Korvania mentor is Pia Jensen"}
+{"day": 11, "op": "add", "key": "Xanzubex|mentor", "entity": "Xanzubex", "attr": "mentor", "value": "Dev Malhotra", "text": "Xanzubex mentor is Dev Malhotra"}
+{"day": 11, "op": "add", "key": "Brolumon|team", "entity": "Brolumon", "attr": "team", "value": "finance", "text": "Brolumon team is finance"}
+{"day": 11, "op": "add", "key": "Xanzubex|override", "entity": "Xanzubex", "attr": "override", "value": "temp-455", "forgetAfterDay": 19, "text": "Xanzubex has a temporary override code temp-455 until day 19"}
+{"day": 12, "op": "add", "key": "Nexfenex|office", "entity": "Nexfenex", "attr": "office", "value": "Berlin", "text": "Nexfenex office is Berlin"}
+{"day": 12, "op": "add", "key": "Talpryia|team", "entity": "Talpryia", "attr": "team", "value": "support", "text": "Talpryia team is support"}
+{"day": 12, "op": "add", "key": "Prytalar|desk zone", "entity": "Prytalar", "attr": "desk zone", "value": "green zone", "text": "Prytalar desk zone is green zone"}
+{"day": 12, "op": "add", "key": "Quidrayn|mentor", "entity": "Quidrayn", "attr": "mentor", "value": "Keira Doyle", "text": "Quidrayn mentor is Keira Doyle"}
+{"day": 12, "op": "add", "key": "Brokoror|mentor", "entity": "Brokoror", "attr": "mentor", "value": "Hugo Lambert", "text": "Brokoror mentor is Hugo Lambert"}
+{"day": 12, "op": "add", "key": "Zeltreor|mentor", "entity": "Zeltreor", "attr": "mentor", "value": "Esme Walker", "text": "Zeltreor mentor is Esme Walker"}
+{"day": 12, "op": "add", "key": "Yarnexia|mentor", "entity": "Yarnexia", "attr": "mentor", "value": "Sven Lund", "text": "Yarnexia mentor is Sven Lund"}
+{"day": 12, "op": "add", "key": "Korulmex|mentor", "entity": "Korulmex", "attr": "mentor", "value": "Quentin Roy", "text": "Korulmex mentor is Quentin Roy"}
+{"day": 13, "op": "add", "key": "Wynzelar|level", "entity": "Wynzelar", "attr": "level", "value": "L4", "text": "Wynzelar level is L4"}
+{"day": 13, "op": "add", "key": "Nexfenex|desk zone", "entity": "Nexfenex", "attr": "desk zone", "value": "amber zone", "text": "Nexfenex desk zone is amber zone"}
+{"day": 13, "op": "add", "key": "Quitalia|manager", "entity": "Quitalia", "attr": "manager", "value": "Sven Lund", "text": "Quitalia manager is Sven Lund"}
+{"day": 13, "op": "add", "key": "Brokoror|level", "entity": "Brokoror", "attr": "level", "value": "L7", "text": "Brokoror level is L7"}
+{"day": 13, "op": "add", "key": "Osttalor|desk zone", "entity": "Osttalor", "attr": "desk zone", "value": "amber zone", "text": "Osttalor desk zone is amber zone"}
+{"day": 13, "op": "add", "key": "Wyndraus|level", "entity": "Wyndraus", "attr": "level", "value": "L7", "text": "Wyndraus level is L7"}
+{"day": 13, "op": "add", "key": "Brofenor|manager", "entity": "Brofenor", "attr": "manager", "value": "Keira Doyle", "text": "Brofenor manager is Keira Doyle"}
+{"day": 14, "op": "add", "key": "Fenxanex|mentor", "entity": "Fenxanex", "attr": "mentor", "value": "Nils Persson", "text": "Fenxanex mentor is Nils Persson"}
+{"day": 14, "op": "add", "key": "Talpryia|manager", "entity": "Talpryia", "attr": "manager", "value": "Nils Persson", "text": "Talpryia manager is Nils Persson"}
+{"day": 14, "op": "add", "key": "Vansavia|manager", "entity": "Vansavia", "attr": "manager", "value": "Quentin Roy", "text": "Vansavia manager is Quentin Roy"}
+{"day": 14, "op": "add", "key": "Wyndraus|mentor", "entity": "Wyndraus", "attr": "mentor", "value": "Bruno Costa", "text": "Wyndraus mentor is Bruno Costa"}
+{"day": 14, "op": "add", "key": "Wynpryyn|team", "entity": "Wynpryyn", "attr": "team", "value": "finance", "text": "Wynpryyn team is finance"}
+{"day": 14, "op": "add", "key": "Savsavor|desk zone", "entity": "Savsavor", "attr": "desk zone", "value": "red zone", "text": "Savsavor desk zone is red zone"}
+{"day": 14, "op": "add", "key": "Lumwynon|desk zone", "entity": "Lumwynon", "attr": "desk zone", "value": "blue zone", "text": "Lumwynon desk zone is blue zone"}
+{"day": 14, "op": "add", "key": "Lumwynon|office", "entity": "Lumwynon", "attr": "office", "value": "Dublin", "text": "Lumwynon office is Dublin"}
+{"day": 14, "op": "add", "key": "Mirwynia|override", "entity": "Mirwynia", "attr": "override", "value": "temp-918", "forgetAfterDay": 25, "text": "Mirwynia has a temporary override code temp-918 until day 25"}
+{"day": 15, "op": "add", "key": "Kornexon|office", "entity": "Kornexon", "attr": "office", "value": "Berlin", "text": "Kornexon office is Berlin"}
+{"day": 15, "op": "add", "key": "Pryvanar|level", "entity": "Pryvanar", "attr": "level", "value": "L4", "text": "Pryvanar level is L4"}
+{"day": 15, "op": "add", "key": "Prysavus|desk zone", "entity": "Prysavus", "attr": "desk zone", "value": "red zone", "text": "Prysavus desk zone is red zone"}
+{"day": 15, "op": "add", "key": "Vansavia|mentor", "entity": "Vansavia", "attr": "mentor", "value": "Bruno Costa", "text": "Vansavia mentor is Bruno Costa"}
+{"day": 15, "op": "add", "key": "Savnexor|level", "entity": "Savnexor", "attr": "level", "value": "L3", "text": "Savnexor level is L3"}
+{"day": 15, "op": "add", "key": "Wynpryyn|level", "entity": "Wynpryyn", "attr": "level", "value": "L3", "text": "Wynpryyn level is L3"}
+{"day": 15, "op": "add", "key": "Brolumon|level", "entity": "Brolumon", "attr": "level", "value": "L7", "text": "Brolumon level is L7"}
+{"day": 16, "op": "add", "key": "Kornexon|mentor", "entity": "Kornexon", "attr": "mentor", "value": "Aiko Tanaka", "text": "Kornexon mentor is Aiko Tanaka"}
+{"day": 16, "op": "add", "key": "Fenxanex|desk zone", "entity": "Fenxanex", "attr": "desk zone", "value": "blue zone", "text": "Fenxanex desk zone is blue zone"}
+{"day": 16, "op": "add", "key": "Pryvanar|mentor", "entity": "Pryvanar", "attr": "mentor", "value": "Mona Eid", "text": "Pryvanar mentor is Mona Eid"}
+{"day": 16, "op": "add", "key": "Quinexyn|desk zone", "entity": "Quinexyn", "attr": "desk zone", "value": "amber zone", "text": "Quinexyn desk zone is amber zone"}
+{"day": 16, "op": "add", "key": "Prymirus|manager", "entity": "Prymirus", "attr": "manager", "value": "Opal Reyes", "text": "Prymirus manager is Opal Reyes"}
+{"day": 16, "op": "add", "key": "Xankoryn|mentor", "entity": "Xankoryn", "attr": "mentor", "value": "Bruno Costa", "text": "Xankoryn mentor is Bruno Costa"}
+{"day": 16, "op": "add", "key": "Korvania|manager", "entity": "Korvania", "attr": "manager", "value": "Aiko Tanaka", "text": "Korvania manager is Aiko Tanaka"}
+{"day": 16, "op": "add", "key": "Brofenor|team", "entity": "Brofenor", "attr": "team", "value": "growth", "text": "Brofenor team is growth"}
+{"day": 17, "op": "add", "key": "Ulmwynyn|team", "entity": "Ulmwynyn", "attr": "team", "value": "growth", "text": "Ulmwynyn team is growth"}
+{"day": 17, "op": "add", "key": "Wynzelar|mentor", "entity": "Wynzelar", "attr": "mentor", "value": "Tara Singh", "text": "Wynzelar mentor is Tara Singh"}
+{"day": 17, "op": "add", "key": "Talpryia|office", "entity": "Talpryia", "attr": "office", "value": "Pune", "text": "Talpryia office is Pune"}
+{"day": 17, "op": "add", "key": "Prysavus|office", "entity": "Prysavus", "attr": "office", "value": "Lisbon", "text": "Prysavus office is Lisbon"}
+{"day": 17, "op": "add", "key": "Prysavus|team", "entity": "Prysavus", "attr": "team", "value": "design", "text": "Prysavus team is design"}
+{"day": 17, "op": "add", "key": "Osttalor|level", "entity": "Osttalor", "attr": "level", "value": "L7", "text": "Osttalor level is L7"}
+{"day": 17, "op": "add", "key": "Vansavia|team", "entity": "Vansavia", "attr": "team", "value": "platform", "text": "Vansavia team is platform"}
+{"day": 17, "op": "add", "key": "Xanzubex|team", "entity": "Xanzubex", "attr": "team", "value": "design", "text": "Xanzubex team is design"}
+{"day": 17, "op": "add", "key": "Quitreia|team", "entity": "Quitreia", "attr": "team", "value": "support", "text": "Quitreia team is support"}
+{"day": 17, "op": "add", "key": "Korulmex|office", "entity": "Korulmex", "attr": "office", "value": "Pune", "text": "Korulmex office is Pune"}
+{"day": 17, "op": "add", "key": "Bropryon|team", "entity": "Bropryon", "attr": "team", "value": "growth", "text": "Bropryon team is growth"}
+{"day": 18, "op": "add", "key": "Fenxanex|office", "entity": "Fenxanex", "attr": "office", "value": "Lisbon", "text": "Fenxanex office is Lisbon"}
+{"day": 18, "op": "add", "key": "Prytalar|office", "entity": "Prytalar", "attr": "office", "value": "Lisbon", "text": "Prytalar office is Lisbon"}
+{"day": 18, "op": "add", "key": "Xankoryn|team", "entity": "Xankoryn", "attr": "team", "value": "design", "text": "Xankoryn team is design"}
+{"day": 18, "op": "add", "key": "Wynpryyn|office", "entity": "Wynpryyn", "attr": "office", "value": "Lisbon", "text": "Wynpryyn office is Lisbon"}
+{"day": 18, "op": "add", "key": "Vanvania|level", "entity": "Vanvania", "attr": "level", "value": "L5", "text": "Vanvania level is L5"}
+{"day": 18, "op": "add", "key": "Lumwynon|team", "entity": "Lumwynon", "attr": "team", "value": "finance", "text": "Lumwynon team is finance"}
+{"day": 21, "op": "update", "key": "Prytalar|desk zone", "entity": "Prytalar", "attr": "desk zone", "value": "blue zone", "old": "green zone", "text": "Prytalar desk zone is now blue zone"}
+{"day": 21, "op": "update", "key": "Savsavor|manager", "entity": "Savsavor", "attr": "manager", "value": "Sven Lund", "old": "Nils Persson", "text": "Savsavor manager is now Sven Lund"}
+{"day": 23, "op": "add", "key": "Ulmwynyn|override", "entity": "Ulmwynyn", "attr": "override", "value": "temp-854", "forgetAfterDay": 31, "text": "Ulmwynyn has a temporary override code temp-854 until day 31"}
+{"day": 24, "op": "update", "key": "Quidrayn|level", "entity": "Quidrayn", "attr": "level", "value": "L6", "old": "L5", "text": "Quidrayn level is now L6"}
+{"day": 24, "op": "update", "key": "Yarzubar|mentor", "entity": "Yarzubar", "attr": "mentor", "value": "Sven Lund", "old": "Farid Nasser", "text": "Yarzubar mentor is now Sven Lund"}
+{"day": 24, "op": "update", "key": "Xankoryn|mentor", "entity": "Xankoryn", "attr": "mentor", "value": "Esme Walker", "old": "Bruno Costa", "text": "Xankoryn mentor is now Esme Walker"}
+{"day": 25, "op": "add", "key": "Nexfenex|override", "entity": "Nexfenex", "attr": "override", "value": "temp-300", "forgetAfterDay": 38, "text": "Nexfenex has a temporary override code temp-300 until day 38"}
+{"day": 25, "op": "add", "key": "Nexyarex|override", "entity": "Nexyarex", "attr": "override", "value": "temp-969", "forgetAfterDay": 32, "text": "Nexyarex has a temporary override code temp-969 until day 32"}
+{"day": 25, "op": "update", "key": "Yarnexia|mentor", "entity": "Yarnexia", "attr": "mentor", "value": "Hugo Lambert", "old": "Sven Lund", "text": "Yarnexia mentor is now Hugo Lambert"}
+{"day": 26, "op": "update", "key": "Ulmxania|desk zone", "entity": "Ulmxania", "attr": "desk zone", "value": "red zone", "old": "green zone", "text": "Ulmxania desk zone is now red zone"}
+{"day": 26, "op": "update", "key": "Prysavus|desk zone", "entity": "Prysavus", "attr": "desk zone", "value": "blue zone", "old": "red zone", "text": "Prysavus desk zone is now blue zone"}
+{"day": 28, "op": "update", "key": "Brokoror|desk zone", "entity": "Brokoror", "attr": "desk zone", "value": "blue zone", "old": "green zone", "text": "Brokoror desk zone is now blue zone"}
+{"day": 28, "op": "consolidate"}
+{"day": 29, "op": "update", "key": "Prysavus|office", "entity": "Prysavus", "attr": "office", "value": "Toronto", "old": "Lisbon", "text": "Prysavus office is now Toronto"}
+{"day": 32, "op": "add", "key": "Fentreyn|override", "entity": "Fentreyn", "attr": "override", "value": "temp-184", "forgetAfterDay": 41, "text": "Fentreyn has a temporary override code temp-184 until day 41"}
+{"day": 34, "op": "add", "key": "Quitreia|override", "entity": "Quitreia", "attr": "override", "value": "temp-592", "forgetAfterDay": 41, "text": "Quitreia has a temporary override code temp-592 until day 41"}
+{"day": 34, "op": "update", "key": "Yarnexia|team", "entity": "Yarnexia", "attr": "team", "value": "data", "old": "support", "text": "Yarnexia team is now data"}
+{"day": 36, "op": "update", "key": "Zubyaria|manager", "entity": "Zubyaria", "attr": "manager", "value": "Nils Persson", "old": "Quentin Roy", "text": "Zubyaria manager is now Nils Persson"}
+{"day": 38, "op": "update", "key": "Vanxanus|mentor", "entity": "Vanxanus", "attr": "mentor", "value": "Quentin Roy", "old": "Sven Lund", "text": "Vanxanus mentor is now Quentin Roy"}
+{"day": 38, "op": "update", "key": "Brofenor|manager", "entity": "Brofenor", "attr": "manager", "value": "Opal Reyes", "old": "Keira Doyle", "text": "Brofenor manager is now Opal Reyes"}
+{"day": 39, "op": "update", "key": "Korvania|desk zone", "entity": "Korvania", "attr": "desk zone", "value": "amber zone", "old": "red zone", "text": "Korvania desk zone is now amber zone"}
+{"day": 39, "op": "update", "key": "Vanxanus|mentor", "entity": "Vanxanus", "attr": "mentor", "value": "Dev Malhotra", "old": "Quentin Roy", "text": "Vanxanus mentor is now Dev Malhotra"}
+{"day": 40, "op": "update", "key": "Bropryon|level", "entity": "Bropryon", "attr": "level", "value": "L4", "old": "L5", "text": "Bropryon level is now L4"}
+{"day": 40, "op": "dup", "key": "Zubyaria|office", "entity": "Zubyaria", "attr": "office", "value": "Dublin", "text": "Zubyaria office is Dublin", "exact": true}
+{"day": 40, "op": "query", "entity": "Bropryon", "attr": "level", "question": "What is Bropryon's level?", "expect": ["L4"], "forbid": ["L5"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Vanxanus", "attr": "mentor", "question": "What is Vanxanus's mentor?", "expect": ["Dev Malhotra"], "forbid": ["Sven Lund", "Quentin Roy"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Korvania", "attr": "desk zone", "question": "What is Korvania's desk zone?", "expect": ["amber zone"], "forbid": ["red zone"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmxania", "attr": "desk zone", "question": "What is Ulmxania's desk zone?", "expect": ["red zone"], "forbid": ["green zone"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Yarzubar", "attr": "mentor", "question": "What is Yarzubar's mentor?", "expect": ["Sven Lund"], "forbid": ["Farid Nasser"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Prysavus", "attr": "desk zone", "question": "What is Prysavus's desk zone?", "expect": ["blue zone"], "forbid": ["red zone"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Pryvanar", "attr": "team", "question": "What is Pryvanar's team?", "expect": ["support"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmwynyn", "attr": "manager", "question": "What is Ulmwynyn's manager?", "expect": ["Carmen Ortiz"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Xantreor", "attr": "mentor", "question": "What is Xantreor's mentor?", "expect": ["Hugo Lambert"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Prymirus", "attr": "team", "question": "What is Prymirus's team?", "expect": ["growth"], "forbid": [], "asOfDay": 40}
+{"day": 41, "op": "add", "key": "Xankoryn|override", "entity": "Xankoryn", "attr": "override", "value": "temp-589", "forgetAfterDay": 52, "text": "Xankoryn has a temporary override code temp-589 until day 52"}
+{"day": 41, "op": "dup", "key": "Quinexyn|mentor", "entity": "Quinexyn", "attr": "mentor", "value": "Pia Jensen", "text": "The mentor for Quinexyn is Pia Jensen", "exact": false}
+{"day": 42, "op": "add", "key": "Wyndraus|override", "entity": "Wyndraus", "attr": "override", "value": "temp-860", "forgetAfterDay": 51, "text": "Wyndraus has a temporary override code temp-860 until day 51"}
+{"day": 42, "op": "update", "key": "Kornexon|manager", "entity": "Kornexon", "attr": "manager", "value": "Keira Doyle", "old": "Carmen Ortiz", "text": "Kornexon manager is now Keira Doyle"}
+{"day": 43, "op": "add", "key": "Yarnexia|override", "entity": "Yarnexia", "attr": "override", "value": "temp-865", "forgetAfterDay": 52, "text": "Yarnexia has a temporary override code temp-865 until day 52"}
+{"day": 43, "op": "update", "key": "Kornexon|office", "entity": "Kornexon", "attr": "office", "value": "Toronto", "old": "Berlin", "text": "Kornexon office is now Toronto"}
+{"day": 43, "op": "update", "key": "Osttalor|level", "entity": "Osttalor", "attr": "level", "value": "L3", "old": "L7", "text": "Osttalor level is now L3"}
+{"day": 44, "op": "dup", "key": "Lumwynon|desk zone", "entity": "Lumwynon", "attr": "desk zone", "value": "blue zone", "text": "Lumwynon desk zone is blue zone", "exact": true}
+{"day": 44, "op": "dup", "key": "Talpryia|team", "entity": "Talpryia", "attr": "team", "value": "support", "text": "The team for Talpryia is support", "exact": false}
+{"day": 45, "op": "add", "key": "Zubyaria|override", "entity": "Zubyaria", "attr": "override", "value": "temp-622", "forgetAfterDay": 57, "text": "Zubyaria has a temporary override code temp-622 until day 57"}
+{"day": 45, "op": "update", "key": "Pryvanar|team", "entity": "Pryvanar", "attr": "team", "value": "data", "old": "support", "text": "Pryvanar team is now data"}
+{"day": 45, "op": "update", "key": "Korvania|manager", "entity": "Korvania", "attr": "manager", "value": "Ines Moreau", "old": "Aiko Tanaka", "text": "Korvania manager is now Ines Moreau"}
+{"day": 45, "op": "update", "key": "Vanxanus|office", "entity": "Vanxanus", "attr": "office", "value": "Dublin", "old": "Berlin", "text": "Vanxanus office is now Dublin"}
+{"day": 45, "op": "update", "key": "Quitalia|level", "entity": "Quitalia", "attr": "level", "value": "L7", "old": "L3", "text": "Quitalia level is now L7"}
+{"day": 45, "op": "dup", "key": "Vansavia|desk zone", "entity": "Vansavia", "attr": "desk zone", "value": "green zone", "text": "The desk zone for Vansavia is green zone", "exact": false}
+{"day": 45, "op": "dup", "key": "Prymirus|manager", "entity": "Prymirus", "attr": "manager", "value": "Opal Reyes", "text": "The manager for Prymirus is Opal Reyes", "exact": false}
+{"day": 45, "op": "dup", "key": "Xantreor|team", "entity": "Xantreor", "attr": "team", "value": "platform", "text": "The team for Xantreor is platform", "exact": false}
+{"day": 46, "op": "update", "key": "Savnexor|level", "entity": "Savnexor", "attr": "level", "value": "L4", "old": "L3", "text": "Savnexor level is now L4"}
+{"day": 46, "op": "dup", "key": "Vanvania|level", "entity": "Vanvania", "attr": "level", "value": "L5", "text": "The level for Vanvania is L5", "exact": false}
+{"day": 46, "op": "dup", "key": "Wynpryyn|office", "entity": "Wynpryyn", "attr": "office", "value": "Lisbon", "text": "The office for Wynpryyn is Lisbon", "exact": false}
+{"day": 46, "op": "dup", "key": "Brolumon|office", "entity": "Brolumon", "attr": "office", "value": "Berlin", "text": "The office for Brolumon is Berlin", "exact": false}
+{"day": 49, "op": "dup", "key": "Fenxanex|manager", "entity": "Fenxanex", "attr": "manager", "value": "Mona Eid", "text": "Fenxanex manager is Mona Eid", "exact": true}
+{"day": 49, "op": "dup", "key": "Mirwynia|manager", "entity": "Mirwynia", "attr": "manager", "value": "Esme Walker", "text": "The manager for Mirwynia is Esme Walker", "exact": false}
+{"day": 51, "op": "update", "key": "Korvania|mentor", "entity": "Korvania", "attr": "mentor", "value": "Rosa Greco", "old": "Pia Jensen", "text": "Korvania mentor is now Rosa Greco"}
+{"day": 52, "op": "update", "key": "Pryvanar|level", "entity": "Pryvanar", "attr": "level", "value": "L6", "old": "L4", "text": "Pryvanar level is now L6"}
+{"day": 52, "op": "update", "key": "Fentreyn|level", "entity": "Fentreyn", "attr": "level", "value": "L7", "old": "L6", "text": "Fentreyn level is now L7"}
+{"day": 52, "op": "dup", "key": "Brofenor|level", "entity": "Brofenor", "attr": "level", "value": "L5", "text": "Brofenor level is L5", "exact": true}
+{"day": 53, "op": "update", "key": "Mirwynia|mentor", "entity": "Mirwynia", "attr": "mentor", "value": "Sven Lund", "old": "Mona Eid", "text": "Mirwynia mentor is now Sven Lund"}
+{"day": 53, "op": "update", "key": "Xantreor|manager", "entity": "Xantreor", "attr": "manager", "value": "Hugo Lambert", "old": "Farid Nasser", "text": "Xantreor manager is now Hugo Lambert"}
+{"day": 53, "op": "dup", "key": "Korulmex|team", "entity": "Korulmex", "attr": "team", "value": "support", "text": "Korulmex team is support", "exact": true}
+{"day": 53, "op": "dup", "key": "Brofenor|team", "entity": "Brofenor", "attr": "team", "value": "growth", "text": "Brofenor team is growth", "exact": true}
+{"day": 53, "op": "dup", "key": "Fentreyn|team", "entity": "Fentreyn", "attr": "team", "value": "design", "text": "The team for Fentreyn is design", "exact": false}
+{"day": 54, "op": "update", "key": "Korulmex|mentor", "entity": "Korulmex", "attr": "mentor", "value": "Rosa Greco", "old": "Quentin Roy", "text": "Korulmex mentor is now Rosa Greco"}
+{"day": 54, "op": "dup", "key": "Bropryon|manager", "entity": "Bropryon", "attr": "manager", "value": "Farid Nasser", "text": "Bropryon manager is Farid Nasser", "exact": true}
+{"day": 54, "op": "dup", "key": "Quitreia|team", "entity": "Quitreia", "attr": "team", "value": "support", "text": "The team for Quitreia is support", "exact": false}
+{"day": 55, "op": "update", "key": "Osttalor|office", "entity": "Osttalor", "attr": "office", "value": "Dublin", "old": "Austin", "text": "Osttalor office is now Dublin"}
+{"day": 56, "op": "update", "key": "Savsavor|mentor", "entity": "Savsavor", "attr": "mentor", "value": "Luis Herrera", "old": "Ines Moreau", "text": "Savsavor mentor is now Luis Herrera"}
+{"day": 56, "op": "dup", "key": "Fenxanex|mentor", "entity": "Fenxanex", "attr": "mentor", "value": "Nils Persson", "text": "Fenxanex mentor is Nils Persson", "exact": true}
+{"day": 56, "op": "dup", "key": "Quitalia|desk zone", "entity": "Quitalia", "attr": "desk zone", "value": "blue zone", "text": "The desk zone for Quitalia is blue zone", "exact": false}
+{"day": 56, "op": "consolidate"}
+{"day": 57, "op": "dup", "key": "Bropryon|desk zone", "entity": "Bropryon", "attr": "desk zone", "value": "red zone", "text": "Bropryon desk zone is red zone", "exact": true}
+{"day": 57, "op": "dup", "key": "Brofenor|office", "entity": "Brofenor", "attr": "office", "value": "Berlin", "text": "Brofenor office is Berlin", "exact": true}
+{"day": 58, "op": "update", "key": "Lumwynon|office", "entity": "Lumwynon", "attr": "office", "value": "Lisbon", "old": "Dublin", "text": "Lumwynon office is now Lisbon"}
+{"day": 58, "op": "dup", "key": "Ulmxania|level", "entity": "Ulmxania", "attr": "level", "value": "L3", "text": "Ulmxania level is L3", "exact": true}
+{"day": 58, "op": "dup", "key": "Quidrayn|manager", "entity": "Quidrayn", "attr": "manager", "value": "Quentin Roy", "text": "Quidrayn manager is Quentin Roy", "exact": true}
+{"day": 58, "op": "dup", "key": "Quidrayn|mentor", "entity": "Quidrayn", "attr": "mentor", "value": "Keira Doyle", "text": "The mentor for Quidrayn is Keira Doyle", "exact": false}
+{"day": 59, "op": "update", "key": "Prysavus|level", "entity": "Prysavus", "attr": "level", "value": "L3", "old": "L5", "text": "Prysavus level is now L3"}
+{"day": 62, "op": "update", "key": "Vanxanus|level", "entity": "Vanxanus", "attr": "level", "value": "L4", "old": "L6", "text": "Vanxanus level is now L4"}
+{"day": 62, "op": "update", "key": "Nexfenex|team", "entity": "Nexfenex", "attr": "team", "value": "finance", "old": "data", "text": "Nexfenex team is now finance"}
+{"day": 64, "op": "update", "key": "Nexyarex|desk zone", "entity": "Nexyarex", "attr": "desk zone", "value": "amber zone", "old": "blue zone", "text": "Nexyarex desk zone is now amber zone"}
+{"day": 65, "op": "update", "key": "Quinexyn|desk zone", "entity": "Quinexyn", "attr": "desk zone", "value": "green zone", "old": "amber zone", "text": "Quinexyn desk zone is now green zone"}
+{"day": 65, "op": "update", "key": "Quinexyn|manager", "entity": "Quinexyn", "attr": "manager", "value": "Jonas Berg", "old": "Esme Walker", "text": "Quinexyn manager is now Jonas Berg"}
+{"day": 65, "op": "query", "entity": "Yarnexia", "attr": "team", "question": "What is Yarnexia's team?", "expect": ["data"], "forbid": ["support"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Savnexor", "attr": "level", "question": "What is Savnexor's level?", "expect": ["L4"], "forbid": ["L3"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Pryvanar", "attr": "level", "question": "What is Pryvanar's level?", "expect": ["L6"], "forbid": ["L4"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Prysavus", "attr": "desk zone", "question": "What is Prysavus's desk zone?", "expect": ["blue zone"], "forbid": ["red zone"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Yarnexia", "attr": "mentor", "question": "What is Yarnexia's mentor?", "expect": ["Hugo Lambert"], "forbid": ["Sven Lund"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Nexyarex", "attr": "desk zone", "question": "What is Nexyarex's desk zone?", "expect": ["amber zone"], "forbid": ["blue zone"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Ulmxania", "attr": "level", "question": "What is Ulmxania's level?", "expect": ["L3"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Quidrayn", "attr": "team", "question": "What is Quidrayn's team?", "expect": ["support"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Osttalor", "attr": "team", "question": "What is Osttalor's team?", "expect": ["finance"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Ulmwynyn", "attr": "level", "question": "What is Ulmwynyn's level?", "expect": ["L6"], "forbid": [], "asOfDay": 65}
+{"day": 66, "op": "update", "key": "Wynzelar|level", "entity": "Wynzelar", "attr": "level", "value": "L7", "old": "L4", "text": "Wynzelar level is now L7"}
+{"day": 66, "op": "update", "key": "Korulmex|office", "entity": "Korulmex", "attr": "office", "value": "Lisbon", "old": "Pune", "text": "Korulmex office is now Lisbon"}
+{"day": 68, "op": "update", "key": "Talpryia|desk zone", "entity": "Talpryia", "attr": "desk zone", "value": "blue zone", "old": "amber zone", "text": "Talpryia desk zone is now blue zone"}
+{"day": 69, "op": "update", "key": "Mirwynia|desk zone", "entity": "Mirwynia", "attr": "desk zone", "value": "red zone", "old": "blue zone", "text": "Mirwynia desk zone is now red zone"}
+{"day": 69, "op": "update", "key": "Yarnexia|manager", "entity": "Yarnexia", "attr": "manager", "value": "Aiko Tanaka", "old": "Ines Moreau", "text": "Yarnexia manager is now Aiko Tanaka"}
+{"day": 83, "op": "consolidate"}
+{"day": 84, "op": "query", "entity": "Fentreyn", "attr": "level", "question": "What is Fentreyn's level?", "expect": ["L7"], "forbid": ["L6"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korulmex", "attr": "mentor", "question": "What is Korulmex's mentor?", "expect": ["Rosa Greco"], "forbid": ["Quentin Roy"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korulmex", "attr": "office", "question": "What is Korulmex's office?", "expect": ["Lisbon"], "forbid": ["Pune"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Brokoror", "attr": "desk zone", "question": "What is Brokoror's desk zone?", "expect": ["blue zone"], "forbid": ["green zone"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quidrayn", "attr": "level", "question": "What is Quidrayn's level?", "expect": ["L6"], "forbid": ["L5"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vanxanus", "attr": "office", "question": "What is Vanxanus's office?", "expect": ["Dublin"], "forbid": ["Berlin"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zubyaria", "attr": "manager", "question": "What is Zubyaria's manager?", "expect": ["Nils Persson"], "forbid": ["Quentin Roy"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vanxanus", "attr": "level", "question": "What is Vanxanus's level?", "expect": ["L4"], "forbid": ["L6"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Prysavus", "attr": "desk zone", "question": "What is Prysavus's desk zone?", "expect": ["blue zone"], "forbid": ["red zone"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xankoryn", "attr": "mentor", "question": "What is Xankoryn's mentor?", "expect": ["Esme Walker"], "forbid": ["Bruno Costa"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Talpryia", "attr": "desk zone", "question": "What is Talpryia's desk zone?", "expect": ["blue zone"], "forbid": ["amber zone"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quinexyn", "attr": "manager", "question": "What is Quinexyn's manager?", "expect": ["Jonas Berg"], "forbid": ["Esme Walker"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Prytalar", "attr": "team", "question": "What is Prytalar's team?", "expect": ["finance"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xantreor", "attr": "office", "question": "What is Xantreor's office?", "expect": ["Pune"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vanvania", "attr": "mentor", "question": "What is Vanvania's mentor?", "expect": ["Sven Lund"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Prysavus", "attr": "team", "question": "What is Prysavus's team?", "expect": ["design"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quinexyn", "attr": "team", "question": "What is Quinexyn's team?", "expect": ["growth"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Fentreyn", "attr": "mentor", "question": "What is Fentreyn's mentor?", "expect": ["Quentin Roy"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Talpryia", "attr": "team", "question": "What is Talpryia's team?", "expect": ["support"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quitreia", "attr": "mentor", "question": "What is Quitreia's mentor?", "expect": ["Farid Nasser"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "question": "What is Nexfenex's override code?", "expect": [], "forbid": ["temp-300"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Mirwynia's override code?", "expect": [], "forbid": ["temp-918"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Nexyarex's override code?", "expect": [], "forbid": ["temp-969"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Wyndraus's override code?", "expect": [], "forbid": ["temp-860"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Zubyaria's override code?", "expect": [], "forbid": ["temp-622"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Fentreyn's override code?", "expect": [], "forbid": ["temp-184"], "asOfDay": null, "kind": "stale"}

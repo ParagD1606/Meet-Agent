@@ -1,0 +1,294 @@
+{"_header": true, "set": "drift-1", "version": 1, "date": "2026-10-24", "theme": "services", "days": 84, "startAgoDays": 90, "facts": 244, "entities": 40}
+{"day": 0, "op": "add", "key": "Savostor|owner", "entity": "Savostor", "attr": "owner", "value": "Opal Reyes", "text": "Savostor owner is Opal Reyes"}
+{"day": 0, "op": "add", "key": "Wynzubia|budget", "entity": "Wynzubia", "attr": "budget", "value": "584k dollars", "text": "Wynzubia budget is 584k dollars"}
+{"day": 0, "op": "add", "key": "Ulmkoryn|runbook", "entity": "Ulmkoryn", "attr": "runbook", "value": "wiki page C", "text": "Ulmkoryn runbook is wiki page C"}
+{"day": 1, "op": "add", "key": "Koryaron|owner", "entity": "Koryaron", "attr": "owner", "value": "Dev Malhotra", "text": "Koryaron owner is Dev Malhotra"}
+{"day": 1, "op": "add", "key": "Vanostor|region", "entity": "Vanostor", "attr": "region", "value": "ap-east", "text": "Vanostor region is ap-east"}
+{"day": 1, "op": "add", "key": "Wynquiex|replicas", "entity": "Wynquiex", "attr": "replicas", "value": "28 replicas", "text": "Wynquiex replicas is 28 replicas"}
+{"day": 1, "op": "add", "key": "Wynyaria|replicas", "entity": "Wynyaria", "attr": "replicas", "value": "37 replicas", "text": "Wynyaria replicas is 37 replicas"}
+{"day": 1, "op": "add", "key": "Vantalia|owner", "entity": "Vantalia", "attr": "owner", "value": "Sven Lund", "text": "Vantalia owner is Sven Lund"}
+{"day": 1, "op": "add", "key": "Quimirar|budget", "entity": "Quimirar", "attr": "budget", "value": "459k dollars", "text": "Quimirar budget is 459k dollars"}
+{"day": 2, "op": "add", "key": "Vanquion|owner", "entity": "Vanquion", "attr": "owner", "value": "Bruno Costa", "text": "Vanquion owner is Bruno Costa"}
+{"day": 2, "op": "add", "key": "Xanpryia|runbook", "entity": "Xanpryia", "attr": "runbook", "value": "wiki page E", "text": "Xanpryia runbook is wiki page E"}
+{"day": 2, "op": "add", "key": "Drasavon|replicas", "entity": "Drasavon", "attr": "replicas", "value": "32 replicas", "text": "Drasavon replicas is 32 replicas"}
+{"day": 2, "op": "add", "key": "Xanxanor|region", "entity": "Xanxanor", "attr": "region", "value": "ap-south", "text": "Xanxanor region is ap-south"}
+{"day": 2, "op": "add", "key": "Bromiria|replicas", "entity": "Bromiria", "attr": "replicas", "value": "27 replicas", "text": "Bromiria replicas is 27 replicas"}
+{"day": 2, "op": "add", "key": "Wynyaria|region", "entity": "Wynyaria", "attr": "region", "value": "us-west", "text": "Wynyaria region is us-west"}
+{"day": 2, "op": "add", "key": "Vantalia|tier", "entity": "Vantalia", "attr": "tier", "value": "bronze", "text": "Vantalia tier is bronze"}
+{"day": 2, "op": "add", "key": "Mirulmar|budget", "entity": "Mirulmar", "attr": "budget", "value": "147k dollars", "text": "Mirulmar budget is 147k dollars"}
+{"day": 2, "op": "add", "key": "Kortrear|owner", "entity": "Kortrear", "attr": "owner", "value": "Quentin Roy", "text": "Kortrear owner is Quentin Roy"}
+{"day": 2, "op": "add", "key": "Nexulmor|tier", "entity": "Nexulmor", "attr": "tier", "value": "gold", "text": "Nexulmor tier is gold"}
+{"day": 2, "op": "add", "key": "Talwynia|region", "entity": "Talwynia", "attr": "region", "value": "eu-north", "text": "Talwynia region is eu-north"}
+{"day": 3, "op": "add", "key": "Korulmus|tier", "entity": "Korulmus", "attr": "tier", "value": "bronze", "text": "Korulmus tier is bronze"}
+{"day": 3, "op": "add", "key": "Drasavon|budget", "entity": "Drasavon", "attr": "budget", "value": "651k dollars", "text": "Drasavon budget is 651k dollars"}
+{"day": 3, "op": "add", "key": "Talmirus|tier", "entity": "Talmirus", "attr": "tier", "value": "bronze", "text": "Talmirus tier is bronze"}
+{"day": 3, "op": "add", "key": "Bromiria|runbook", "entity": "Bromiria", "attr": "runbook", "value": "wiki page A", "text": "Bromiria runbook is wiki page A"}
+{"day": 3, "op": "add", "key": "Vantalia|replicas", "entity": "Vantalia", "attr": "replicas", "value": "10 replicas", "text": "Vantalia replicas is 10 replicas"}
+{"day": 3, "op": "add", "key": "Fenmiryn|runbook", "entity": "Fenmiryn", "attr": "runbook", "value": "wiki page B", "text": "Fenmiryn runbook is wiki page B"}
+{"day": 3, "op": "add", "key": "Fenmiryn|region", "entity": "Fenmiryn", "attr": "region", "value": "us-east", "text": "Fenmiryn region is us-east"}
+{"day": 3, "op": "add", "key": "Quixania|runbook", "entity": "Quixania", "attr": "runbook", "value": "wiki page D", "text": "Quixania runbook is wiki page D"}
+{"day": 3, "op": "add", "key": "Lumwynia|budget", "entity": "Lumwynia", "attr": "budget", "value": "470k dollars", "text": "Lumwynia budget is 470k dollars"}
+{"day": 3, "op": "add", "key": "Talwynia|tier", "entity": "Talwynia", "attr": "tier", "value": "gold", "text": "Talwynia tier is gold"}
+{"day": 3, "op": "add", "key": "Zelfenon|replicas", "entity": "Zelfenon", "attr": "replicas", "value": "36 replicas", "text": "Zelfenon replicas is 36 replicas"}
+{"day": 4, "op": "add", "key": "Talmirus|runbook", "entity": "Talmirus", "attr": "runbook", "value": "wiki page D", "text": "Talmirus runbook is wiki page D"}
+{"day": 4, "op": "add", "key": "Lumwynia|owner", "entity": "Lumwynia", "attr": "owner", "value": "Aiko Tanaka", "text": "Lumwynia owner is Aiko Tanaka"}
+{"day": 4, "op": "add", "key": "Zelfenon|budget", "entity": "Zelfenon", "attr": "budget", "value": "11k dollars", "text": "Zelfenon budget is 11k dollars"}
+{"day": 4, "op": "add", "key": "Prywynon|tier", "entity": "Prywynon", "attr": "tier", "value": "platinum", "text": "Prywynon tier is platinum"}
+{"day": 5, "op": "add", "key": "Drasavon|owner", "entity": "Drasavon", "attr": "owner", "value": "Tara Singh", "text": "Drasavon owner is Tara Singh"}
+{"day": 5, "op": "add", "key": "Xanxanor|owner", "entity": "Xanxanor", "attr": "owner", "value": "Quentin Roy", "text": "Xanxanor owner is Quentin Roy"}
+{"day": 5, "op": "add", "key": "Zellumia|budget", "entity": "Zellumia", "attr": "budget", "value": "148k dollars", "text": "Zellumia budget is 148k dollars"}
+{"day": 5, "op": "add", "key": "Quiyarex|owner", "entity": "Quiyarex", "attr": "owner", "value": "Ines Moreau", "text": "Quiyarex owner is Ines Moreau"}
+{"day": 5, "op": "add", "key": "Wynyaria|budget", "entity": "Wynyaria", "attr": "budget", "value": "611k dollars", "text": "Wynyaria budget is 611k dollars"}
+{"day": 5, "op": "add", "key": "Ulmkoryn|budget", "entity": "Ulmkoryn", "attr": "budget", "value": "685k dollars", "text": "Ulmkoryn budget is 685k dollars"}
+{"day": 5, "op": "add", "key": "Dramirex|owner", "entity": "Dramirex", "attr": "owner", "value": "Tara Singh", "text": "Dramirex owner is Tara Singh"}
+{"day": 5, "op": "add", "key": "Kortrear|runbook", "entity": "Kortrear", "attr": "runbook", "value": "wiki page F", "text": "Kortrear runbook is wiki page F"}
+{"day": 5, "op": "add", "key": "Nexulmor|replicas", "entity": "Nexulmor", "attr": "replicas", "value": "9 replicas", "text": "Nexulmor replicas is 9 replicas"}
+{"day": 5, "op": "add", "key": "Lumwynia|region", "entity": "Lumwynia", "attr": "region", "value": "ap-south", "text": "Lumwynia region is ap-south"}
+{"day": 6, "op": "add", "key": "Vanquion|runbook", "entity": "Vanquion", "attr": "runbook", "value": "wiki page B", "text": "Vanquion runbook is wiki page B"}
+{"day": 6, "op": "add", "key": "Savostor|tier", "entity": "Savostor", "attr": "tier", "value": "gold", "text": "Savostor tier is gold"}
+{"day": 6, "op": "add", "key": "Yarquiex|replicas", "entity": "Yarquiex", "attr": "replicas", "value": "12 replicas", "text": "Yarquiex replicas is 12 replicas"}
+{"day": 6, "op": "add", "key": "Savtalon|budget", "entity": "Savtalon", "attr": "budget", "value": "846k dollars", "text": "Savtalon budget is 846k dollars"}
+{"day": 6, "op": "add", "key": "Xanxanor|runbook", "entity": "Xanxanor", "attr": "runbook", "value": "wiki page C", "text": "Xanxanor runbook is wiki page C"}
+{"day": 6, "op": "add", "key": "Korsavia|tier", "entity": "Korsavia", "attr": "tier", "value": "bronze", "text": "Korsavia tier is bronze"}
+{"day": 6, "op": "add", "key": "Quitalyn|owner", "entity": "Quitalyn", "attr": "owner", "value": "Aiko Tanaka", "text": "Quitalyn owner is Aiko Tanaka"}
+{"day": 6, "op": "add", "key": "Quitalyn|tier", "entity": "Quitalyn", "attr": "tier", "value": "silver", "text": "Quitalyn tier is silver"}
+{"day": 6, "op": "add", "key": "Quixania|tier", "entity": "Quixania", "attr": "tier", "value": "gold", "text": "Quixania tier is gold"}
+{"day": 6, "op": "add", "key": "Quimirar|tier", "entity": "Quimirar", "attr": "tier", "value": "gold", "text": "Quimirar tier is gold"}
+{"day": 6, "op": "add", "key": "Bromiria|override", "entity": "Bromiria", "attr": "override", "value": "temp-640", "forgetAfterDay": 14, "text": "Bromiria has a temporary override code temp-640 until day 14"}
+{"day": 7, "op": "add", "key": "Savtalon|tier", "entity": "Savtalon", "attr": "tier", "value": "bronze", "text": "Savtalon tier is bronze"}
+{"day": 7, "op": "add", "key": "Mirmiron|replicas", "entity": "Mirmiron", "attr": "replicas", "value": "17 replicas", "text": "Mirmiron replicas is 17 replicas"}
+{"day": 7, "op": "add", "key": "Prywynon|region", "entity": "Prywynon", "attr": "region", "value": "eu-north", "text": "Prywynon region is eu-north"}
+{"day": 8, "op": "add", "key": "Xanpryia|replicas", "entity": "Xanpryia", "attr": "replicas", "value": "23 replicas", "text": "Xanpryia replicas is 23 replicas"}
+{"day": 8, "op": "add", "key": "Bropryex|tier", "entity": "Bropryex", "attr": "tier", "value": "platinum", "text": "Bropryex tier is platinum"}
+{"day": 8, "op": "add", "key": "Vanostor|replicas", "entity": "Vanostor", "attr": "replicas", "value": "13 replicas", "text": "Vanostor replicas is 13 replicas"}
+{"day": 8, "op": "add", "key": "Wynyaria|runbook", "entity": "Wynyaria", "attr": "runbook", "value": "wiki page C", "text": "Wynyaria runbook is wiki page C"}
+{"day": 8, "op": "add", "key": "Fenmiryn|budget", "entity": "Fenmiryn", "attr": "budget", "value": "260k dollars", "text": "Fenmiryn budget is 260k dollars"}
+{"day": 8, "op": "add", "key": "Talwynia|budget", "entity": "Talwynia", "attr": "budget", "value": "634k dollars", "text": "Talwynia budget is 634k dollars"}
+{"day": 8, "op": "add", "key": "Quiwynyn|owner", "entity": "Quiwynyn", "attr": "owner", "value": "Tara Singh", "text": "Quiwynyn owner is Tara Singh"}
+{"day": 9, "op": "add", "key": "Korulmus|owner", "entity": "Korulmus", "attr": "owner", "value": "Opal Reyes", "text": "Korulmus owner is Opal Reyes"}
+{"day": 9, "op": "add", "key": "Xanxanor|budget", "entity": "Xanxanor", "attr": "budget", "value": "578k dollars", "text": "Xanxanor budget is 578k dollars"}
+{"day": 9, "op": "add", "key": "Bropryex|budget", "entity": "Bropryex", "attr": "budget", "value": "839k dollars", "text": "Bropryex budget is 839k dollars"}
+{"day": 9, "op": "add", "key": "Vanostor|runbook", "entity": "Vanostor", "attr": "runbook", "value": "wiki page C", "text": "Vanostor runbook is wiki page C"}
+{"day": 9, "op": "add", "key": "Zubzelus|replicas", "entity": "Zubzelus", "attr": "replicas", "value": "33 replicas", "text": "Zubzelus replicas is 33 replicas"}
+{"day": 9, "op": "add", "key": "Kortrear|replicas", "entity": "Kortrear", "attr": "replicas", "value": "27 replicas", "text": "Kortrear replicas is 27 replicas"}
+{"day": 9, "op": "add", "key": "Nexulmor|budget", "entity": "Nexulmor", "attr": "budget", "value": "504k dollars", "text": "Nexulmor budget is 504k dollars"}
+{"day": 9, "op": "add", "key": "Zelquiar|replicas", "entity": "Zelquiar", "attr": "replicas", "value": "35 replicas", "text": "Zelquiar replicas is 35 replicas"}
+{"day": 9, "op": "add", "key": "Zelquiar|tier", "entity": "Zelquiar", "attr": "tier", "value": "silver", "text": "Zelquiar tier is silver"}
+{"day": 9, "op": "add", "key": "Xanlumon|runbook", "entity": "Xanlumon", "attr": "runbook", "value": "wiki page A", "text": "Xanlumon runbook is wiki page A"}
+{"day": 9, "op": "add", "key": "Prywynon|override", "entity": "Prywynon", "attr": "override", "value": "temp-374", "forgetAfterDay": 19, "text": "Prywynon has a temporary override code temp-374 until day 19"}
+{"day": 9, "op": "add", "key": "Nexulmor|override", "entity": "Nexulmor", "attr": "override", "value": "temp-219", "forgetAfterDay": 23, "text": "Nexulmor has a temporary override code temp-219 until day 23"}
+{"day": 10, "op": "add", "key": "Zellumia|region", "entity": "Zellumia", "attr": "region", "value": "us-west", "text": "Zellumia region is us-west"}
+{"day": 10, "op": "add", "key": "Korsavia|owner", "entity": "Korsavia", "attr": "owner", "value": "Carmen Ortiz", "text": "Korsavia owner is Carmen Ortiz"}
+{"day": 10, "op": "add", "key": "Quitalyn|budget", "entity": "Quitalyn", "attr": "budget", "value": "645k dollars", "text": "Quitalyn budget is 645k dollars"}
+{"day": 10, "op": "add", "key": "Mirzelia|tier", "entity": "Mirzelia", "attr": "tier", "value": "platinum", "text": "Mirzelia tier is platinum"}
+{"day": 10, "op": "add", "key": "Nexulmor|runbook", "entity": "Nexulmor", "attr": "runbook", "value": "wiki page F", "text": "Nexulmor runbook is wiki page F"}
+{"day": 10, "op": "add", "key": "Lumwynia|tier", "entity": "Lumwynia", "attr": "tier", "value": "gold", "text": "Lumwynia tier is gold"}
+{"day": 10, "op": "add", "key": "Zelfenon|runbook", "entity": "Zelfenon", "attr": "runbook", "value": "wiki page E", "text": "Zelfenon runbook is wiki page E"}
+{"day": 11, "op": "add", "key": "Zellumia|runbook", "entity": "Zellumia", "attr": "runbook", "value": "wiki page F", "text": "Zellumia runbook is wiki page F"}
+{"day": 11, "op": "add", "key": "Vanostor|budget", "entity": "Vanostor", "attr": "budget", "value": "147k dollars", "text": "Vanostor budget is 147k dollars"}
+{"day": 11, "op": "add", "key": "Mirulmar|owner", "entity": "Mirulmar", "attr": "owner", "value": "Ines Moreau", "text": "Mirulmar owner is Ines Moreau"}
+{"day": 11, "op": "add", "key": "Quimirar|runbook", "entity": "Quimirar", "attr": "runbook", "value": "wiki page A", "text": "Quimirar runbook is wiki page A"}
+{"day": 11, "op": "add", "key": "Mirmiron|budget", "entity": "Mirmiron", "attr": "budget", "value": "645k dollars", "text": "Mirmiron budget is 645k dollars"}
+{"day": 11, "op": "add", "key": "Mirmiron|owner", "entity": "Mirmiron", "attr": "owner", "value": "Bruno Costa", "text": "Mirmiron owner is Bruno Costa"}
+{"day": 11, "op": "add", "key": "Zelfenon|tier", "entity": "Zelfenon", "attr": "tier", "value": "gold", "text": "Zelfenon tier is gold"}
+{"day": 11, "op": "add", "key": "Quiwynyn|replicas", "entity": "Quiwynyn", "attr": "replicas", "value": "25 replicas", "text": "Quiwynyn replicas is 25 replicas"}
+{"day": 12, "op": "add", "key": "Korulmus|budget", "entity": "Korulmus", "attr": "budget", "value": "281k dollars", "text": "Korulmus budget is 281k dollars"}
+{"day": 12, "op": "add", "key": "Wynzubia|owner", "entity": "Wynzubia", "attr": "owner", "value": "Farid Nasser", "text": "Wynzubia owner is Farid Nasser"}
+{"day": 12, "op": "add", "key": "Koryaron|budget", "entity": "Koryaron", "attr": "budget", "value": "284k dollars", "text": "Koryaron budget is 284k dollars"}
+{"day": 12, "op": "add", "key": "Bropryex|owner", "entity": "Bropryex", "attr": "owner", "value": "Sven Lund", "text": "Bropryex owner is Sven Lund"}
+{"day": 12, "op": "add", "key": "Quiyarex|region", "entity": "Quiyarex", "attr": "region", "value": "us-east", "text": "Quiyarex region is us-east"}
+{"day": 12, "op": "add", "key": "Zubzelus|runbook", "entity": "Zubzelus", "attr": "runbook", "value": "wiki page B", "text": "Zubzelus runbook is wiki page B"}
+{"day": 12, "op": "add", "key": "Wynnexyn|owner", "entity": "Wynnexyn", "attr": "owner", "value": "Quentin Roy", "text": "Wynnexyn owner is Quentin Roy"}
+{"day": 12, "op": "add", "key": "Zelquiar|region", "entity": "Zelquiar", "attr": "region", "value": "eu-north", "text": "Zelquiar region is eu-north"}
+{"day": 12, "op": "add", "key": "Quiwynyn|region", "entity": "Quiwynyn", "attr": "region", "value": "us-east", "text": "Quiwynyn region is us-east"}
+{"day": 13, "op": "add", "key": "Savostor|region", "entity": "Savostor", "attr": "region", "value": "us-west", "text": "Savostor region is us-west"}
+{"day": 13, "op": "add", "key": "Quitalyn|runbook", "entity": "Quitalyn", "attr": "runbook", "value": "wiki page F", "text": "Quitalyn runbook is wiki page F"}
+{"day": 13, "op": "add", "key": "Wynquiex|runbook", "entity": "Wynquiex", "attr": "runbook", "value": "wiki page E", "text": "Wynquiex runbook is wiki page E"}
+{"day": 13, "op": "add", "key": "Mirulmar|tier", "entity": "Mirulmar", "attr": "tier", "value": "gold", "text": "Mirulmar tier is gold"}
+{"day": 13, "op": "add", "key": "Fenmiryn|tier", "entity": "Fenmiryn", "attr": "tier", "value": "gold", "text": "Fenmiryn tier is gold"}
+{"day": 13, "op": "add", "key": "Xanlumon|owner", "entity": "Xanlumon", "attr": "owner", "value": "Ines Moreau", "text": "Xanlumon owner is Ines Moreau"}
+{"day": 13, "op": "add", "key": "Mirmiron|runbook", "entity": "Mirmiron", "attr": "runbook", "value": "wiki page B", "text": "Mirmiron runbook is wiki page B"}
+{"day": 13, "op": "add", "key": "Prywynon|runbook", "entity": "Prywynon", "attr": "runbook", "value": "wiki page D", "text": "Prywynon runbook is wiki page D"}
+{"day": 13, "op": "add", "key": "Prywynon|owner", "entity": "Prywynon", "attr": "owner", "value": "Pia Jensen", "text": "Prywynon owner is Pia Jensen"}
+{"day": 14, "op": "add", "key": "Vanquion|tier", "entity": "Vanquion", "attr": "tier", "value": "bronze", "text": "Vanquion tier is bronze"}
+{"day": 14, "op": "add", "key": "Xanpryia|tier", "entity": "Xanpryia", "attr": "tier", "value": "gold", "text": "Xanpryia tier is gold"}
+{"day": 14, "op": "add", "key": "Wynzubia|runbook", "entity": "Wynzubia", "attr": "runbook", "value": "wiki page F", "text": "Wynzubia runbook is wiki page F"}
+{"day": 14, "op": "add", "key": "Koryaron|tier", "entity": "Koryaron", "attr": "tier", "value": "gold", "text": "Koryaron tier is gold"}
+{"day": 14, "op": "add", "key": "Savtalon|replicas", "entity": "Savtalon", "attr": "replicas", "value": "24 replicas", "text": "Savtalon replicas is 24 replicas"}
+{"day": 14, "op": "add", "key": "Drasavon|runbook", "entity": "Drasavon", "attr": "runbook", "value": "wiki page A", "text": "Drasavon runbook is wiki page A"}
+{"day": 14, "op": "add", "key": "Korsavia|runbook", "entity": "Korsavia", "attr": "runbook", "value": "wiki page E", "text": "Korsavia runbook is wiki page E"}
+{"day": 14, "op": "add", "key": "Bromiria|owner", "entity": "Bromiria", "attr": "owner", "value": "Pia Jensen", "text": "Bromiria owner is Pia Jensen"}
+{"day": 14, "op": "add", "key": "Dramirex|budget", "entity": "Dramirex", "attr": "budget", "value": "458k dollars", "text": "Dramirex budget is 458k dollars"}
+{"day": 14, "op": "add", "key": "Dramirex|replicas", "entity": "Dramirex", "attr": "replicas", "value": "11 replicas", "text": "Dramirex replicas is 11 replicas"}
+{"day": 14, "op": "add", "key": "Dramirex|runbook", "entity": "Dramirex", "attr": "runbook", "value": "wiki page D", "text": "Dramirex runbook is wiki page D"}
+{"day": 14, "op": "add", "key": "Wynnexyn|budget", "entity": "Wynnexyn", "attr": "budget", "value": "467k dollars", "text": "Wynnexyn budget is 467k dollars"}
+{"day": 15, "op": "add", "key": "Xanpryia|owner", "entity": "Xanpryia", "attr": "owner", "value": "Carmen Ortiz", "text": "Xanpryia owner is Carmen Ortiz"}
+{"day": 15, "op": "add", "key": "Savostor|budget", "entity": "Savostor", "attr": "budget", "value": "138k dollars", "text": "Savostor budget is 138k dollars"}
+{"day": 15, "op": "add", "key": "Yarquiex|budget", "entity": "Yarquiex", "attr": "budget", "value": "504k dollars", "text": "Yarquiex budget is 504k dollars"}
+{"day": 15, "op": "add", "key": "Zellumia|owner", "entity": "Zellumia", "attr": "owner", "value": "Carmen Ortiz", "text": "Zellumia owner is Carmen Ortiz"}
+{"day": 15, "op": "add", "key": "Talmirus|replicas", "entity": "Talmirus", "attr": "replicas", "value": "40 replicas", "text": "Talmirus replicas is 40 replicas"}
+{"day": 15, "op": "add", "key": "Quiyarex|budget", "entity": "Quiyarex", "attr": "budget", "value": "295k dollars", "text": "Quiyarex budget is 295k dollars"}
+{"day": 15, "op": "add", "key": "Wynquiex|owner", "entity": "Wynquiex", "attr": "owner", "value": "Hugo Lambert", "text": "Wynquiex owner is Hugo Lambert"}
+{"day": 15, "op": "add", "key": "Quixania|replicas", "entity": "Quixania", "attr": "replicas", "value": "6 replicas", "text": "Quixania replicas is 6 replicas"}
+{"day": 15, "op": "add", "key": "Wynnexyn|tier", "entity": "Wynnexyn", "attr": "tier", "value": "silver", "text": "Wynnexyn tier is silver"}
+{"day": 15, "op": "add", "key": "Mirulmar|override", "entity": "Mirulmar", "attr": "override", "value": "temp-612", "forgetAfterDay": 25, "text": "Mirulmar has a temporary override code temp-612 until day 25"}
+{"day": 16, "op": "add", "key": "Vanquion|replicas", "entity": "Vanquion", "attr": "replicas", "value": "35 replicas", "text": "Vanquion replicas is 35 replicas"}
+{"day": 16, "op": "add", "key": "Yarquiex|owner", "entity": "Yarquiex", "attr": "owner", "value": "Rosa Greco", "text": "Yarquiex owner is Rosa Greco"}
+{"day": 16, "op": "add", "key": "Yarquiex|region", "entity": "Yarquiex", "attr": "region", "value": "us-west", "text": "Yarquiex region is us-west"}
+{"day": 16, "op": "add", "key": "Wynzubia|region", "entity": "Wynzubia", "attr": "region", "value": "eu-west", "text": "Wynzubia region is eu-west"}
+{"day": 16, "op": "add", "key": "Koryaron|region", "entity": "Koryaron", "attr": "region", "value": "us-east", "text": "Koryaron region is us-east"}
+{"day": 16, "op": "add", "key": "Savtalon|runbook", "entity": "Savtalon", "attr": "runbook", "value": "wiki page D", "text": "Savtalon runbook is wiki page D"}
+{"day": 16, "op": "add", "key": "Bropryex|region", "entity": "Bropryex", "attr": "region", "value": "ap-east", "text": "Bropryex region is ap-east"}
+{"day": 16, "op": "add", "key": "Quiyarex|replicas", "entity": "Quiyarex", "attr": "replicas", "value": "12 replicas", "text": "Quiyarex replicas is 12 replicas"}
+{"day": 16, "op": "add", "key": "Zubzelus|region", "entity": "Zubzelus", "attr": "region", "value": "us-east", "text": "Zubzelus region is us-east"}
+{"day": 16, "op": "add", "key": "Ulmkoryn|region", "entity": "Ulmkoryn", "attr": "region", "value": "eu-north", "text": "Ulmkoryn region is eu-north"}
+{"day": 16, "op": "add", "key": "Mirzelia|budget", "entity": "Mirzelia", "attr": "budget", "value": "696k dollars", "text": "Mirzelia budget is 696k dollars"}
+{"day": 16, "op": "add", "key": "Mirzelia|region", "entity": "Mirzelia", "attr": "region", "value": "eu-north", "text": "Mirzelia region is eu-north"}
+{"day": 16, "op": "add", "key": "Wynnexyn|region", "entity": "Wynnexyn", "attr": "region", "value": "eu-north", "text": "Wynnexyn region is eu-north"}
+{"day": 16, "op": "add", "key": "Quimirar|replicas", "entity": "Quimirar", "attr": "replicas", "value": "36 replicas", "text": "Quimirar replicas is 36 replicas"}
+{"day": 16, "op": "add", "key": "Talwynia|owner", "entity": "Talwynia", "attr": "owner", "value": "Esme Walker", "text": "Talwynia owner is Esme Walker"}
+{"day": 16, "op": "add", "key": "Xanlumon|tier", "entity": "Xanlumon", "attr": "tier", "value": "gold", "text": "Xanlumon tier is gold"}
+{"day": 16, "op": "add", "key": "Xanlumon|budget", "entity": "Xanlumon", "attr": "budget", "value": "40k dollars", "text": "Xanlumon budget is 40k dollars"}
+{"day": 17, "op": "add", "key": "Korulmus|region", "entity": "Korulmus", "attr": "region", "value": "ap-south", "text": "Korulmus region is ap-south"}
+{"day": 17, "op": "add", "key": "Talmirus|owner", "entity": "Talmirus", "attr": "owner", "value": "Keira Doyle", "text": "Talmirus owner is Keira Doyle"}
+{"day": 17, "op": "add", "key": "Korsavia|budget", "entity": "Korsavia", "attr": "budget", "value": "708k dollars", "text": "Korsavia budget is 708k dollars"}
+{"day": 17, "op": "add", "key": "Wynquiex|tier", "entity": "Wynquiex", "attr": "tier", "value": "platinum", "text": "Wynquiex tier is platinum"}
+{"day": 17, "op": "add", "key": "Zubzelus|budget", "entity": "Zubzelus", "attr": "budget", "value": "894k dollars", "text": "Zubzelus budget is 894k dollars"}
+{"day": 17, "op": "add", "key": "Ulmkoryn|tier", "entity": "Ulmkoryn", "attr": "tier", "value": "platinum", "text": "Ulmkoryn tier is platinum"}
+{"day": 17, "op": "add", "key": "Vantalia|region", "entity": "Vantalia", "attr": "region", "value": "eu-west", "text": "Vantalia region is eu-west"}
+{"day": 17, "op": "add", "key": "Quixania|region", "entity": "Quixania", "attr": "region", "value": "ap-south", "text": "Quixania region is ap-south"}
+{"day": 17, "op": "add", "key": "Kortrear|budget", "entity": "Kortrear", "attr": "budget", "value": "118k dollars", "text": "Kortrear budget is 118k dollars"}
+{"day": 18, "op": "add", "key": "Bromiria|budget", "entity": "Bromiria", "attr": "budget", "value": "228k dollars", "text": "Bromiria budget is 228k dollars"}
+{"day": 18, "op": "add", "key": "Mirulmar|region", "entity": "Mirulmar", "attr": "region", "value": "eu-west", "text": "Mirulmar region is eu-west"}
+{"day": 18, "op": "add", "key": "Mirzelia|owner", "entity": "Mirzelia", "attr": "owner", "value": "Aiko Tanaka", "text": "Mirzelia owner is Aiko Tanaka"}
+{"day": 18, "op": "add", "key": "Zelquiar|owner", "entity": "Zelquiar", "attr": "owner", "value": "Esme Walker", "text": "Zelquiar owner is Esme Walker"}
+{"day": 18, "op": "add", "key": "Quiwynyn|budget", "entity": "Quiwynyn", "attr": "budget", "value": "777k dollars", "text": "Quiwynyn budget is 777k dollars"}
+{"day": 19, "op": "add", "key": "Vanostor|override", "entity": "Vanostor", "attr": "override", "value": "temp-387", "forgetAfterDay": 30, "text": "Vanostor has a temporary override code temp-387 until day 30"}
+{"day": 22, "op": "add", "key": "Drasavon|override", "entity": "Drasavon", "attr": "override", "value": "temp-574", "forgetAfterDay": 31, "text": "Drasavon has a temporary override code temp-574 until day 31"}
+{"day": 22, "op": "update", "key": "Mirulmar|region", "entity": "Mirulmar", "attr": "region", "value": "ap-east", "old": "eu-west", "text": "Mirulmar region is now ap-east"}
+{"day": 23, "op": "add", "key": "Talwynia|override", "entity": "Talwynia", "attr": "override", "value": "temp-668", "forgetAfterDay": 33, "text": "Talwynia has a temporary override code temp-668 until day 33"}
+{"day": 23, "op": "update", "key": "Quitalyn|tier", "entity": "Quitalyn", "attr": "tier", "value": "gold", "old": "silver", "text": "Quitalyn tier is now gold"}
+{"day": 24, "op": "add", "key": "Wynyaria|override", "entity": "Wynyaria", "attr": "override", "value": "temp-959", "forgetAfterDay": 38, "text": "Wynyaria has a temporary override code temp-959 until day 38"}
+{"day": 24, "op": "update", "key": "Talmirus|replicas", "entity": "Talmirus", "attr": "replicas", "value": "16 replicas", "old": "40 replicas", "text": "Talmirus replicas is now 16 replicas"}
+{"day": 24, "op": "update", "key": "Bropryex|tier", "entity": "Bropryex", "attr": "tier", "value": "bronze", "old": "platinum", "text": "Bropryex tier is now bronze"}
+{"day": 26, "op": "update", "key": "Vantalia|region", "entity": "Vantalia", "attr": "region", "value": "ap-south", "old": "eu-west", "text": "Vantalia region is now ap-south"}
+{"day": 26, "op": "update", "key": "Koryaron|tier", "entity": "Koryaron", "attr": "tier", "value": "bronze", "old": "gold", "text": "Koryaron tier is now bronze"}
+{"day": 27, "op": "update", "key": "Prywynon|region", "entity": "Prywynon", "attr": "region", "value": "us-east", "old": "eu-north", "text": "Prywynon region is now us-east"}
+{"day": 28, "op": "update", "key": "Koryaron|region", "entity": "Koryaron", "attr": "region", "value": "ap-south", "old": "us-east", "text": "Koryaron region is now ap-south"}
+{"day": 28, "op": "update", "key": "Wynzubia|region", "entity": "Wynzubia", "attr": "region", "value": "us-west", "old": "eu-west", "text": "Wynzubia region is now us-west"}
+{"day": 28, "op": "consolidate"}
+{"day": 29, "op": "update", "key": "Savostor|region", "entity": "Savostor", "attr": "region", "value": "us-east", "old": "us-west", "text": "Savostor region is now us-east"}
+{"day": 29, "op": "update", "key": "Nexulmor|budget", "entity": "Nexulmor", "attr": "budget", "value": "579k dollars", "old": "504k dollars", "text": "Nexulmor budget is now 579k dollars"}
+{"day": 31, "op": "add", "key": "Savtalon|override", "entity": "Savtalon", "attr": "override", "value": "temp-150", "forgetAfterDay": 45, "text": "Savtalon has a temporary override code temp-150 until day 45"}
+{"day": 32, "op": "update", "key": "Wynnexyn|region", "entity": "Wynnexyn", "attr": "region", "value": "ap-south", "old": "eu-north", "text": "Wynnexyn region is now ap-south"}
+{"day": 35, "op": "update", "key": "Quiwynyn|budget", "entity": "Quiwynyn", "attr": "budget", "value": "796k dollars", "old": "777k dollars", "text": "Quiwynyn budget is now 796k dollars"}
+{"day": 37, "op": "update", "key": "Dramirex|owner", "entity": "Dramirex", "attr": "owner", "value": "Opal Reyes", "old": "Tara Singh", "text": "Dramirex owner is now Opal Reyes"}
+{"day": 38, "op": "add", "key": "Fenmiryn|override", "entity": "Fenmiryn", "attr": "override", "value": "temp-580", "forgetAfterDay": 51, "text": "Fenmiryn has a temporary override code temp-580 until day 51"}
+{"day": 38, "op": "update", "key": "Dramirex|replicas", "entity": "Dramirex", "attr": "replicas", "value": "8 replicas", "old": "11 replicas", "text": "Dramirex replicas is now 8 replicas"}
+{"day": 40, "op": "dup", "key": "Vanquion|replicas", "entity": "Vanquion", "attr": "replicas", "value": "35 replicas", "text": "Vanquion replicas is 35 replicas", "exact": true}
+{"day": 40, "op": "dup", "key": "Wynyaria|replicas", "entity": "Wynyaria", "attr": "replicas", "value": "37 replicas", "text": "Wynyaria replicas is 37 replicas", "exact": true}
+{"day": 40, "op": "query", "entity": "Wynzubia", "attr": "region", "question": "What is Wynzubia's region?", "expect": ["us-west"], "forbid": ["eu-west"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Bropryex", "attr": "tier", "question": "What is Bropryex's tier?", "expect": ["bronze"], "forbid": ["platinum"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Savostor", "attr": "region", "question": "What is Savostor's region?", "expect": ["us-east"], "forbid": ["us-west"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Talmirus", "attr": "replicas", "question": "What is Talmirus's replicas?", "expect": ["16 replicas"], "forbid": ["40 replicas"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Koryaron", "attr": "tier", "question": "What is Koryaron's tier?", "expect": ["bronze"], "forbid": ["gold"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Quitalyn", "attr": "tier", "question": "What is Quitalyn's tier?", "expect": ["gold"], "forbid": ["silver"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Zellumia", "attr": "budget", "question": "What is Zellumia's budget?", "expect": ["148k dollars"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Savtalon", "attr": "runbook", "question": "What is Savtalon's runbook?", "expect": ["wiki page D"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmkoryn", "attr": "tier", "question": "What is Ulmkoryn's tier?", "expect": ["platinum"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Koryaron", "attr": "budget", "question": "What is Koryaron's budget?", "expect": ["284k dollars"], "forbid": [], "asOfDay": 40}
+{"day": 41, "op": "update", "key": "Quimirar|replicas", "entity": "Quimirar", "attr": "replicas", "value": "17 replicas", "old": "36 replicas", "text": "Quimirar replicas is now 17 replicas"}
+{"day": 41, "op": "dup", "key": "Vanquion|owner", "entity": "Vanquion", "attr": "owner", "value": "Bruno Costa", "text": "Vanquion owner is Bruno Costa", "exact": true}
+{"day": 41, "op": "dup", "key": "Koryaron|budget", "entity": "Koryaron", "attr": "budget", "value": "284k dollars", "text": "Koryaron budget is 284k dollars", "exact": true}
+{"day": 41, "op": "dup", "key": "Quitalyn|budget", "entity": "Quitalyn", "attr": "budget", "value": "645k dollars", "text": "The budget for Quitalyn is 645k dollars", "exact": false}
+{"day": 42, "op": "dup", "key": "Zellumia|region", "entity": "Zellumia", "attr": "region", "value": "us-west", "text": "Zellumia region is us-west", "exact": true}
+{"day": 42, "op": "dup", "key": "Talmirus|owner", "entity": "Talmirus", "attr": "owner", "value": "Keira Doyle", "text": "Talmirus owner is Keira Doyle", "exact": true}
+{"day": 42, "op": "dup", "key": "Wynyaria|region", "entity": "Wynyaria", "attr": "region", "value": "us-west", "text": "The region for Wynyaria is us-west", "exact": false}
+{"day": 43, "op": "dup", "key": "Bropryex|region", "entity": "Bropryex", "attr": "region", "value": "ap-east", "text": "The region for Bropryex is ap-east", "exact": false}
+{"day": 44, "op": "add", "key": "Mirzelia|override", "entity": "Mirzelia", "attr": "override", "value": "temp-775", "forgetAfterDay": 57, "text": "Mirzelia has a temporary override code temp-775 until day 57"}
+{"day": 44, "op": "update", "key": "Mirzelia|tier", "entity": "Mirzelia", "attr": "tier", "value": "silver", "old": "platinum", "text": "Mirzelia tier is now silver"}
+{"day": 44, "op": "update", "key": "Wynquiex|tier", "entity": "Wynquiex", "attr": "tier", "value": "silver", "old": "platinum", "text": "Wynquiex tier is now silver"}
+{"day": 44, "op": "update", "key": "Zelfenon|budget", "entity": "Zelfenon", "attr": "budget", "value": "585k dollars", "old": "11k dollars", "text": "Zelfenon budget is now 585k dollars"}
+{"day": 44, "op": "update", "key": "Prywynon|owner", "entity": "Prywynon", "attr": "owner", "value": "Keira Doyle", "old": "Pia Jensen", "text": "Prywynon owner is now Keira Doyle"}
+{"day": 44, "op": "update", "key": "Korulmus|tier", "entity": "Korulmus", "attr": "tier", "value": "silver", "old": "bronze", "text": "Korulmus tier is now silver"}
+{"day": 44, "op": "update", "key": "Xanlumon|tier", "entity": "Xanlumon", "attr": "tier", "value": "platinum", "old": "gold", "text": "Xanlumon tier is now platinum"}
+{"day": 44, "op": "dup", "key": "Wynzubia|owner", "entity": "Wynzubia", "attr": "owner", "value": "Farid Nasser", "text": "The owner for Wynzubia is Farid Nasser", "exact": false}
+{"day": 45, "op": "update", "key": "Bromiria|budget", "entity": "Bromiria", "attr": "budget", "value": "715k dollars", "old": "228k dollars", "text": "Bromiria budget is now 715k dollars"}
+{"day": 45, "op": "update", "key": "Bromiria|runbook", "entity": "Bromiria", "attr": "runbook", "value": "wiki page C", "old": "wiki page A", "text": "Bromiria runbook is now wiki page C"}
+{"day": 46, "op": "update", "key": "Xanpryia|tier", "entity": "Xanpryia", "attr": "tier", "value": "bronze", "old": "gold", "text": "Xanpryia tier is now bronze"}
+{"day": 46, "op": "update", "key": "Quiwynyn|replicas", "entity": "Quiwynyn", "attr": "replicas", "value": "9 replicas", "old": "25 replicas", "text": "Quiwynyn replicas is now 9 replicas"}
+{"day": 47, "op": "add", "key": "Korsavia|override", "entity": "Korsavia", "attr": "override", "value": "temp-742", "forgetAfterDay": 60, "text": "Korsavia has a temporary override code temp-742 until day 60"}
+{"day": 47, "op": "dup", "key": "Nexulmor|runbook", "entity": "Nexulmor", "attr": "runbook", "value": "wiki page F", "text": "Nexulmor runbook is wiki page F", "exact": true}
+{"day": 48, "op": "update", "key": "Vanquion|runbook", "entity": "Vanquion", "attr": "runbook", "value": "wiki page C", "old": "wiki page B", "text": "Vanquion runbook is now wiki page C"}
+{"day": 48, "op": "dup", "key": "Korsavia|tier", "entity": "Korsavia", "attr": "tier", "value": "bronze", "text": "Korsavia tier is bronze", "exact": true}
+{"day": 50, "op": "update", "key": "Xanlumon|budget", "entity": "Xanlumon", "attr": "budget", "value": "334k dollars", "old": "40k dollars", "text": "Xanlumon budget is now 334k dollars"}
+{"day": 51, "op": "add", "key": "Bropryex|override", "entity": "Bropryex", "attr": "override", "value": "temp-544", "forgetAfterDay": 63, "text": "Bropryex has a temporary override code temp-544 until day 63"}
+{"day": 51, "op": "dup", "key": "Zelquiar|owner", "entity": "Zelquiar", "attr": "owner", "value": "Esme Walker", "text": "The owner for Zelquiar is Esme Walker", "exact": false}
+{"day": 52, "op": "update", "key": "Xanpryia|owner", "entity": "Xanpryia", "attr": "owner", "value": "Quentin Roy", "old": "Carmen Ortiz", "text": "Xanpryia owner is now Quentin Roy"}
+{"day": 53, "op": "update", "key": "Kortrear|runbook", "entity": "Kortrear", "attr": "runbook", "value": "wiki page B", "old": "wiki page F", "text": "Kortrear runbook is now wiki page B"}
+{"day": 53, "op": "dup", "key": "Ulmkoryn|runbook", "entity": "Ulmkoryn", "attr": "runbook", "value": "wiki page C", "text": "The runbook for Ulmkoryn is wiki page C", "exact": false}
+{"day": 54, "op": "dup", "key": "Quimirar|runbook", "entity": "Quimirar", "attr": "runbook", "value": "wiki page A", "text": "Quimirar runbook is wiki page A", "exact": true}
+{"day": 54, "op": "dup", "key": "Zubzelus|replicas", "entity": "Zubzelus", "attr": "replicas", "value": "33 replicas", "text": "The replicas for Zubzelus is 33 replicas", "exact": false}
+{"day": 54, "op": "dup", "key": "Korsavia|runbook", "entity": "Korsavia", "attr": "runbook", "value": "wiki page E", "text": "The runbook for Korsavia is wiki page E", "exact": false}
+{"day": 54, "op": "dup", "key": "Vanostor|runbook", "entity": "Vanostor", "attr": "runbook", "value": "wiki page C", "text": "The runbook for Vanostor is wiki page C", "exact": false}
+{"day": 55, "op": "add", "key": "Zubzelus|override", "entity": "Zubzelus", "attr": "override", "value": "temp-353", "forgetAfterDay": 69, "text": "Zubzelus has a temporary override code temp-353 until day 69"}
+{"day": 55, "op": "dup", "key": "Mirmiron|budget", "entity": "Mirmiron", "attr": "budget", "value": "645k dollars", "text": "Mirmiron budget is 645k dollars", "exact": true}
+{"day": 55, "op": "dup", "key": "Fenmiryn|tier", "entity": "Fenmiryn", "attr": "tier", "value": "gold", "text": "The tier for Fenmiryn is gold", "exact": false}
+{"day": 56, "op": "dup", "key": "Zelquiar|replicas", "entity": "Zelquiar", "attr": "replicas", "value": "35 replicas", "text": "The replicas for Zelquiar is 35 replicas", "exact": false}
+{"day": 56, "op": "consolidate"}
+{"day": 57, "op": "update", "key": "Zubzelus|runbook", "entity": "Zubzelus", "attr": "runbook", "value": "wiki page D", "old": "wiki page B", "text": "Zubzelus runbook is now wiki page D"}
+{"day": 57, "op": "dup", "key": "Quiyarex|owner", "entity": "Quiyarex", "attr": "owner", "value": "Ines Moreau", "text": "The owner for Quiyarex is Ines Moreau", "exact": false}
+{"day": 58, "op": "dup", "key": "Bropryex|budget", "entity": "Bropryex", "attr": "budget", "value": "839k dollars", "text": "Bropryex budget is 839k dollars", "exact": true}
+{"day": 58, "op": "dup", "key": "Lumwynia|budget", "entity": "Lumwynia", "attr": "budget", "value": "470k dollars", "text": "The budget for Lumwynia is 470k dollars", "exact": false}
+{"day": 59, "op": "update", "key": "Mirzelia|region", "entity": "Mirzelia", "attr": "region", "value": "us-west", "old": "eu-north", "text": "Mirzelia region is now us-west"}
+{"day": 59, "op": "dup", "key": "Korulmus|region", "entity": "Korulmus", "attr": "region", "value": "ap-south", "text": "Korulmus region is ap-south", "exact": true}
+{"day": 61, "op": "update", "key": "Talmirus|runbook", "entity": "Talmirus", "attr": "runbook", "value": "wiki page F", "old": "wiki page D", "text": "Talmirus runbook is now wiki page F"}
+{"day": 61, "op": "update", "key": "Wynzubia|budget", "entity": "Wynzubia", "attr": "budget", "value": "648k dollars", "old": "584k dollars", "text": "Wynzubia budget is now 648k dollars"}
+{"day": 63, "op": "update", "key": "Quimirar|budget", "entity": "Quimirar", "attr": "budget", "value": "345k dollars", "old": "459k dollars", "text": "Quimirar budget is now 345k dollars"}
+{"day": 64, "op": "update", "key": "Xanxanor|budget", "entity": "Xanxanor", "attr": "budget", "value": "853k dollars", "old": "578k dollars", "text": "Xanxanor budget is now 853k dollars"}
+{"day": 64, "op": "update", "key": "Savostor|owner", "entity": "Savostor", "attr": "owner", "value": "Hugo Lambert", "old": "Opal Reyes", "text": "Savostor owner is now Hugo Lambert"}
+{"day": 65, "op": "update", "key": "Quitalyn|runbook", "entity": "Quitalyn", "attr": "runbook", "value": "wiki page D", "old": "wiki page F", "text": "Quitalyn runbook is now wiki page D"}
+{"day": 65, "op": "query", "entity": "Quimirar", "attr": "replicas", "question": "What is Quimirar's replicas?", "expect": ["17 replicas"], "forbid": ["36 replicas"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Dramirex", "attr": "replicas", "question": "What is Dramirex's replicas?", "expect": ["8 replicas"], "forbid": ["11 replicas"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Wynnexyn", "attr": "region", "question": "What is Wynnexyn's region?", "expect": ["ap-south"], "forbid": ["eu-north"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Koryaron", "attr": "tier", "question": "What is Koryaron's tier?", "expect": ["bronze"], "forbid": ["gold"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Bromiria", "attr": "budget", "question": "What is Bromiria's budget?", "expect": ["715k dollars"], "forbid": ["228k dollars"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Mirulmar", "attr": "region", "question": "What is Mirulmar's region?", "expect": ["ap-east"], "forbid": ["eu-west"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Korulmus", "attr": "region", "question": "What is Korulmus's region?", "expect": ["ap-south"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Talwynia", "attr": "owner", "question": "What is Talwynia's owner?", "expect": ["Esme Walker"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Korsavia", "attr": "owner", "question": "What is Korsavia's owner?", "expect": ["Carmen Ortiz"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Yarquiex", "attr": "budget", "question": "What is Yarquiex's budget?", "expect": ["504k dollars"], "forbid": [], "asOfDay": 65}
+{"day": 66, "op": "update", "key": "Xanlumon|runbook", "entity": "Xanlumon", "attr": "runbook", "value": "wiki page D", "old": "wiki page A", "text": "Xanlumon runbook is now wiki page D"}
+{"day": 66, "op": "update", "key": "Korulmus|budget", "entity": "Korulmus", "attr": "budget", "value": "596k dollars", "old": "281k dollars", "text": "Korulmus budget is now 596k dollars"}
+{"day": 67, "op": "update", "key": "Quixania|replicas", "entity": "Quixania", "attr": "replicas", "value": "33 replicas", "old": "6 replicas", "text": "Quixania replicas is now 33 replicas"}
+{"day": 67, "op": "update", "key": "Kortrear|budget", "entity": "Kortrear", "attr": "budget", "value": "417k dollars", "old": "118k dollars", "text": "Kortrear budget is now 417k dollars"}
+{"day": 69, "op": "update", "key": "Wynquiex|runbook", "entity": "Wynquiex", "attr": "runbook", "value": "wiki page F", "old": "wiki page E", "text": "Wynquiex runbook is now wiki page F"}
+{"day": 70, "op": "update", "key": "Drasavon|runbook", "entity": "Drasavon", "attr": "runbook", "value": "wiki page B", "old": "wiki page A", "text": "Drasavon runbook is now wiki page B"}
+{"day": 70, "op": "update", "key": "Dramirex|runbook", "entity": "Dramirex", "attr": "runbook", "value": "wiki page E", "old": "wiki page D", "text": "Dramirex runbook is now wiki page E"}
+{"day": 83, "op": "consolidate"}
+{"day": 84, "op": "query", "entity": "Xanlumon", "attr": "budget", "question": "What is Xanlumon's budget?", "expect": ["334k dollars"], "forbid": ["40k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vantalia", "attr": "region", "question": "What is Vantalia's region?", "expect": ["ap-south"], "forbid": ["eu-west"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xanlumon", "attr": "runbook", "question": "What is Xanlumon's runbook?", "expect": ["wiki page D"], "forbid": ["wiki page A"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Bropryex", "attr": "tier", "question": "What is Bropryex's tier?", "expect": ["bronze"], "forbid": ["platinum"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Wynquiex", "attr": "runbook", "question": "What is Wynquiex's runbook?", "expect": ["wiki page F"], "forbid": ["wiki page E"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quitalyn", "attr": "runbook", "question": "What is Quitalyn's runbook?", "expect": ["wiki page D"], "forbid": ["wiki page F"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Wynzubia", "attr": "budget", "question": "What is Wynzubia's budget?", "expect": ["648k dollars"], "forbid": ["584k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quimirar", "attr": "budget", "question": "What is Quimirar's budget?", "expect": ["345k dollars"], "forbid": ["459k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zelfenon", "attr": "budget", "question": "What is Zelfenon's budget?", "expect": ["585k dollars"], "forbid": ["11k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Koryaron", "attr": "tier", "question": "What is Koryaron's tier?", "expect": ["bronze"], "forbid": ["gold"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korulmus", "attr": "budget", "question": "What is Korulmus's budget?", "expect": ["596k dollars"], "forbid": ["281k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Dramirex", "attr": "runbook", "question": "What is Dramirex's runbook?", "expect": ["wiki page E"], "forbid": ["wiki page D"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Mirmiron", "attr": "replicas", "question": "What is Mirmiron's replicas?", "expect": ["17 replicas"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Quiyarex", "attr": "owner", "question": "What is Quiyarex's owner?", "expect": ["Ines Moreau"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Lumwynia", "attr": "tier", "question": "What is Lumwynia's tier?", "expect": ["gold"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vantalia", "attr": "replicas", "question": "What is Vantalia's replicas?", "expect": ["10 replicas"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Mirmiron", "attr": "owner", "question": "What is Mirmiron's owner?", "expect": ["Bruno Costa"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Savtalon", "attr": "runbook", "question": "What is Savtalon's runbook?", "expect": ["wiki page D"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Kortrear", "attr": "owner", "question": "What is Kortrear's owner?", "expect": ["Quentin Roy"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Koryaron", "attr": "budget", "question": "What is Koryaron's budget?", "expect": ["284k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "question": "What is Savtalon's override code?", "expect": [], "forbid": ["temp-150"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Prywynon's override code?", "expect": [], "forbid": ["temp-374"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Wynyaria's override code?", "expect": [], "forbid": ["temp-959"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Vanostor's override code?", "expect": [], "forbid": ["temp-387"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Drasavon's override code?", "expect": [], "forbid": ["temp-574"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Fenmiryn's override code?", "expect": [], "forbid": ["temp-580"], "asOfDay": null, "kind": "stale"}

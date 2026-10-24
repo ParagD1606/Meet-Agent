@@ -7,6 +7,8 @@
     "dev": "bun --cwd server dev",
     "check-types": "bun --cwd server check-types",
     "test": "bun --cwd server test",
-    "db:generate": "bun --cwd server db:generate"
+    "db:generate": "bun --cwd server db:generate",
+    "verify": "bash scripts/verify.sh",
+    "eval:nightly": "bun --cwd server run scripts/eval-nightly.ts"
   }
 }

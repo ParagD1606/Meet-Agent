@@ -1,0 +1,294 @@
+{"_header": true, "set": "drift-5", "version": 1, "date": "2026-10-24", "theme": "vendors", "days": 84, "startAgoDays": 300, "facts": 244, "entities": 40}
+{"day": 0, "op": "add", "key": "Yarvanar|renewal month", "entity": "Yarvanar", "attr": "renewal month", "value": "March", "text": "Yarvanar renewal month is March"}
+{"day": 0, "op": "add", "key": "Mirdraus|security rating", "entity": "Mirdraus", "attr": "security rating", "value": "B", "text": "Mirdraus security rating is B"}
+{"day": 0, "op": "add", "key": "Zellumon|renewal month", "entity": "Zellumon", "attr": "renewal month", "value": "November", "text": "Zellumon renewal month is November"}
+{"day": 0, "op": "add", "key": "Ulmquior|security rating", "entity": "Ulmquior", "attr": "security rating", "value": "A", "text": "Ulmquior security rating is A"}
+{"day": 0, "op": "add", "key": "Ostxanex|annual spend", "entity": "Ostxanex", "attr": "annual spend", "value": "131k dollars", "text": "Ostxanex annual spend is 131k dollars"}
+{"day": 0, "op": "add", "key": "Prytreia|renewal month", "entity": "Prytreia", "attr": "renewal month", "value": "July", "text": "Prytreia renewal month is July"}
+{"day": 0, "op": "add", "key": "Prytreia|contract term", "entity": "Prytreia", "attr": "contract term", "value": "3 years", "text": "Prytreia contract term is 3 years"}
+{"day": 0, "op": "add", "key": "Pryvanus|escalation contact", "entity": "Pryvanus", "attr": "escalation contact", "value": "Esme Walker", "text": "Pryvanus escalation contact is Esme Walker"}
+{"day": 0, "op": "add", "key": "Yarnexyn|escalation contact", "entity": "Yarnexyn", "attr": "escalation contact", "value": "Quentin Roy", "text": "Yarnexyn escalation contact is Quentin Roy"}
+{"day": 1, "op": "add", "key": "Ulmpryor|relationship owner", "entity": "Ulmpryor", "attr": "relationship owner", "value": "Dev Malhotra", "text": "Ulmpryor relationship owner is Dev Malhotra"}
+{"day": 1, "op": "add", "key": "Ostxanex|escalation contact", "entity": "Ostxanex", "attr": "escalation contact", "value": "Aiko Tanaka", "text": "Ostxanex escalation contact is Aiko Tanaka"}
+{"day": 1, "op": "add", "key": "Dralumar|annual spend", "entity": "Dralumar", "attr": "annual spend", "value": "490k dollars", "text": "Dralumar annual spend is 490k dollars"}
+{"day": 1, "op": "add", "key": "Tretreia|annual spend", "entity": "Tretreia", "attr": "annual spend", "value": "477k dollars", "text": "Tretreia annual spend is 477k dollars"}
+{"day": 1, "op": "add", "key": "Yarquiyn|contract term", "entity": "Yarquiyn", "attr": "contract term", "value": "1 year", "text": "Yarquiyn contract term is 1 year"}
+{"day": 1, "op": "add", "key": "Ulmostor|relationship owner", "entity": "Ulmostor", "attr": "relationship owner", "value": "Opal Reyes", "text": "Ulmostor relationship owner is Opal Reyes"}
+{"day": 2, "op": "add", "key": "Ulmpryor|annual spend", "entity": "Ulmpryor", "attr": "annual spend", "value": "338k dollars", "text": "Ulmpryor annual spend is 338k dollars"}
+{"day": 2, "op": "add", "key": "Vannexyn|renewal month", "entity": "Vannexyn", "attr": "renewal month", "value": "March", "text": "Vannexyn renewal month is March"}
+{"day": 2, "op": "add", "key": "Tretreia|escalation contact", "entity": "Tretreia", "attr": "escalation contact", "value": "Pia Jensen", "text": "Tretreia escalation contact is Pia Jensen"}
+{"day": 2, "op": "add", "key": "Wynlumon|escalation contact", "entity": "Wynlumon", "attr": "escalation contact", "value": "Greta Olsen", "text": "Wynlumon escalation contact is Greta Olsen"}
+{"day": 2, "op": "add", "key": "Korostor|escalation contact", "entity": "Korostor", "attr": "escalation contact", "value": "Jonas Berg", "text": "Korostor escalation contact is Jonas Berg"}
+{"day": 2, "op": "add", "key": "Xantalex|escalation contact", "entity": "Xantalex", "attr": "escalation contact", "value": "Rosa Greco", "text": "Xantalex escalation contact is Rosa Greco"}
+{"day": 2, "op": "add", "key": "Fentreyn|renewal month", "entity": "Fentreyn", "attr": "renewal month", "value": "January", "text": "Fentreyn renewal month is January"}
+{"day": 2, "op": "add", "key": "Fentreyn|contract term", "entity": "Fentreyn", "attr": "contract term", "value": "2 years", "text": "Fentreyn contract term is 2 years"}
+{"day": 2, "op": "add", "key": "Zeltreia|relationship owner", "entity": "Zeltreia", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "Zeltreia relationship owner is Aiko Tanaka"}
+{"day": 2, "op": "add", "key": "Pryzubus|annual spend", "entity": "Pryzubus", "attr": "annual spend", "value": "35k dollars", "text": "Pryzubus annual spend is 35k dollars"}
+{"day": 2, "op": "add", "key": "Yaryaror|security rating", "entity": "Yaryaror", "attr": "security rating", "value": "D", "text": "Yaryaror security rating is D"}
+{"day": 2, "op": "add", "key": "Zubyaror|escalation contact", "entity": "Zubyaror", "attr": "escalation contact", "value": "Aiko Tanaka", "text": "Zubyaror escalation contact is Aiko Tanaka"}
+{"day": 2, "op": "add", "key": "Yarnexyn|security rating", "entity": "Yarnexyn", "attr": "security rating", "value": "B", "text": "Yarnexyn security rating is B"}
+{"day": 3, "op": "add", "key": "Miryaria|security rating", "entity": "Miryaria", "attr": "security rating", "value": "C", "text": "Miryaria security rating is C"}
+{"day": 3, "op": "add", "key": "Zellumon|security rating", "entity": "Zellumon", "attr": "security rating", "value": "A", "text": "Zellumon security rating is A"}
+{"day": 3, "op": "add", "key": "Dralumar|security rating", "entity": "Dralumar", "attr": "security rating", "value": "B", "text": "Dralumar security rating is B"}
+{"day": 3, "op": "add", "key": "Korvanus|annual spend", "entity": "Korvanus", "attr": "annual spend", "value": "312k dollars", "text": "Korvanus annual spend is 312k dollars"}
+{"day": 3, "op": "add", "key": "Dramiria|contract term", "entity": "Dramiria", "attr": "contract term", "value": "monthly", "text": "Dramiria contract term is monthly"}
+{"day": 3, "op": "add", "key": "Korvanon|escalation contact", "entity": "Korvanon", "attr": "escalation contact", "value": "Pia Jensen", "text": "Korvanon escalation contact is Pia Jensen"}
+{"day": 3, "op": "add", "key": "Zubtalyn|security rating", "entity": "Zubtalyn", "attr": "security rating", "value": "A", "text": "Zubtalyn security rating is A"}
+{"day": 3, "op": "add", "key": "Yarnexyn|relationship owner", "entity": "Yarnexyn", "attr": "relationship owner", "value": "Farid Nasser", "text": "Yarnexyn relationship owner is Farid Nasser"}
+{"day": 4, "op": "add", "key": "Ostxanex|contract term", "entity": "Ostxanex", "attr": "contract term", "value": "1 year", "text": "Ostxanex contract term is 1 year"}
+{"day": 4, "op": "add", "key": "Xantalex|security rating", "entity": "Xantalex", "attr": "security rating", "value": "A", "text": "Xantalex security rating is A"}
+{"day": 4, "op": "add", "key": "Wynkoryn|security rating", "entity": "Wynkoryn", "attr": "security rating", "value": "D", "text": "Wynkoryn security rating is D"}
+{"day": 4, "op": "add", "key": "Fentreyn|security rating", "entity": "Fentreyn", "attr": "security rating", "value": "D", "text": "Fentreyn security rating is D"}
+{"day": 4, "op": "add", "key": "Fenbroar|relationship owner", "entity": "Fenbroar", "attr": "relationship owner", "value": "Tara Singh", "text": "Fenbroar relationship owner is Tara Singh"}
+{"day": 4, "op": "add", "key": "Savsavus|security rating", "entity": "Savsavus", "attr": "security rating", "value": "D", "text": "Savsavus security rating is D"}
+{"day": 4, "op": "add", "key": "Dramiria|relationship owner", "entity": "Dramiria", "attr": "relationship owner", "value": "Rosa Greco", "text": "Dramiria relationship owner is Rosa Greco"}
+{"day": 4, "op": "add", "key": "Korvanon|renewal month", "entity": "Korvanon", "attr": "renewal month", "value": "November", "text": "Korvanon renewal month is November"}
+{"day": 4, "op": "add", "key": "Zubtalyn|annual spend", "entity": "Zubtalyn", "attr": "annual spend", "value": "266k dollars", "text": "Zubtalyn annual spend is 266k dollars"}
+{"day": 5, "op": "add", "key": "Ulmpryor|contract term", "entity": "Ulmpryor", "attr": "contract term", "value": "2 years", "text": "Ulmpryor contract term is 2 years"}
+{"day": 5, "op": "add", "key": "Dralumar|renewal month", "entity": "Dralumar", "attr": "renewal month", "value": "January", "text": "Dralumar renewal month is January"}
+{"day": 5, "op": "add", "key": "Savzubyn|annual spend", "entity": "Savzubyn", "attr": "annual spend", "value": "247k dollars", "text": "Savzubyn annual spend is 247k dollars"}
+{"day": 5, "op": "add", "key": "Lumxania|renewal month", "entity": "Lumxania", "attr": "renewal month", "value": "November", "text": "Lumxania renewal month is November"}
+{"day": 5, "op": "add", "key": "Wynkoryn|renewal month", "entity": "Wynkoryn", "attr": "renewal month", "value": "May", "text": "Wynkoryn renewal month is May"}
+{"day": 5, "op": "add", "key": "Pryzubus|security rating", "entity": "Pryzubus", "attr": "security rating", "value": "B", "text": "Pryzubus security rating is B"}
+{"day": 5, "op": "add", "key": "Ulmostor|security rating", "entity": "Ulmostor", "attr": "security rating", "value": "B", "text": "Ulmostor security rating is B"}
+{"day": 5, "op": "add", "key": "Yarnexyn|override", "entity": "Yarnexyn", "attr": "override", "value": "temp-465", "forgetAfterDay": 17, "text": "Yarnexyn has a temporary override code temp-465 until day 17"}
+{"day": 6, "op": "add", "key": "Xanbroyn|renewal month", "entity": "Xanbroyn", "attr": "renewal month", "value": "March", "text": "Xanbroyn renewal month is March"}
+{"day": 6, "op": "add", "key": "Vannexyn|escalation contact", "entity": "Vannexyn", "attr": "escalation contact", "value": "Opal Reyes", "text": "Vannexyn escalation contact is Opal Reyes"}
+{"day": 6, "op": "add", "key": "Korostor|contract term", "entity": "Korostor", "attr": "contract term", "value": "1 year", "text": "Korostor contract term is 1 year"}
+{"day": 6, "op": "add", "key": "Lumxania|contract term", "entity": "Lumxania", "attr": "contract term", "value": "3 years", "text": "Lumxania contract term is 3 years"}
+{"day": 6, "op": "add", "key": "Korvanus|relationship owner", "entity": "Korvanus", "attr": "relationship owner", "value": "Opal Reyes", "text": "Korvanus relationship owner is Opal Reyes"}
+{"day": 6, "op": "add", "key": "Dramiria|security rating", "entity": "Dramiria", "attr": "security rating", "value": "D", "text": "Dramiria security rating is D"}
+{"day": 6, "op": "add", "key": "Pryvanus|security rating", "entity": "Pryvanus", "attr": "security rating", "value": "B", "text": "Pryvanus security rating is B"}
+{"day": 7, "op": "add", "key": "Zellumon|annual spend", "entity": "Zellumon", "attr": "annual spend", "value": "165k dollars", "text": "Zellumon annual spend is 165k dollars"}
+{"day": 7, "op": "add", "key": "Ulmquior|relationship owner", "entity": "Ulmquior", "attr": "relationship owner", "value": "Quentin Roy", "text": "Ulmquior relationship owner is Quentin Roy"}
+{"day": 7, "op": "add", "key": "Korostor|security rating", "entity": "Korostor", "attr": "security rating", "value": "C", "text": "Korostor security rating is C"}
+{"day": 7, "op": "add", "key": "Lumxania|annual spend", "entity": "Lumxania", "attr": "annual spend", "value": "113k dollars", "text": "Lumxania annual spend is 113k dollars"}
+{"day": 7, "op": "add", "key": "Korvanus|security rating", "entity": "Korvanus", "attr": "security rating", "value": "A", "text": "Korvanus security rating is A"}
+{"day": 7, "op": "add", "key": "Fenbroar|escalation contact", "entity": "Fenbroar", "attr": "escalation contact", "value": "Rosa Greco", "text": "Fenbroar escalation contact is Rosa Greco"}
+{"day": 7, "op": "add", "key": "Yaryaror|contract term", "entity": "Yaryaror", "attr": "contract term", "value": "3 years", "text": "Yaryaror contract term is 3 years"}
+{"day": 8, "op": "add", "key": "Ulmpryor|escalation contact", "entity": "Ulmpryor", "attr": "escalation contact", "value": "Keira Doyle", "text": "Ulmpryor escalation contact is Keira Doyle"}
+{"day": 8, "op": "add", "key": "Yarlumia|annual spend", "entity": "Yarlumia", "attr": "annual spend", "value": "89k dollars", "text": "Yarlumia annual spend is 89k dollars"}
+{"day": 8, "op": "add", "key": "Fenbroar|security rating", "entity": "Fenbroar", "attr": "security rating", "value": "D", "text": "Fenbroar security rating is D"}
+{"day": 8, "op": "add", "key": "Savsavus|relationship owner", "entity": "Savsavus", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "Savsavus relationship owner is Aiko Tanaka"}
+{"day": 8, "op": "add", "key": "Zeltreia|annual spend", "entity": "Zeltreia", "attr": "annual spend", "value": "46k dollars", "text": "Zeltreia annual spend is 46k dollars"}
+{"day": 8, "op": "add", "key": "Pryzubus|contract term", "entity": "Pryzubus", "attr": "contract term", "value": "monthly", "text": "Pryzubus contract term is monthly"}
+{"day": 8, "op": "add", "key": "Yarnexyn|contract term", "entity": "Yarnexyn", "attr": "contract term", "value": "3 years", "text": "Yarnexyn contract term is 3 years"}
+{"day": 9, "op": "add", "key": "Xanbroyn|security rating", "entity": "Xanbroyn", "attr": "security rating", "value": "D", "text": "Xanbroyn security rating is D"}
+{"day": 9, "op": "add", "key": "Ulmquior|annual spend", "entity": "Ulmquior", "attr": "annual spend", "value": "106k dollars", "text": "Ulmquior annual spend is 106k dollars"}
+{"day": 9, "op": "add", "key": "Savzubyn|escalation contact", "entity": "Savzubyn", "attr": "escalation contact", "value": "Pia Jensen", "text": "Savzubyn escalation contact is Pia Jensen"}
+{"day": 9, "op": "add", "key": "Xantalex|contract term", "entity": "Xantalex", "attr": "contract term", "value": "3 years", "text": "Xantalex contract term is 3 years"}
+{"day": 9, "op": "add", "key": "Korvanus|contract term", "entity": "Korvanus", "attr": "contract term", "value": "3 years", "text": "Korvanus contract term is 3 years"}
+{"day": 9, "op": "add", "key": "Quinexia|security rating", "entity": "Quinexia", "attr": "security rating", "value": "A", "text": "Quinexia security rating is A"}
+{"day": 9, "op": "add", "key": "Ulmxanex|annual spend", "entity": "Ulmxanex", "attr": "annual spend", "value": "210k dollars", "text": "Ulmxanex annual spend is 210k dollars"}
+{"day": 9, "op": "add", "key": "Quiostex|relationship owner", "entity": "Quiostex", "attr": "relationship owner", "value": "Sven Lund", "text": "Quiostex relationship owner is Sven Lund"}
+{"day": 9, "op": "add", "key": "Zubyaror|renewal month", "entity": "Zubyaror", "attr": "renewal month", "value": "January", "text": "Zubyaror renewal month is January"}
+{"day": 9, "op": "add", "key": "Pryvanus|relationship owner", "entity": "Pryvanus", "attr": "relationship owner", "value": "Dev Malhotra", "text": "Pryvanus relationship owner is Dev Malhotra"}
+{"day": 10, "op": "add", "key": "Miryaria|renewal month", "entity": "Miryaria", "attr": "renewal month", "value": "November", "text": "Miryaria renewal month is November"}
+{"day": 10, "op": "add", "key": "Ostquiex|relationship owner", "entity": "Ostquiex", "attr": "relationship owner", "value": "Nils Persson", "text": "Ostquiex relationship owner is Nils Persson"}
+{"day": 10, "op": "add", "key": "Yarvanar|escalation contact", "entity": "Yarvanar", "attr": "escalation contact", "value": "Opal Reyes", "text": "Yarvanar escalation contact is Opal Reyes"}
+{"day": 10, "op": "add", "key": "Yarquiyn|renewal month", "entity": "Yarquiyn", "attr": "renewal month", "value": "July", "text": "Yarquiyn renewal month is July"}
+{"day": 10, "op": "add", "key": "Yarquiyn|annual spend", "entity": "Yarquiyn", "attr": "annual spend", "value": "484k dollars", "text": "Yarquiyn annual spend is 484k dollars"}
+{"day": 10, "op": "add", "key": "Fenbroar|annual spend", "entity": "Fenbroar", "attr": "annual spend", "value": "18k dollars", "text": "Fenbroar annual spend is 18k dollars"}
+{"day": 10, "op": "add", "key": "Nexfenus|annual spend", "entity": "Nexfenus", "attr": "annual spend", "value": "267k dollars", "text": "Nexfenus annual spend is 267k dollars"}
+{"day": 10, "op": "add", "key": "Nexfenus|relationship owner", "entity": "Nexfenus", "attr": "relationship owner", "value": "Opal Reyes", "text": "Nexfenus relationship owner is Opal Reyes"}
+{"day": 10, "op": "add", "key": "Yaryaror|relationship owner", "entity": "Yaryaror", "attr": "relationship owner", "value": "Nils Persson", "text": "Yaryaror relationship owner is Nils Persson"}
+{"day": 11, "op": "add", "key": "Ostquiex|security rating", "entity": "Ostquiex", "attr": "security rating", "value": "B", "text": "Ostquiex security rating is B"}
+{"day": 11, "op": "add", "key": "Mirdraus|contract term", "entity": "Mirdraus", "attr": "contract term", "value": "2 years", "text": "Mirdraus contract term is 2 years"}
+{"day": 11, "op": "add", "key": "Tretreia|relationship owner", "entity": "Tretreia", "attr": "relationship owner", "value": "Nils Persson", "text": "Tretreia relationship owner is Nils Persson"}
+{"day": 11, "op": "add", "key": "Yarquiyn|escalation contact", "entity": "Yarquiyn", "attr": "escalation contact", "value": "Greta Olsen", "text": "Yarquiyn escalation contact is Greta Olsen"}
+{"day": 11, "op": "add", "key": "Taltreon|escalation contact", "entity": "Taltreon", "attr": "escalation contact", "value": "Carmen Ortiz", "text": "Taltreon escalation contact is Carmen Ortiz"}
+{"day": 11, "op": "add", "key": "Taltreon|relationship owner", "entity": "Taltreon", "attr": "relationship owner", "value": "Mona Eid", "text": "Taltreon relationship owner is Mona Eid"}
+{"day": 11, "op": "add", "key": "Savsavus|contract term", "entity": "Savsavus", "attr": "contract term", "value": "2 years", "text": "Savsavus contract term is 2 years"}
+{"day": 11, "op": "add", "key": "Quiostex|escalation contact", "entity": "Quiostex", "attr": "escalation contact", "value": "Hugo Lambert", "text": "Quiostex escalation contact is Hugo Lambert"}
+{"day": 12, "op": "add", "key": "Yarlumia|renewal month", "entity": "Yarlumia", "attr": "renewal month", "value": "July", "text": "Yarlumia renewal month is July"}
+{"day": 12, "op": "add", "key": "Yarlumia|relationship owner", "entity": "Yarlumia", "attr": "relationship owner", "value": "Hugo Lambert", "text": "Yarlumia relationship owner is Hugo Lambert"}
+{"day": 12, "op": "add", "key": "Xanbroyn|relationship owner", "entity": "Xanbroyn", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "Xanbroyn relationship owner is Aiko Tanaka"}
+{"day": 12, "op": "add", "key": "Vannexyn|security rating", "entity": "Vannexyn", "attr": "security rating", "value": "D", "text": "Vannexyn security rating is D"}
+{"day": 12, "op": "add", "key": "Wynkoryn|escalation contact", "entity": "Wynkoryn", "attr": "escalation contact", "value": "Mona Eid", "text": "Wynkoryn escalation contact is Mona Eid"}
+{"day": 12, "op": "add", "key": "Fentreyn|annual spend", "entity": "Fentreyn", "attr": "annual spend", "value": "329k dollars", "text": "Fentreyn annual spend is 329k dollars"}
+{"day": 12, "op": "add", "key": "Quinexia|renewal month", "entity": "Quinexia", "attr": "renewal month", "value": "May", "text": "Quinexia renewal month is May"}
+{"day": 12, "op": "add", "key": "Quinexia|relationship owner", "entity": "Quinexia", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "Quinexia relationship owner is Aiko Tanaka"}
+{"day": 12, "op": "add", "key": "Pryzubus|escalation contact", "entity": "Pryzubus", "attr": "escalation contact", "value": "Sven Lund", "text": "Pryzubus escalation contact is Sven Lund"}
+{"day": 12, "op": "add", "key": "Quiostex|security rating", "entity": "Quiostex", "attr": "security rating", "value": "D", "text": "Quiostex security rating is D"}
+{"day": 12, "op": "add", "key": "Korvanon|security rating", "entity": "Korvanon", "attr": "security rating", "value": "A", "text": "Korvanon security rating is A"}
+{"day": 13, "op": "add", "key": "Yarlumia|contract term", "entity": "Yarlumia", "attr": "contract term", "value": "3 years", "text": "Yarlumia contract term is 3 years"}
+{"day": 13, "op": "add", "key": "Ostquiex|contract term", "entity": "Ostquiex", "attr": "contract term", "value": "3 years", "text": "Ostquiex contract term is 3 years"}
+{"day": 13, "op": "add", "key": "Mirdraus|relationship owner", "entity": "Mirdraus", "attr": "relationship owner", "value": "Pia Jensen", "text": "Mirdraus relationship owner is Pia Jensen"}
+{"day": 13, "op": "add", "key": "Lumxania|relationship owner", "entity": "Lumxania", "attr": "relationship owner", "value": "Carmen Ortiz", "text": "Lumxania relationship owner is Carmen Ortiz"}
+{"day": 13, "op": "add", "key": "Xantalex|relationship owner", "entity": "Xantalex", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "Xantalex relationship owner is Aiko Tanaka"}
+{"day": 13, "op": "add", "key": "Taltreon|security rating", "entity": "Taltreon", "attr": "security rating", "value": "C", "text": "Taltreon security rating is C"}
+{"day": 13, "op": "add", "key": "Zubyaror|security rating", "entity": "Zubyaror", "attr": "security rating", "value": "B", "text": "Zubyaror security rating is B"}
+{"day": 13, "op": "add", "key": "Zubtalyn|contract term", "entity": "Zubtalyn", "attr": "contract term", "value": "2 years", "text": "Zubtalyn contract term is 2 years"}
+{"day": 13, "op": "add", "key": "Pryvanus|override", "entity": "Pryvanus", "attr": "override", "value": "temp-221", "forgetAfterDay": 26, "text": "Pryvanus has a temporary override code temp-221 until day 26"}
+{"day": 14, "op": "add", "key": "Miryaria|relationship owner", "entity": "Miryaria", "attr": "relationship owner", "value": "Luis Herrera", "text": "Miryaria relationship owner is Luis Herrera"}
+{"day": 14, "op": "add", "key": "Yarvanar|contract term", "entity": "Yarvanar", "attr": "contract term", "value": "3 years", "text": "Yarvanar contract term is 3 years"}
+{"day": 14, "op": "add", "key": "Savzubyn|security rating", "entity": "Savzubyn", "attr": "security rating", "value": "D", "text": "Savzubyn security rating is D"}
+{"day": 14, "op": "add", "key": "Wynkoryn|contract term", "entity": "Wynkoryn", "attr": "contract term", "value": "2 years", "text": "Wynkoryn contract term is 2 years"}
+{"day": 14, "op": "add", "key": "Ulmxanex|contract term", "entity": "Ulmxanex", "attr": "contract term", "value": "2 years", "text": "Ulmxanex contract term is 2 years"}
+{"day": 14, "op": "add", "key": "Zubyaror|annual spend", "entity": "Zubyaror", "attr": "annual spend", "value": "309k dollars", "text": "Zubyaror annual spend is 309k dollars"}
+{"day": 14, "op": "add", "key": "Korvanon|contract term", "entity": "Korvanon", "attr": "contract term", "value": "3 years", "text": "Korvanon contract term is 3 years"}
+{"day": 14, "op": "add", "key": "Ulmostor|annual spend", "entity": "Ulmostor", "attr": "annual spend", "value": "340k dollars", "text": "Ulmostor annual spend is 340k dollars"}
+{"day": 15, "op": "add", "key": "Miryaria|escalation contact", "entity": "Miryaria", "attr": "escalation contact", "value": "Keira Doyle", "text": "Miryaria escalation contact is Keira Doyle"}
+{"day": 15, "op": "add", "key": "Zellumon|contract term", "entity": "Zellumon", "attr": "contract term", "value": "monthly", "text": "Zellumon contract term is monthly"}
+{"day": 15, "op": "add", "key": "Ostxanex|renewal month", "entity": "Ostxanex", "attr": "renewal month", "value": "May", "text": "Ostxanex renewal month is May"}
+{"day": 15, "op": "add", "key": "Dralumar|relationship owner", "entity": "Dralumar", "attr": "relationship owner", "value": "Luis Herrera", "text": "Dralumar relationship owner is Luis Herrera"}
+{"day": 15, "op": "add", "key": "Korostor|annual spend", "entity": "Korostor", "attr": "annual spend", "value": "219k dollars", "text": "Korostor annual spend is 219k dollars"}
+{"day": 15, "op": "add", "key": "Prytreia|escalation contact", "entity": "Prytreia", "attr": "escalation contact", "value": "Keira Doyle", "text": "Prytreia escalation contact is Keira Doyle"}
+{"day": 15, "op": "add", "key": "Zeltreia|security rating", "entity": "Zeltreia", "attr": "security rating", "value": "A", "text": "Zeltreia security rating is A"}
+{"day": 15, "op": "add", "key": "Zubtalyn|escalation contact", "entity": "Zubtalyn", "attr": "escalation contact", "value": "Luis Herrera", "text": "Zubtalyn escalation contact is Luis Herrera"}
+{"day": 15, "op": "add", "key": "Pryvanus|annual spend", "entity": "Pryvanus", "attr": "annual spend", "value": "230k dollars", "text": "Pryvanus annual spend is 230k dollars"}
+{"day": 15, "op": "add", "key": "Korvanon|override", "entity": "Korvanon", "attr": "override", "value": "temp-645", "forgetAfterDay": 28, "text": "Korvanon has a temporary override code temp-645 until day 28"}
+{"day": 16, "op": "add", "key": "Taltreon|renewal month", "entity": "Taltreon", "attr": "renewal month", "value": "November", "text": "Taltreon renewal month is November"}
+{"day": 16, "op": "add", "key": "Quinexia|contract term", "entity": "Quinexia", "attr": "contract term", "value": "2 years", "text": "Quinexia contract term is 2 years"}
+{"day": 16, "op": "add", "key": "Ulmxanex|escalation contact", "entity": "Ulmxanex", "attr": "escalation contact", "value": "Tara Singh", "text": "Ulmxanex escalation contact is Tara Singh"}
+{"day": 16, "op": "add", "key": "Zeltreia|escalation contact", "entity": "Zeltreia", "attr": "escalation contact", "value": "Dev Malhotra", "text": "Zeltreia escalation contact is Dev Malhotra"}
+{"day": 16, "op": "add", "key": "Yaryaror|annual spend", "entity": "Yaryaror", "attr": "annual spend", "value": "136k dollars", "text": "Yaryaror annual spend is 136k dollars"}
+{"day": 17, "op": "add", "key": "Xanbroyn|annual spend", "entity": "Xanbroyn", "attr": "annual spend", "value": "11k dollars", "text": "Xanbroyn annual spend is 11k dollars"}
+{"day": 17, "op": "add", "key": "Yarvanar|security rating", "entity": "Yarvanar", "attr": "security rating", "value": "B", "text": "Yarvanar security rating is B"}
+{"day": 17, "op": "add", "key": "Vannexyn|annual spend", "entity": "Vannexyn", "attr": "annual spend", "value": "220k dollars", "text": "Vannexyn annual spend is 220k dollars"}
+{"day": 17, "op": "add", "key": "Ulmquior|contract term", "entity": "Ulmquior", "attr": "contract term", "value": "2 years", "text": "Ulmquior contract term is 2 years"}
+{"day": 17, "op": "add", "key": "Tretreia|contract term", "entity": "Tretreia", "attr": "contract term", "value": "3 years", "text": "Tretreia contract term is 3 years"}
+{"day": 17, "op": "add", "key": "Wynlumon|renewal month", "entity": "Wynlumon", "attr": "renewal month", "value": "November", "text": "Wynlumon renewal month is November"}
+{"day": 17, "op": "add", "key": "Wynlumon|relationship owner", "entity": "Wynlumon", "attr": "relationship owner", "value": "Pia Jensen", "text": "Wynlumon relationship owner is Pia Jensen"}
+{"day": 17, "op": "add", "key": "Wynlumon|contract term", "entity": "Wynlumon", "attr": "contract term", "value": "3 years", "text": "Wynlumon contract term is 3 years"}
+{"day": 17, "op": "add", "key": "Prytreia|relationship owner", "entity": "Prytreia", "attr": "relationship owner", "value": "Keira Doyle", "text": "Prytreia relationship owner is Keira Doyle"}
+{"day": 17, "op": "add", "key": "Ulmxanex|relationship owner", "entity": "Ulmxanex", "attr": "relationship owner", "value": "Rosa Greco", "text": "Ulmxanex relationship owner is Rosa Greco"}
+{"day": 17, "op": "add", "key": "Nexfenus|escalation contact", "entity": "Nexfenus", "attr": "escalation contact", "value": "Hugo Lambert", "text": "Nexfenus escalation contact is Hugo Lambert"}
+{"day": 17, "op": "add", "key": "Quiostex|contract term", "entity": "Quiostex", "attr": "contract term", "value": "2 years", "text": "Quiostex contract term is 2 years"}
+{"day": 17, "op": "add", "key": "Dramiria|escalation contact", "entity": "Dramiria", "attr": "escalation contact", "value": "Nils Persson", "text": "Dramiria escalation contact is Nils Persson"}
+{"day": 18, "op": "add", "key": "Ostquiex|annual spend", "entity": "Ostquiex", "attr": "annual spend", "value": "45k dollars", "text": "Ostquiex annual spend is 45k dollars"}
+{"day": 18, "op": "add", "key": "Mirdraus|escalation contact", "entity": "Mirdraus", "attr": "escalation contact", "value": "Quentin Roy", "text": "Mirdraus escalation contact is Quentin Roy"}
+{"day": 18, "op": "add", "key": "Savzubyn|contract term", "entity": "Savzubyn", "attr": "contract term", "value": "2 years", "text": "Savzubyn contract term is 2 years"}
+{"day": 18, "op": "add", "key": "Savsavus|renewal month", "entity": "Savsavus", "attr": "renewal month", "value": "January", "text": "Savsavus renewal month is January"}
+{"day": 18, "op": "add", "key": "Nexfenus|contract term", "entity": "Nexfenus", "attr": "contract term", "value": "monthly", "text": "Nexfenus contract term is monthly"}
+{"day": 18, "op": "add", "key": "Ulmostor|contract term", "entity": "Ulmostor", "attr": "contract term", "value": "2 years", "text": "Ulmostor contract term is 2 years"}
+{"day": 21, "op": "update", "key": "Yarvanar|security rating", "entity": "Yarvanar", "attr": "security rating", "value": "A", "old": "B", "text": "Yarvanar security rating is now A"}
+{"day": 22, "op": "add", "key": "Quinexia|override", "entity": "Quinexia", "attr": "override", "value": "temp-274", "forgetAfterDay": 30, "text": "Quinexia has a temporary override code temp-274 until day 30"}
+{"day": 22, "op": "update", "key": "Pryvanus|annual spend", "entity": "Pryvanus", "attr": "annual spend", "value": "193k dollars", "old": "230k dollars", "text": "Pryvanus annual spend is now 193k dollars"}
+{"day": 22, "op": "update", "key": "Tretreia|contract term", "entity": "Tretreia", "attr": "contract term", "value": "1 year", "old": "3 years", "text": "Tretreia contract term is now 1 year"}
+{"day": 23, "op": "update", "key": "Savzubyn|security rating", "entity": "Savzubyn", "attr": "security rating", "value": "C", "old": "D", "text": "Savzubyn security rating is now C"}
+{"day": 24, "op": "add", "key": "Ulmostor|override", "entity": "Ulmostor", "attr": "override", "value": "temp-279", "forgetAfterDay": 31, "text": "Ulmostor has a temporary override code temp-279 until day 31"}
+{"day": 25, "op": "update", "key": "Fenbroar|annual spend", "entity": "Fenbroar", "attr": "annual spend", "value": "295k dollars", "old": "18k dollars", "text": "Fenbroar annual spend is now 295k dollars"}
+{"day": 28, "op": "update", "key": "Korvanus|contract term", "entity": "Korvanus", "attr": "contract term", "value": "monthly", "old": "3 years", "text": "Korvanus contract term is now monthly"}
+{"day": 28, "op": "consolidate"}
+{"day": 30, "op": "update", "key": "Prytreia|escalation contact", "entity": "Prytreia", "attr": "escalation contact", "value": "Ines Moreau", "old": "Keira Doyle", "text": "Prytreia escalation contact is now Ines Moreau"}
+{"day": 30, "op": "update", "key": "Xanbroyn|annual spend", "entity": "Xanbroyn", "attr": "annual spend", "value": "377k dollars", "old": "11k dollars", "text": "Xanbroyn annual spend is now 377k dollars"}
+{"day": 32, "op": "update", "key": "Quinexia|security rating", "entity": "Quinexia", "attr": "security rating", "value": "B", "old": "A", "text": "Quinexia security rating is now B"}
+{"day": 32, "op": "update", "key": "Yarvanar|contract term", "entity": "Yarvanar", "attr": "contract term", "value": "2 years", "old": "3 years", "text": "Yarvanar contract term is now 2 years"}
+{"day": 32, "op": "update", "key": "Nexfenus|escalation contact", "entity": "Nexfenus", "attr": "escalation contact", "value": "Ines Moreau", "old": "Hugo Lambert", "text": "Nexfenus escalation contact is now Ines Moreau"}
+{"day": 33, "op": "update", "key": "Pryvanus|escalation contact", "entity": "Pryvanus", "attr": "escalation contact", "value": "Bruno Costa", "old": "Esme Walker", "text": "Pryvanus escalation contact is now Bruno Costa"}
+{"day": 33, "op": "update", "key": "Ulmxanex|contract term", "entity": "Ulmxanex", "attr": "contract term", "value": "1 year", "old": "2 years", "text": "Ulmxanex contract term is now 1 year"}
+{"day": 37, "op": "add", "key": "Xanbroyn|override", "entity": "Xanbroyn", "attr": "override", "value": "temp-948", "forgetAfterDay": 48, "text": "Xanbroyn has a temporary override code temp-948 until day 48"}
+{"day": 38, "op": "update", "key": "Ulmpryor|contract term", "entity": "Ulmpryor", "attr": "contract term", "value": "3 years", "old": "2 years", "text": "Ulmpryor contract term is now 3 years"}
+{"day": 39, "op": "update", "key": "Yarnexyn|relationship owner", "entity": "Yarnexyn", "attr": "relationship owner", "value": "Aiko Tanaka", "old": "Farid Nasser", "text": "Yarnexyn relationship owner is now Aiko Tanaka"}
+{"day": 40, "op": "add", "key": "Xantalex|override", "entity": "Xantalex", "attr": "override", "value": "temp-739", "forgetAfterDay": 54, "text": "Xantalex has a temporary override code temp-739 until day 54"}
+{"day": 40, "op": "query", "entity": "Fenbroar", "attr": "annual spend", "question": "What is Fenbroar's annual spend?", "expect": ["295k dollars"], "forbid": ["18k dollars"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmxanex", "attr": "contract term", "question": "What is Ulmxanex's contract term?", "expect": ["1 year"], "forbid": ["2 years"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Tretreia", "attr": "contract term", "question": "What is Tretreia's contract term?", "expect": ["1 year"], "forbid": ["3 years"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Pryvanus", "attr": "escalation contact", "question": "What is Pryvanus's escalation contact?", "expect": ["Bruno Costa"], "forbid": ["Esme Walker"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Prytreia", "attr": "escalation contact", "question": "What is Prytreia's escalation contact?", "expect": ["Ines Moreau"], "forbid": ["Keira Doyle"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Savzubyn", "attr": "security rating", "question": "What is Savzubyn's security rating?", "expect": ["C"], "forbid": ["D"], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ostquiex", "attr": "security rating", "question": "What is Ostquiex's security rating?", "expect": ["B"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Quinexia", "attr": "contract term", "question": "What is Quinexia's contract term?", "expect": ["2 years"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Xanbroyn", "attr": "renewal month", "question": "What is Xanbroyn's renewal month?", "expect": ["March"], "forbid": [], "asOfDay": 40}
+{"day": 40, "op": "query", "entity": "Ulmxanex", "attr": "relationship owner", "question": "What is Ulmxanex's relationship owner?", "expect": ["Rosa Greco"], "forbid": [], "asOfDay": 40}
+{"day": 41, "op": "update", "key": "Ulmpryor|annual spend", "entity": "Ulmpryor", "attr": "annual spend", "value": "350k dollars", "old": "338k dollars", "text": "Ulmpryor annual spend is now 350k dollars"}
+{"day": 41, "op": "update", "key": "Dralumar|renewal month", "entity": "Dralumar", "attr": "renewal month", "value": "November", "old": "January", "text": "Dralumar renewal month is now November"}
+{"day": 41, "op": "dup", "key": "Korostor|contract term", "entity": "Korostor", "attr": "contract term", "value": "1 year", "text": "The contract term for Korostor is 1 year", "exact": false}
+{"day": 41, "op": "dup", "key": "Quinexia|relationship owner", "entity": "Quinexia", "attr": "relationship owner", "value": "Aiko Tanaka", "text": "The relationship owner for Quinexia is Aiko Tanaka", "exact": false}
+{"day": 42, "op": "dup", "key": "Fentreyn|contract term", "entity": "Fentreyn", "attr": "contract term", "value": "2 years", "text": "Fentreyn contract term is 2 years", "exact": true}
+{"day": 43, "op": "dup", "key": "Korvanon|contract term", "entity": "Korvanon", "attr": "contract term", "value": "3 years", "text": "Korvanon contract term is 3 years", "exact": true}
+{"day": 43, "op": "dup", "key": "Quiostex|security rating", "entity": "Quiostex", "attr": "security rating", "value": "D", "text": "The security rating for Quiostex is D", "exact": false}
+{"day": 44, "op": "update", "key": "Dralumar|annual spend", "entity": "Dralumar", "attr": "annual spend", "value": "152k dollars", "old": "490k dollars", "text": "Dralumar annual spend is now 152k dollars"}
+{"day": 44, "op": "update", "key": "Savsavus|security rating", "entity": "Savsavus", "attr": "security rating", "value": "C", "old": "D", "text": "Savsavus security rating is now C"}
+{"day": 44, "op": "dup", "key": "Yaryaror|relationship owner", "entity": "Yaryaror", "attr": "relationship owner", "value": "Nils Persson", "text": "The relationship owner for Yaryaror is Nils Persson", "exact": false}
+{"day": 46, "op": "update", "key": "Ulmxanex|annual spend", "entity": "Ulmxanex", "attr": "annual spend", "value": "31k dollars", "old": "210k dollars", "text": "Ulmxanex annual spend is now 31k dollars"}
+{"day": 46, "op": "dup", "key": "Taltreon|renewal month", "entity": "Taltreon", "attr": "renewal month", "value": "November", "text": "The renewal month for Taltreon is November", "exact": false}
+{"day": 48, "op": "update", "key": "Ulmquior|security rating", "entity": "Ulmquior", "attr": "security rating", "value": "C", "old": "A", "text": "Ulmquior security rating is now C"}
+{"day": 48, "op": "dup", "key": "Korvanon|renewal month", "entity": "Korvanon", "attr": "renewal month", "value": "November", "text": "Korvanon renewal month is November", "exact": true}
+{"day": 48, "op": "dup", "key": "Korostor|security rating", "entity": "Korostor", "attr": "security rating", "value": "C", "text": "The security rating for Korostor is C", "exact": false}
+{"day": 49, "op": "update", "key": "Zeltreia|security rating", "entity": "Zeltreia", "attr": "security rating", "value": "C", "old": "A", "text": "Zeltreia security rating is now C"}
+{"day": 49, "op": "update", "key": "Nexfenus|contract term", "entity": "Nexfenus", "attr": "contract term", "value": "1 year", "old": "monthly", "text": "Nexfenus contract term is now 1 year"}
+{"day": 49, "op": "update", "key": "Miryaria|renewal month", "entity": "Miryaria", "attr": "renewal month", "value": "September", "old": "November", "text": "Miryaria renewal month is now September"}
+{"day": 49, "op": "dup", "key": "Yaryaror|contract term", "entity": "Yaryaror", "attr": "contract term", "value": "3 years", "text": "Yaryaror contract term is 3 years", "exact": true}
+{"day": 49, "op": "dup", "key": "Vannexyn|renewal month", "entity": "Vannexyn", "attr": "renewal month", "value": "March", "text": "Vannexyn renewal month is March", "exact": true}
+{"day": 49, "op": "dup", "key": "Miryaria|relationship owner", "entity": "Miryaria", "attr": "relationship owner", "value": "Luis Herrera", "text": "Miryaria relationship owner is Luis Herrera", "exact": true}
+{"day": 50, "op": "update", "key": "Savsavus|contract term", "entity": "Savsavus", "attr": "contract term", "value": "monthly", "old": "2 years", "text": "Savsavus contract term is now monthly"}
+{"day": 50, "op": "update", "key": "Yarlumia|relationship owner", "entity": "Yarlumia", "attr": "relationship owner", "value": "Sven Lund", "old": "Hugo Lambert", "text": "Yarlumia relationship owner is now Sven Lund"}
+{"day": 50, "op": "update", "key": "Savsavus|renewal month", "entity": "Savsavus", "attr": "renewal month", "value": "March", "old": "January", "text": "Savsavus renewal month is now March"}
+{"day": 50, "op": "update", "key": "Mirdraus|relationship owner", "entity": "Mirdraus", "attr": "relationship owner", "value": "Sven Lund", "old": "Pia Jensen", "text": "Mirdraus relationship owner is now Sven Lund"}
+{"day": 50, "op": "dup", "key": "Xantalex|escalation contact", "entity": "Xantalex", "attr": "escalation contact", "value": "Rosa Greco", "text": "Xantalex escalation contact is Rosa Greco", "exact": true}
+{"day": 52, "op": "add", "key": "Savzubyn|override", "entity": "Savzubyn", "attr": "override", "value": "temp-593", "forgetAfterDay": 60, "text": "Savzubyn has a temporary override code temp-593 until day 60"}
+{"day": 52, "op": "add", "key": "Zubtalyn|override", "entity": "Zubtalyn", "attr": "override", "value": "temp-929", "forgetAfterDay": 59, "text": "Zubtalyn has a temporary override code temp-929 until day 59"}
+{"day": 52, "op": "add", "key": "Dralumar|override", "entity": "Dralumar", "attr": "override", "value": "temp-960", "forgetAfterDay": 63, "text": "Dralumar has a temporary override code temp-960 until day 63"}
+{"day": 52, "op": "dup", "key": "Taltreon|escalation contact", "entity": "Taltreon", "attr": "escalation contact", "value": "Carmen Ortiz", "text": "The escalation contact for Taltreon is Carmen Ortiz", "exact": false}
+{"day": 52, "op": "dup", "key": "Zubyaror|annual spend", "entity": "Zubyaror", "attr": "annual spend", "value": "309k dollars", "text": "The annual spend for Zubyaror is 309k dollars", "exact": false}
+{"day": 53, "op": "dup", "key": "Korvanon|escalation contact", "entity": "Korvanon", "attr": "escalation contact", "value": "Pia Jensen", "text": "Korvanon escalation contact is Pia Jensen", "exact": true}
+{"day": 54, "op": "add", "key": "Savsavus|override", "entity": "Savsavus", "attr": "override", "value": "temp-174", "forgetAfterDay": 62, "text": "Savsavus has a temporary override code temp-174 until day 62"}
+{"day": 54, "op": "add", "key": "Nexfenus|override", "entity": "Nexfenus", "attr": "override", "value": "temp-587", "forgetAfterDay": 64, "text": "Nexfenus has a temporary override code temp-587 until day 64"}
+{"day": 54, "op": "add", "key": "Taltreon|override", "entity": "Taltreon", "attr": "override", "value": "temp-154", "forgetAfterDay": 61, "text": "Taltreon has a temporary override code temp-154 until day 61"}
+{"day": 55, "op": "add", "key": "Prytreia|override", "entity": "Prytreia", "attr": "override", "value": "temp-637", "forgetAfterDay": 68, "text": "Prytreia has a temporary override code temp-637 until day 68"}
+{"day": 55, "op": "update", "key": "Xanbroyn|renewal month", "entity": "Xanbroyn", "attr": "renewal month", "value": "September", "old": "March", "text": "Xanbroyn renewal month is now September"}
+{"day": 55, "op": "update", "key": "Yarnexyn|security rating", "entity": "Yarnexyn", "attr": "security rating", "value": "A", "old": "B", "text": "Yarnexyn security rating is now A"}
+{"day": 55, "op": "update", "key": "Pryvanus|relationship owner", "entity": "Pryvanus", "attr": "relationship owner", "value": "Opal Reyes", "old": "Dev Malhotra", "text": "Pryvanus relationship owner is now Opal Reyes"}
+{"day": 55, "op": "dup", "key": "Zellumon|contract term", "entity": "Zellumon", "attr": "contract term", "value": "monthly", "text": "Zellumon contract term is monthly", "exact": true}
+{"day": 55, "op": "dup", "key": "Vannexyn|escalation contact", "entity": "Vannexyn", "attr": "escalation contact", "value": "Opal Reyes", "text": "Vannexyn escalation contact is Opal Reyes", "exact": true}
+{"day": 55, "op": "dup", "key": "Mirdraus|escalation contact", "entity": "Mirdraus", "attr": "escalation contact", "value": "Quentin Roy", "text": "The escalation contact for Mirdraus is Quentin Roy", "exact": false}
+{"day": 56, "op": "update", "key": "Korvanus|relationship owner", "entity": "Korvanus", "attr": "relationship owner", "value": "Quentin Roy", "old": "Opal Reyes", "text": "Korvanus relationship owner is now Quentin Roy"}
+{"day": 56, "op": "consolidate"}
+{"day": 57, "op": "dup", "key": "Korostor|escalation contact", "entity": "Korostor", "attr": "escalation contact", "value": "Jonas Berg", "text": "Korostor escalation contact is Jonas Berg", "exact": true}
+{"day": 57, "op": "dup", "key": "Tretreia|relationship owner", "entity": "Tretreia", "attr": "relationship owner", "value": "Nils Persson", "text": "The relationship owner for Tretreia is Nils Persson", "exact": false}
+{"day": 58, "op": "update", "key": "Ulmostor|security rating", "entity": "Ulmostor", "attr": "security rating", "value": "C", "old": "B", "text": "Ulmostor security rating is now C"}
+{"day": 58, "op": "dup", "key": "Wynkoryn|escalation contact", "entity": "Wynkoryn", "attr": "escalation contact", "value": "Mona Eid", "text": "Wynkoryn escalation contact is Mona Eid", "exact": true}
+{"day": 58, "op": "dup", "key": "Quiostex|contract term", "entity": "Quiostex", "attr": "contract term", "value": "2 years", "text": "The contract term for Quiostex is 2 years", "exact": false}
+{"day": 58, "op": "dup", "key": "Ulmquior|annual spend", "entity": "Ulmquior", "attr": "annual spend", "value": "106k dollars", "text": "The annual spend for Ulmquior is 106k dollars", "exact": false}
+{"day": 59, "op": "dup", "key": "Zeltreia|annual spend", "entity": "Zeltreia", "attr": "annual spend", "value": "46k dollars", "text": "The annual spend for Zeltreia is 46k dollars", "exact": false}
+{"day": 60, "op": "update", "key": "Dramiria|relationship owner", "entity": "Dramiria", "attr": "relationship owner", "value": "Quentin Roy", "old": "Rosa Greco", "text": "Dramiria relationship owner is now Quentin Roy"}
+{"day": 61, "op": "update", "key": "Korostor|annual spend", "entity": "Korostor", "attr": "annual spend", "value": "85k dollars", "old": "219k dollars", "text": "Korostor annual spend is now 85k dollars"}
+{"day": 61, "op": "update", "key": "Lumxania|renewal month", "entity": "Lumxania", "attr": "renewal month", "value": "September", "old": "November", "text": "Lumxania renewal month is now September"}
+{"day": 62, "op": "update", "key": "Ulmostor|annual spend", "entity": "Ulmostor", "attr": "annual spend", "value": "217k dollars", "old": "340k dollars", "text": "Ulmostor annual spend is now 217k dollars"}
+{"day": 62, "op": "update", "key": "Quinexia|renewal month", "entity": "Quinexia", "attr": "renewal month", "value": "March", "old": "May", "text": "Quinexia renewal month is now March"}
+{"day": 62, "op": "update", "key": "Yarvanar|renewal month", "entity": "Yarvanar", "attr": "renewal month", "value": "July", "old": "March", "text": "Yarvanar renewal month is now July"}
+{"day": 65, "op": "query", "entity": "Quinexia", "attr": "security rating", "question": "What is Quinexia's security rating?", "expect": ["B"], "forbid": ["A"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Lumxania", "attr": "renewal month", "question": "What is Lumxania's renewal month?", "expect": ["September"], "forbid": ["November"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Fenbroar", "attr": "annual spend", "question": "What is Fenbroar's annual spend?", "expect": ["295k dollars"], "forbid": ["18k dollars"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Tretreia", "attr": "contract term", "question": "What is Tretreia's contract term?", "expect": ["1 year"], "forbid": ["3 years"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Korvanus", "attr": "contract term", "question": "What is Korvanus's contract term?", "expect": ["monthly"], "forbid": ["3 years"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Ulmpryor", "attr": "annual spend", "question": "What is Ulmpryor's annual spend?", "expect": ["350k dollars"], "forbid": ["338k dollars"], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Dralumar", "attr": "relationship owner", "question": "What is Dralumar's relationship owner?", "expect": ["Luis Herrera"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Ulmxanex", "attr": "escalation contact", "question": "What is Ulmxanex's escalation contact?", "expect": ["Tara Singh"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Tretreia", "attr": "relationship owner", "question": "What is Tretreia's relationship owner?", "expect": ["Nils Persson"], "forbid": [], "asOfDay": 65}
+{"day": 65, "op": "query", "entity": "Quiostex", "attr": "security rating", "question": "What is Quiostex's security rating?", "expect": ["D"], "forbid": [], "asOfDay": 65}
+{"day": 66, "op": "update", "key": "Ostquiex|security rating", "entity": "Ostquiex", "attr": "security rating", "value": "A", "old": "B", "text": "Ostquiex security rating is now A"}
+{"day": 67, "op": "update", "key": "Dramiria|escalation contact", "entity": "Dramiria", "attr": "escalation contact", "value": "Esme Walker", "old": "Nils Persson", "text": "Dramiria escalation contact is now Esme Walker"}
+{"day": 68, "op": "update", "key": "Nexfenus|annual spend", "entity": "Nexfenus", "attr": "annual spend", "value": "445k dollars", "old": "267k dollars", "text": "Nexfenus annual spend is now 445k dollars"}
+{"day": 69, "op": "update", "key": "Yarlumia|contract term", "entity": "Yarlumia", "attr": "contract term", "value": "2 years", "old": "3 years", "text": "Yarlumia contract term is now 2 years"}
+{"day": 69, "op": "update", "key": "Xantalex|relationship owner", "entity": "Xantalex", "attr": "relationship owner", "value": "Greta Olsen", "old": "Aiko Tanaka", "text": "Xantalex relationship owner is now Greta Olsen"}
+{"day": 69, "op": "update", "key": "Savsavus|security rating", "entity": "Savsavus", "attr": "security rating", "value": "B", "old": "C", "text": "Savsavus security rating is now B"}
+{"day": 83, "op": "consolidate"}
+{"day": 84, "op": "query", "entity": "Dralumar", "attr": "annual spend", "question": "What is Dralumar's annual spend?", "expect": ["152k dollars"], "forbid": ["490k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Pryvanus", "attr": "relationship owner", "question": "What is Pryvanus's relationship owner?", "expect": ["Opal Reyes"], "forbid": ["Dev Malhotra"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Pryvanus", "attr": "annual spend", "question": "What is Pryvanus's annual spend?", "expect": ["193k dollars"], "forbid": ["230k dollars"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korvanus", "attr": "contract term", "question": "What is Korvanus's contract term?", "expect": ["monthly"], "forbid": ["3 years"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xantalex", "attr": "relationship owner", "question": "What is Xantalex's relationship owner?", "expect": ["Greta Olsen"], "forbid": ["Aiko Tanaka"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Korvanus", "attr": "relationship owner", "question": "What is Korvanus's relationship owner?", "expect": ["Quentin Roy"], "forbid": ["Opal Reyes"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Savsavus", "attr": "security rating", "question": "What is Savsavus's security rating?", "expect": ["B"], "forbid": ["D", "C"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Xanbroyn", "attr": "renewal month", "question": "What is Xanbroyn's renewal month?", "expect": ["September"], "forbid": ["March"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Ulmpryor", "attr": "contract term", "question": "What is Ulmpryor's contract term?", "expect": ["3 years"], "forbid": ["2 years"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Prytreia", "attr": "escalation contact", "question": "What is Prytreia's escalation contact?", "expect": ["Ines Moreau"], "forbid": ["Keira Doyle"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Yarvanar", "attr": "renewal month", "question": "What is Yarvanar's renewal month?", "expect": ["July"], "forbid": ["March"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Mirdraus", "attr": "relationship owner", "question": "What is Mirdraus's relationship owner?", "expect": ["Sven Lund"], "forbid": ["Pia Jensen"], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zubyaror", "attr": "annual spend", "question": "What is Zubyaror's annual spend?", "expect": ["309k dollars"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Dramiria", "attr": "security rating", "question": "What is Dramiria's security rating?", "expect": ["D"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Vannexyn", "attr": "escalation contact", "question": "What is Vannexyn's escalation contact?", "expect": ["Opal Reyes"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Dralumar", "attr": "security rating", "question": "What is Dralumar's security rating?", "expect": ["B"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Zubyaror", "attr": "security rating", "question": "What is Zubyaror's security rating?", "expect": ["B"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Taltreon", "attr": "renewal month", "question": "What is Taltreon's renewal month?", "expect": ["November"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Yarnexyn", "attr": "contract term", "question": "What is Yarnexyn's contract term?", "expect": ["3 years"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "entity": "Miryaria", "attr": "escalation contact", "question": "What is Miryaria's escalation contact?", "expect": ["Keira Doyle"], "forbid": [], "asOfDay": null}
+{"day": 84, "op": "query", "question": "What is Yarnexyn's override code?", "expect": [], "forbid": ["temp-465"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Ulmostor's override code?", "expect": [], "forbid": ["temp-279"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Savzubyn's override code?", "expect": [], "forbid": ["temp-593"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Xantalex's override code?", "expect": [], "forbid": ["temp-739"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Savsavus's override code?", "expect": [], "forbid": ["temp-174"], "asOfDay": null, "kind": "stale"}
+{"day": 84, "op": "query", "question": "What is Quinexia's override code?", "expect": [], "forbid": ["temp-274"], "asOfDay": null, "kind": "stale"}
