@@ -1,0 +1,19 @@
+Dana Okafor: Thanks everyone for joining the Order Portal v2 kickoff. We have twenty minutes, so let's get to who does what.
+Priya Raman: Before we start, the goal is a November launch for the Reserve plan on the new portal.
+Dana Okafor: Right. Let's decide the launch date first. Are we agreed on November?
+Marcus Lee: Yes, November works for engineering.
+Sofia Alvarez: Yes, customers are expecting it.
+Tom Becker: Agreed.
+Dana Okafor: Then it's decided: Reserve launches in November.
+Marcus Lee: I will set up the Stripe webhook alerts by Friday.
+Dana Okafor: Thanks Marcus, by Friday.
+Sofia Alvarez: I will send the invoice sample to Harbor Cafe by next Wednesday.
+Dana Okafor: Great, Sofia, next Wednesday.
+Tom Becker: I will prepare the billing migration plan and share it with everyone by the end of the month.
+Dana Okafor: Thank you Tom, the end of the month.
+Priya Raman: I will draft the launch checklist and send it to the team by Monday.
+Dana Okafor: Perfect, Priya, by Monday.
+Dana Okafor: Does anyone have anything else?
+Marcus Lee: No, that covers engineering.
+Sofia Alvarez: Nothing from customer success.
+Dana Okafor: Great. Thanks everyone, that is a good plan.

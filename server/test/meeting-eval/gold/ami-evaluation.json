@@ -1,0 +1,348 @@
+{
+ "id": "ami-evaluation",
+ "title": "Remote control project: product evaluation",
+ "source": "AMI-style",
+ "date": "2026-03-23",
+ "participants": [
+  "Sam Whitaker",
+  "Priya Nair",
+  "Leo Brandt",
+  "Hannah Cole"
+ ],
+ "transcript": [
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, welcome back everyone. It's the twenty-third. This is the evaluation meeting, so we look at the prototype against the criteria and then plan the final presentation."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Great, I brought the questionnaires."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "And I've got the prototype here. It's yellow!"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Oh nice. Can I hold it?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Sure, here. Careful, the scroll wheel is a bit sticky."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, I feel it. It catches."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "That's the, um, the rubber ring rubbing the casing. I'll try to fix that, but I need to see if the tolerances allow it."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay. So go through the criteria. Hannah, you've got the numbers from the questionnaire."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah. So we asked the, um, twelve people in the lab. Looks, seven out of seven on the scale. Sorry, the average was six point five."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Wow."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Ease of use, five point eight. The scroll wheel scored really well."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "See, intuitive."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah, nobody asked what it was. Which is, you know, I was worried."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Good. And the fancy factor?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Six. Which is good. People liked the colour a lot."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Even the older people?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Even them. Well, except one guy who said it looks like a toy."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Ha, there's always one."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right. And cost. Priya?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "So the costs, um, we're at eleven ninety per unit. Under the twelve fifty. Which is a relief."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "That's excellent. Would you be able to send me the breakdown in writing? For the presentation."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes, I'll email the full cost breakdown to you tomorrow."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Tomorrow, the twenty-fourth. Great."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "For the usability numbers, I'm happy to add them to the slides. Like the charts from the lab, the error counts, the time to change a channel."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "That would be great, Leo. When can you do that?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Wednesday. I'll have the usability results in the deck by Wednesday."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Wednesday the twenty-fifth. Perfect."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "So are we going with this? I mean the whole remote as is?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "I think so, yes. Anybody against? The yellow rubber one with the scroll wheel goes to the final presentation."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "No, I think it's good."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, go."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Then that's decided. We go with it."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "What about the scroll wheel being sticky?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "I'll try to fix it, like I said. Worst case we say in the presentation it's a prototype issue."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay. Priya will have a look. No date, it's a prototype thing."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Right."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Should we do one more round of testing? Like after the fix?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Maybe. I don't know if we have the time."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "We don't. Skip it."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Okay, fine."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So for the final presentation. I'll prepare the slides, the main deck, and I'll get the draft done by Friday."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "The twenty-seventh?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "The twenty-seventh, yes."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Can I do the marketing slide?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Oh, please. Actually, Hannah, send me that, um, a page, whatever you've got, and I'll put it in."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Okay. I'll, uh, I'll write something up."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Cool."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Oh and, should we rehearse? Like, all together before the actual one? I think we should rehearse. Maybe Thursday."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Sure, why not."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Let's see how it goes. If there's time. I'm not putting it in the calendar yet."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "It would help though."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Yeah, yeah, I know."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "And the room. For the presentation. Who's booking the room? Because last time it was a mess."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Hm. Who is going to book the meeting room for the presentation?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "I'm out Thursday and Friday."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I don't have the access, I'm external."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "I can't either."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay. Nobody's got it for now."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "By the way, after the launch we could, you know, do a follow-up session with the marketing team and see how it sells."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Yeah, that would be nice. Not for now though."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "If it sells well we could do a, um, a version with the backlight."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "If it sells well we'd have a budget for anything."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Ha."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right, I think that's all. Thank you, everybody. It's been a pleasure."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Same here."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Bye all!"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Go ahead with the yellow rubber remote for the final presentation"
+   },
+   {
+    "text": "The scroll wheel scored well and stays"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Prepare the final presentation slides",
+    "owner": "Sam Whitaker",
+    "due": "2026-03-27",
+    "label": "confirmed"
+   },
+   {
+    "title": "Add the usability results to the slides",
+    "owner": "Leo Brandt",
+    "due": "2026-03-25",
+    "label": "confirmed"
+   },
+   {
+    "title": "Write the marketing page for the slides",
+    "owner": "Hannah Cole",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the cost breakdown to Sam",
+    "owner": "Priya Nair",
+    "due": "2026-03-24",
+    "label": "confirmed"
+   },
+   {
+    "title": "Fix the sticky scroll wheel prototype",
+    "owner": "Priya Nair",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Rehearse the presentation together",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Hold a follow-up session with the marketing team after launch",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who is going to book the meeting room for the presentation",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

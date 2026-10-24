@@ -1,0 +1,237 @@
+WEBVTT
+
+1
+00:00:03.000 --> 00:00:11.400
+<v Dana Okafor>ok um can everyone hear me yeah ok so this is the weekly sync, uh, let's try to be quick
+
+2
+00:00:12.000 --> 00:00:14.940
+<v Marcus Lee>morning, sorry, yeah, i was on mute
+
+3
+00:00:15.540 --> 00:00:17.540
+<v Tom Becker>hi
+
+4
+00:00:18.140 --> 00:00:20.660
+<v Sofia Alvarez>hey hey, sorry i'm walking in
+
+5
+00:00:21.260 --> 00:00:25.880
+<v Dana Okafor>so, the invoice thing. tom you saw the duplicate invoices right
+
+6
+00:00:26.480 --> 00:00:33.620
+<v Tom Becker>yeah um three customers got two emails for the same order, it's the retry job i think
+
+7
+00:00:34.220 --> 00:00:39.680
+<v Marcus Lee>yeah the retry creates a second invoice when the email provider times out
+
+8
+00:00:40.280 --> 00:00:45.320
+<v Tom Becker>right so, um, yeah i'll fix the duplicate invoice bug by thursday
+
+9
+00:00:45.920 --> 00:00:49.700
+<v Dana Okafor>great, thursday is a deploy day so that works
+
+10
+00:00:50.300 --> 00:00:53.240
+<v Sofia Alvarez>did anybody see the game last night
+
+11
+00:00:53.840 --> 00:00:55.840
+<v Marcus Lee>don't, i'm still sad
+
+12
+00:00:56.440 --> 00:01:00.640
+<v Dana Okafor>ok let's, let's stay on the agenda. harbor cafe. sofia
+
+13
+00:01:01.240 --> 00:01:10.900
+<v Sofia Alvarez>yeah so they asked for a sample of the consolidated invoice, um, and i'll send harbor the invoice sample, i think friday works
+
+14
+00:01:11.500 --> 00:01:13.500
+<v Dana Okafor>ok friday
+
+15
+00:01:14.100 --> 00:01:21.660
+<v Priya Raman>and kessler, the order form, i'll send the order form to kessler by friday, i have the draft
+
+16
+00:01:22.260 --> 00:01:24.260
+<v Dana Okafor>good
+
+17
+00:01:24.860 --> 00:01:32.840
+<v Marcus Lee>um before i forget, we need the staging environment to stop resetting on sunday night, people lose their stuff
+
+18
+00:01:33.440 --> 00:01:35.960
+<v Tom Becker>yeah that bit me last week
+
+19
+00:01:36.560 --> 00:01:44.120
+<v Marcus Lee>so, uh, maybe we should move the staging reset to saturday night? like it's a one line change
+
+20
+00:01:44.720 --> 00:01:50.180
+<v Dana Okafor>i don't know who owns that cron though. let's not decide that now
+
+21
+00:01:50.780 --> 00:01:52.780
+<v Marcus Lee>ok fair
+
+22
+00:01:53.380 --> 00:01:57.580
+<v Dana Okafor>dark mode. are we doing dark mode for the beta
+
+23
+00:01:58.180 --> 00:02:02.380
+<v Marcus Lee>it's a big change in the stylesheets, i'd say no
+
+24
+00:02:02.980 --> 00:02:06.760
+<v Priya Raman>i'd say no too, we don't have the people
+
+25
+00:02:07.360 --> 00:02:11.140
+<v Dana Okafor>ok then dark mode is after the beta, decided
+
+26
+00:02:11.740 --> 00:02:13.740
+<v Tom Becker>fine by me
+
+27
+00:02:14.340 --> 00:02:20.640
+<v Dana Okafor>uh what else, the certificate, the ssl cert for the portal expires in three weeks
+
+28
+00:02:21.240 --> 00:02:23.240
+<v Marcus Lee>oh right
+
+29
+00:02:23.840 --> 00:02:25.940
+<v Tom Becker>i thought it auto renews
+
+30
+00:02:26.540 --> 00:02:31.1000
+<v Marcus Lee>it did but we changed the provider in march so i'm not sure
+
+31
+00:02:32.600 --> 00:02:35.960
+<v Dana Okafor>so who's going to renew the ssl cert
+
+32
+00:02:36.560 --> 00:02:38.560
+<v Priya Raman>not me
+
+33
+00:02:39.160 --> 00:02:41.160
+<v Marcus Lee>i don't think me
+
+34
+00:02:41.760 --> 00:02:44.700
+<v Tom Becker>i don't know who set it up
+
+35
+00:02:45.300 --> 00:02:47.820
+<v Dana Okafor>ok so nobody. we'll leave it
+
+36
+00:02:48.420 --> 00:02:56.400
+<v Sofia Alvarez>also we still need the beta announcement to go out to harbor, somebody should write that, like the email
+
+37
+00:02:56.1000 --> 00:02:59.100
+<v Dana Okafor>yeah yeah that needs doing
+
+38
+00:02:59.700 --> 00:03:01.700
+<v Marcus Lee>mm
+
+39
+00:03:02.300 --> 00:03:04.300
+<v Priya Raman>yeah
+
+40
+00:03:04.900 --> 00:03:06.900
+<v Dana Okafor>ok. moving on
+
+41
+00:03:07.500 --> 00:03:16.740
+<v Tom Becker>um the on-call doc is out of date by the way, priya joined the rotation and it still has the old list
+
+42
+00:03:17.340 --> 00:03:29.520
+<v Dana Okafor>oh yeah that's mine, i'll probably update the on-call doc at some point this week, it's just a text file, but i might not get to it before friday
+
+43
+00:03:30.120 --> 00:03:32.120
+<v Tom Becker>no rush
+
+44
+00:03:32.720 --> 00:03:39.440
+<v Priya Raman>hey one thing on the kessler form, um, tom said the bank cut-off is monday so
+
+45
+00:03:40.040 --> 00:03:45.920
+<v Tom Becker>yeah the finance cut-off, it's monday not friday, so the order form is monday
+
+46
+00:03:46.520 --> 00:03:51.560
+<v Priya Raman>oh ok, then i'll send the order form to kessler on monday
+
+47
+00:03:52.160 --> 00:03:54.160
+<v Dana Okafor>ok monday then
+
+48
+00:03:54.760 --> 00:04:02.740
+<v Sofia Alvarez>oh and um, so yeah i'm sending the sample invoice over to harbor, i'll get that to them friday
+
+49
+00:04:03.340 --> 00:04:05.440
+<v Dana Okafor>sofia you said that already
+
+50
+00:04:06.040 --> 00:04:08.140
+<v Sofia Alvarez>oh yeah sorry, same thing
+
+51
+00:04:08.740 --> 00:04:14.200
+<v Marcus Lee>i'll review the checkout pr today, um, i know it's a big one
+
+52
+00:04:14.800 --> 00:04:16.800
+<v Dana Okafor>thanks marcus
+
+53
+00:04:17.400 --> 00:04:21.600
+<v Tom Becker>if we had more people we could do everything lol
+
+54
+00:04:22.200 --> 00:04:24.300
+<v Dana Okafor>ha, yeah. ok anything else
+
+55
+00:04:24.900 --> 00:04:26.900
+<v Marcus Lee>no
+
+56
+00:04:27.500 --> 00:04:29.500
+<v Sofia Alvarez>nope
+
+57
+00:04:30.100 --> 00:04:32.100
+<v Dana Okafor>ok thanks everyone, bye
+
+58
+00:04:32.700 --> 00:04:34.700
+<v Marcus Lee>bye
+
+59
+00:04:35.300 --> 00:04:37.300
+<v Tom Becker>bye

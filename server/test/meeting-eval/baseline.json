@@ -1,0 +1,26 @@
+{
+  "mode": "final",
+  "target": "analyzeLiveMeeting",
+  "model": "gemini-3.5-flash",
+  "date": "2026-10-24",
+  "fixtures": 12,
+  "goldTasks": 84,
+  "metrics": {
+    "taskPrecision": 0.792,
+    "taskRecall": 0.75,
+    "taskF1": 0.77,
+    "ownerAccuracy": 0.982,
+    "ownerAccuracyNamed": 1,
+    "dueAccuracy": 0.877,
+    "dueAccuracyDated": 0.964,
+    "classificationAccuracy": 0.895,
+    "decisionPrecision": 0.957,
+    "decisionRecall": 0.917,
+    "decisionF1": 0.937,
+    "duplicateDetectionRate": null,
+    "falseDuplicateRate": null,
+    "conflictDetectionRate": null,
+    "hallucinationRate": null,
+    "approvalSafety": null
+  }
+}

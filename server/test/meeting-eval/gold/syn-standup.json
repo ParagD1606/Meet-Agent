@@ -1,0 +1,332 @@
+{
+ "id": "syn-standup",
+ "title": "Engineering weekly sync",
+ "source": "synthetic",
+ "date": "2026-06-03",
+ "participants": [
+  "Dana Okafor",
+  "Marcus Lee",
+  "Priya Raman",
+  "Tom Becker"
+ ],
+ "transcript": [
+  {
+   "speaker": "Dana Okafor",
+   "text": "Morning all. Okay, quick one today, I have another call at ten. Who wants to start?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "I can. Um, so I finished the portal pagination yesterday and it's in review. Today I'm on the checkout flow."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Great. Priya?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yeah, so I spent most of yesterday on the supplier thing, um, Kessler confirmed the shipment, so that's done."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Nice."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "And I also, I sent the invoice to finance last week, already, Tom has it."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yep, I got it. It's paid, actually, I did the transfer on Monday."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Great, so no action there. Tom, anything else?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "So there's the, the invoice bug. Some customers got two invoices for the same order. I've seen it on three accounts."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Oh, that's the retry. The job retries when the email provider times out and it creates a second invoice."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "That sounds right."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Can someone take it? Tom, you've got the billing code."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yeah, I'll take that. I should be able to get a fix out tomorrow."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Tomorrow's Thursday, which is a deploy day, so that works."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yeah."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Marcus, the checkout pull request."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Yeah, it's a big one. I need someone to look at it. Dana, could you?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "I'm on calls all day. Priya?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Not my area."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Um, okay, I'll review it myself today then, there's a checklist so it's not terrible. Actually no, hold on, I wrote it, so, I'll review the checkout PR myself by end of day, and then Tom does the second review tomorrow."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Deploys, we said Tuesdays and Thursdays. Does anyone want to change that?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "I'd stay as is."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Same."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Fine by me."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Alright, stays Tuesday and Thursday. Decided."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Hey, did you guys see the game last night?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "No, was there a game?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "I only saw the score. It was embarrassing."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Alright, football later. Priya, the beta announcement."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Right. So the Lantern beta is the fourteenth. I'll write the beta announcement and the, um, the email to Harbor Cafe. I'd say by Friday."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Friday the fifth, okay, good."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "For the announcement, are we mentioning dark mode?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "No. Dark mode, I'd say we postpone until after the beta. We don't have the people."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Agreed. It's a big change in the, in the stylesheets."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yeah, fine."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, so dark mode is after the Lantern beta. Decided."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "One more thing. The SSL certificate for the portal expires in three weeks."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Oh. Right."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Who is going to renew the SSL certificate? Is that, um, is that in the runbook?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "I thought it auto-renews."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "It did, but we changed the provider in March, so I'm not sure."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Hm. I don't know who set it up."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Not me."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Not me either. I don't think so."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. We need to find out. Nobody has it as of now."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yeah."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Also, um, since we're on infra. Maybe we should move the staging reset from Sunday night to Saturday night? Because people sometimes work on Sunday evening and lose their data."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "That would be better, yeah."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "It's a one line change. But I don't know who owns the cron. Let's keep it as a suggestion for now."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Okay."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Marcus, the Stripe thing, the webhook alerts."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Yeah, so we had that one missed webhook in May and nobody noticed. I'll set up alerts for the Stripe webhooks. Not this week, there's the checkout stuff, so, by next Wednesday?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Next Wednesday is the tenth. Okay."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Yes. The tenth."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Alright. And I should update the on-call rotation document, because Priya joined the list and it's still the old one. I'll probably do that at some point this week, it's just a text file."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Thanks Dana."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "I might not get to it before Friday, to be honest. We'll see."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "No rush, we know who is on call."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Anything else? No? Then thank you all. Good week everyone."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Thanks."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Deploys stay on Tuesday and Thursday"
+   },
+   {
+    "text": "Postpone the dark mode work until after the Lantern beta"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Fix the duplicate invoice bug",
+    "owner": "Tom Becker",
+    "due": "2026-06-04",
+    "label": "confirmed"
+   },
+   {
+    "title": "Review the checkout pull request",
+    "owner": "Marcus Lee",
+    "due": "2026-06-03",
+    "label": "confirmed"
+   },
+   {
+    "title": "Do the second review of the checkout pull request",
+    "owner": "Tom Becker",
+    "due": "2026-06-04",
+    "label": "confirmed"
+   },
+   {
+    "title": "Write the Lantern beta announcement",
+    "owner": "Priya Raman",
+    "due": "2026-06-05",
+    "label": "confirmed"
+   },
+   {
+    "title": "Update the on-call rotation doc",
+    "owner": "Dana Okafor",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Move the staging reset to Saturday night",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who is going to renew the SSL certificate",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Set up the Stripe webhook alerts",
+    "owner": "Marcus Lee",
+    "due": "2026-06-10",
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

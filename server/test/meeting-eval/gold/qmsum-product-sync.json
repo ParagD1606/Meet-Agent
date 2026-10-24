@@ -1,0 +1,310 @@
+{
+ "id": "qmsum-product-sync",
+ "title": "Product meeting: smart speaker prototype (excerpt)",
+ "source": "QMSum-style",
+ "date": "2026-02-10",
+ "participants": [
+  "Project Manager",
+  "Industrial Designer",
+  "User Interface",
+  "Marketing"
+ ],
+ "transcript": [
+  {
+   "speaker": "Project Manager",
+   "text": "Okay, so, let's start. Um, this is the, the second product sync on the speaker. Today, materials, then the app, then, um, packaging."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Before we start, did everyone get the survey link? I put it in the chat."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "I did it yesterday. It took like three minutes."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Mine too."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Good. So, materials. Industrial Designer, you had the two options."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Yeah. Option one is the brushed aluminium front. It looks great, but it's heavy and it's, I'd say, almost six euros more per unit. Option two is the fabric mesh, like the competitor's, and it's light and, um, also acoustically transparent."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Is it, uh, does it get dirty easily?"
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Not really. You can wipe it. The grey one at least. Light colours would be a problem."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Honestly the mesh sells better in the, in the surveys. People associate it with home and warmth. Aluminium reads as office."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "So are we going with the mesh?"
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "I'd say yes."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Yes."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Fine by me. I don't have a stake."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Okay. Decision, fabric mesh, not aluminium."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Then I need samples. I'll order the mesh samples from the supplier. They said it takes about three days, so I'd, I'd like to order today. I'll place the order by Friday at the latest."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Friday the thirteenth, fine."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "And I'll update the cost sheet with the new price once you give me the quote."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "I'll send you the quote as soon as I get it."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Good, so I'll update the cost sheet. I'll do that when the quote is in."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Can I give the survey summary now? It's quick."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Go ahead."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "So there were a hundred and forty responses. Um, eighty percent want voice control. Sixty percent say they would pay extra for, for better sound. And the, um, the app, a lot of people complained about onboarding on the competitor."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Yeah, that's a known thing. Their pairing is awful."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "So I'll write up the whole survey and send the results to all of you. Tomorrow, I have to clean up the open text answers."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Tomorrow's the eleventh. Okay."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Are we doing the voice assistant integration, by the way? Eighty percent want it."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "We talked about it. It's, it's four months of work. Not in this release."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Yeah, I figured."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "It hurts, but okay."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Let's say it for the notes. We are not doing the voice assistant integration in this release. It's decided."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Agreed."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Agreed."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Yeah, okay."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Um, on the app. Maybe we should compare our onboarding flow against two of the competitors? Like, screen-recordings and count the taps."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "That's a good idea. I could, you know, look at it but I'm not sure."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Let's not assign it. Take it as an idea."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Okay."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Were we okay on the speaker grille size? The mesh needs, um, a bit of a bigger opening."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "That's in my sketches already."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Good. Packaging, Marketing?"
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Um, so I think we want a minimal box. Recycled cardboard, one colour print. I could draft the brief for it. I'm not sure I'd have it before the, the twentieth, because of the campaign thing, but I'll try for the twentieth."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Okay. Packaging brief, Marketing, trying for the twentieth."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Is there a cost budget for the box?"
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Not yet."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Let's set it with the brief."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Okay."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Anything on certification? Like the radio approvals. We need it before we ship."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Yes, we do. Hmm. Who owns the certification paperwork? I'm assuming it's, it's engineering, but we don't have anyone in this call from there."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "It's not me. I only do the enclosure."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Not marketing."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Don't know."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Okay, nobody. It's open."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "Alright."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Anybody up for lunch after this? There's the new place on the corner."
+  },
+  {
+   "speaker": "User Interface",
+   "text": "Yes, please."
+  },
+  {
+   "speaker": "Industrial Designer",
+   "text": "I'm in."
+  },
+  {
+   "speaker": "Project Manager",
+   "text": "Sure. Okay, that's it. Thanks everyone."
+  },
+  {
+   "speaker": "Marketing",
+   "text": "Thanks."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "The prototype will use the cheaper fabric mesh instead of aluminium"
+   },
+   {
+    "text": "The team will not do the voice-assistant integration in this release"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Order the fabric mesh samples",
+    "owner": "Industrial Designer",
+    "due": "2026-02-13",
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the mesh supplier quote to the Project Manager",
+    "owner": "Industrial Designer",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Update the cost sheet with the new mesh price",
+    "owner": "Project Manager",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Draft the packaging brief",
+    "owner": "Marketing",
+    "due": "2026-02-20",
+    "label": "tentative"
+   },
+   {
+    "title": "Compare the app onboarding flow with two competitors",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who owns the certification paperwork",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Send the survey results to the group",
+    "owner": "Marketing",
+    "due": "2026-02-11",
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

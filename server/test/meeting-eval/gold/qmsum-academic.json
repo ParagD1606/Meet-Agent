@@ -1,0 +1,369 @@
+{
+ "id": "qmsum-academic",
+ "title": "Speech group meeting: acoustic model ablations (excerpt)",
+ "source": "QMSum-style",
+ "date": "2026-04-02",
+ "participants": [
+  "Prof Ramos",
+  "Wen Li",
+  "Tomas Eriksson",
+  "Aisha Khan"
+ ],
+ "transcript": [
+  {
+   "speaker": "Prof Ramos",
+   "text": "Okay, let's get going. It's Thursday, um, second of April. We have, what, forty minutes? So the agenda is the ablation results, the workshop paper, and then logistics."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Sounds good."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Fine by me."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "Can everyone see the slides? I'll, um, share the, the first table."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yes, I see it."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "So where are we on the baseline?"
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "So the baseline word error rate is, um, eleven point four on the dev set. But I think it's, it's not quite right, because the language model I used is the old one."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "The old one from the last paper?"
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yeah. The new one has the extra web text and it should drop, I'd guess, by half a point."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Then it's not a fair baseline. Wen, rerun it with the new language model."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yes, I'll rerun the baseline with the new language model. It's about a day of compute. I can have it by Monday."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Monday the sixth, good."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yeah."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "And is it the full training set or the subset?"
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "That was the other question. Tomas?"
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "So the full set takes five days per run and we have, like, twelve ablations. The three hundred hour subset is eight hours per run and the ranking of the systems was the same in my pilot."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "The ranking was the same? Completely?"
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "For the top five, yes. Below that there was some noise."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Then I'm happy. Subset for the ablations, and the full set only for the final numbers. Everyone agree?"
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "Agreed."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Yeah."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Good, three hundred hours for all ablations. Decided."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "One thing about the data, there's the segmentation issue. About ten percent of the utterances are cut in the middle of words."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "That would affect the alignments."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Yeah, definitely. So I'm going to re-segment the corpus before we train anything."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "How long does that take?"
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Um, it's a script, it should be a couple of hours. I'll just do it."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Okay."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "And then I'll need the aligned data for the, for the pronunciation analysis. Can you send it to me?"
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Sure. I'll send the aligned data to you by the ninth. Is that okay?"
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "The ninth is Thursday. That's fine."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "What about the tokenizer? Do we retrain it on the new text?"
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "I'd rather not. It changes everything downstream. Keep the current tokenizer."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Okay, keep it."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "So that's a decision, no retraining of the tokenizer?"
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Yes. We keep the current tokenizer and we don't retrain it."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "I was going to say, if we had unlimited GPUs we would train the big model on everything. But, we don't."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Ha. If we had unlimited GPUs I'd be on holiday."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Let's stay on topic."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "What about the low-resource condition? The numbers are really bad there."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Yeah. Um, maybe we should try wav2vec features for that. I read a paper where they get a big gain at ten hours."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "That's interesting. Could be."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "It's a good thought. I don't want to commit anyone to it before we see the baseline."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Right, that's fair. I was just throwing it out."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Okay. The workshop. The deadline is the first week of May, so, Aisha, are you able to write the abstract?"
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "I should be able to draft the abstract by the end of the month. It depends on whether the reviews for the other paper come back, so, I'll try."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "End of the month, April thirtieth. Okay."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "Yes, that's the plan, as far as I can tell."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Now logistics. The seminar room for the next group meeting is double booked on the, uh, the usual day."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Again?"
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Yes. I'll email the department about the seminar room and sort it out."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Thanks."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "And, um, GPUs. Who has the GPU allocation for next week? Because the cluster is being shared with the vision group and someone has to book it."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "I thought Tomas had it."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "No, I had it last week."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "I don't have a login for the booking system."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Hm. Okay, so, nobody. That needs a name."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Hm."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "I'll leave it open for now, we'll see on Monday."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "By the way, I'll be redoing the segmentation of the corpus today actually, it's running already, so I'll segment the corpus again with the fix."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "That is the same thing as before, Tomas. Fine."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Yeah, sorry. Same."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "Did anyone see the new keynote speaker list?"
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Not yet. Is it good?"
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "It's the usual suspects."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "Okay. If there's nothing else, thank you everyone."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Thanks."
+  },
+  {
+   "speaker": "Tomas Eriksson",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Aisha Khan",
+   "text": "Bye all."
+  },
+  {
+   "speaker": "Prof Ramos",
+   "text": "And remember the, uh, the reading group is cancelled this week."
+  },
+  {
+   "speaker": "Wen Li",
+   "text": "Okay, noted."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Use the 300-hour subset for all the ablations"
+   },
+   {
+    "text": "Keep the current tokenizer and do not retrain it"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Rerun the baseline with the new language model",
+    "owner": "Wen Li",
+    "due": "2026-04-06",
+    "label": "confirmed"
+   },
+   {
+    "title": "Re-segment the corpus before training",
+    "owner": "Tomas Eriksson",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the aligned data to Aisha",
+    "owner": "Tomas Eriksson",
+    "due": "2026-04-09",
+    "label": "confirmed"
+   },
+   {
+    "title": "Draft the workshop abstract",
+    "owner": "Aisha Khan",
+    "due": "2026-04-30",
+    "label": "tentative"
+   },
+   {
+    "title": "Email the department about the seminar room",
+    "owner": "Prof Ramos",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Try wav2vec features for the low-resource condition",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who has the GPU allocation for next week",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Re-segment the corpus with the fix",
+    "owner": "Tomas Eriksson",
+    "due": null,
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [
+   [
+    1,
+    7
+   ]
+  ],
+  "conflicts": []
+ }
+}

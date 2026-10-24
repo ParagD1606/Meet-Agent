@@ -1,0 +1,285 @@
+{
+ "id": "syn-brainstorm",
+ "title": "Pricing brainstorm (mostly hypotheticals)",
+ "source": "synthetic",
+ "date": "2026-06-08",
+ "participants": [
+  "Priya Raman",
+  "Sofia Alvarez",
+  "Tom Becker",
+  "Dana Okafor"
+ ],
+ "transcript": [
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, so, this is a brainstorm. No decisions today unless we really have to. Let's just throw ideas around about pricing."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Love that. Can I start with the wild one?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Please."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "What if we gave the first month free to every office? Like, just free. And then we, we convert them."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "That would kill our margin. I mean, on paper, a free month is, what, eight percent of the first year."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Sure, but imagine the signups."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Imagine if we had a billion customers, too."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Ha, ha."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Wild is fine. Keep going."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Okay, what if we went to annual billing only? We'd get the cash up front."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Would customers go for that? Offices like monthly."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Some would. The bigger ones, probably. It's hypothetical."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Harbor Cafe has actually asked about it. Not in so many words. They asked if there was a discount for paying yearly."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Interesting. That's a real signal."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "I could, I could ask them directly. Whether they would pay for an annual plan, and how big a discount they would need. I'll try to get to it, but this month is crazy with the renewals."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "No pressure. Whenever."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "What if we also did tiers for the tea? Like, a basic tea, a premium tea, a, a collector's tea."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "A collector's tea. Ha."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "I'm serious, there are people who collect these. We could do limited editions."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "It would complicate the supply. Kessler ships once a month."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "True. It's just an idea."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "What if the Sampler plan went from twenty-nine to thirty-five? Would anybody notice?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Customers would notice."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Do we need to increase the Sampler?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Not really. The numbers are fine on Sampler. It's Classic that is the question."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "So let's say we leave the Sampler where it is for now. Anyone object?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "No."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "No."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "No."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, so Sampler stays as is. That's the only thing we are deciding today."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Could we bundle the tea with some mugs? I'd buy that."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Mugs from where? We'd need a vendor."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "If there was a vendor. I'm only thinking out loud."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Would there be a margin on mugs, though? I'd guess not."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "We could consider it down the line. Not now."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "What about a referral thing, where the customer who brings a friend gets a free box?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "We had that at my last job. It was fine. It was, like, a third of the signups."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Hm, that sounds interesting. If we did it, it could replace some of the ad spend."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "If we dropped ads altogether we'd, we'd save forty thousand a year."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "We're not dropping ads altogether."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "I know. I'm just saying."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Now, Classic. Tom, what do we know about the churn?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Honestly, I don't have the current number. I have it from March. It was, I think, four percent a month, but I'd want to check."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "That would be useful before we talk price on Classic."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yeah. I'll pull the churn numbers for the Classic plan. I can get them to you by Friday."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Friday the twelfth. Great."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Sure."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Did anyone try the new place for lunch?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "The noodle one? It's incredible."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "I'm going to go there after."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Who's coming?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Me."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "I will, as long as it's not raining."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Back to it. Is there anything else on price?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "In theory we could do dynamic pricing, depending on the season. Winter, higher."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "People would be so annoyed."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yeah, yeah. Theoretical."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. So to wrap up. Sampler unchanged. Tom looks at Classic churn. Sofia talks to Harbor. Everything else is just ideas."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Works for me."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Good session."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yeah, fun."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Thanks everybody."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Keep the Sampler plan price unchanged for now"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Pull the churn numbers for the Classic plan",
+    "owner": "Tom Becker",
+    "due": "2026-06-12",
+    "label": "confirmed"
+   },
+   {
+    "title": "Ask Harbor Cafe whether they would pay for the annual plan",
+    "owner": "Sofia Alvarez",
+    "due": null,
+    "label": "tentative"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

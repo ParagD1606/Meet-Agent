@@ -1,0 +1,384 @@
+{
+ "id": "ami-detailed",
+ "title": "Remote control project: detailed design",
+ "source": "AMI-style",
+ "date": "2026-03-16",
+ "participants": [
+  "Sam Whitaker",
+  "Priya Nair",
+  "Leo Brandt",
+  "Hannah Cole"
+ ],
+ "transcript": [
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, Monday morning, sixteenth. Let's get going, we're a bit behind. Everybody has coffee? Good."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes, yes. Um, I've got the CAD open, I can share."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Let's start with the components. Priya, where are we?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "So, um, the case in CAD is mostly there. The curve works. The scroll wheel sits at the top third, then the power button above it."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Can we, um, talk about the LCD? Because last time we, we left that open."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right. The little display to show the channel."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah. From a user point of view it's nice but it's expensive."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "It's four euros of the twelve fifty. Just the display."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Four? That's a third of the budget."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So, drop it?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah. Yeah, drop it. People look at the TV for the channel anyway."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Agreed."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Agreed. Saves me a hole in the case too."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right, LCD is out. Decision made."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Oh, and the colour. Marketing feedback came in, the, um, yellow is the number one choice."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yellow, with the rubber? That could actually look good."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "As long as the icons stay readable. Black on yellow is fine."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So yellow case, rubber finish, everyone fine?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Great. Yellow it is."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I'll ask the supplier whether they can do a yellow dye on the rubber. I think it should be fine, but I'm not certain they stock it, so, I'll try."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Do we put a power button on the front too, or just the top one?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "One's enough. The top."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Single power button on top, agreed? Okay, good."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Mm, one other thing. We could add a backlight for the buttons, maybe, for the dark living room thing."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Oh yeah, people like that."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Backlight means LEDs, means another battery drain, plus cost."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah. I don't know. Maybe we should look at it. Someone."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "I won't assign it, it's a nice-to-have. Let's note it as an idea."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Sure."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right. Let's talk about cost, because I've seen the numbers and I'm a bit worried. Priya, can you give me the, um, bill of materials?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "I'll send it right after this meeting."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Thanks. I'll check the component costs against the budget by Wednesday and tell you where we stand."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Wednesday the eighteenth?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "The eighteenth, yes."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "So for the CAD, um, I'll finish the CAD drawing of the case by Friday. I think that's realistic."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Friday the twentieth, great."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Okay. And the user manual. Who does that? It's, it's, we need a draft for the evaluation."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "I think that's you, Leo, isn't it? Because it's closest to the interface."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, okay, I'll write the user manual draft."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I can do it too, I've, um, I've done a few for the earlier product."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Oh, okay, Hannah, you would take the manual then? That works, you have the template."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah, I'll take the manual draft."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Oh, hm. Okay. So we're both on it?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Hmm. Let's, let's sort it out offline. Between you two."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yep."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Actually, sorry, can I come back on the CAD? I said Friday but the, the software licence is down on Friday for maintenance. So, it'll be Monday the twenty-third."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Hmm. Okay. Monday the twenty-third then, for the CAD."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes, Monday."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Alright, I'll, hm, I'll write down both and we check on the Friday."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Sorry, what's the CAD going to be Friday or Monday?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Monday. Well, Friday if the licence works."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, leave it."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Did the building people confirm the lab?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Oh. The usability lab, for the evaluation next week. Um, I haven't heard. Who is going to arrange the usability lab for next week?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I thought you, Sam."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "I thought maybe marketing."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Mm, no."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "It's not a UI thing."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay. Unclear."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Maybe it's the secretary who books rooms."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Could be. Let's, let's see."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Did you see the weather this weekend?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Don't get me started. I was soaked."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Ha. Alright, if there's nothing else, let's close. Thank you, everyone."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Thanks."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "The case colour is yellow with a rubber finish"
+   },
+   {
+    "text": "Drop the LCD display from the design"
+   },
+   {
+    "text": "Ship with a single power button on top"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Finish the CAD drawing of the case",
+    "owner": "Priya Nair",
+    "due": "2026-03-20",
+    "label": "confirmed"
+   },
+   {
+    "title": "Finish the CAD drawing of the case",
+    "owner": "Priya Nair",
+    "due": "2026-03-23",
+    "label": "confirmed"
+   },
+   {
+    "title": "Write the user manual draft",
+    "owner": "Leo Brandt",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Write the user manual draft",
+    "owner": "Hannah Cole",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Check the component costs against the budget",
+    "owner": "Sam Whitaker",
+    "due": "2026-03-18",
+    "label": "confirmed"
+   },
+   {
+    "title": "Ask the supplier about a yellow dye option",
+    "owner": "Hannah Cole",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Add a backlight to the buttons",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who will arrange the usability lab for next week",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Send the bill of materials after the meeting",
+    "owner": "Priya Nair",
+    "due": "2026-03-16",
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": [
+   {
+    "a": 0,
+    "b": 1,
+    "type": "due"
+   },
+   {
+    "a": 2,
+    "b": 3,
+    "type": "owner"
+   }
+  ]
+ }
+}

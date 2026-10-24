@@ -1,0 +1,339 @@
+{
+ "id": "ami-kickoff",
+ "title": "Remote control project: kick-off",
+ "source": "AMI-style",
+ "date": "2026-03-02",
+ "participants": [
+  "Sam Whitaker",
+  "Priya Nair",
+  "Leo Brandt",
+  "Hannah Cole"
+ ],
+ "transcript": [
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, um, good morning everyone. Can everyone hear me? Great. So welcome to the kick-off for the remote control project."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Morning. Yeah, I can hear you fine."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Morning, sorry, just getting the laptop to, um, connect to the projector."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "No worries, we've got time."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So I'm Sam, I'm the project manager. Priya you're industrial design, Leo is user interface, and Hannah is marketing. Right?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "That's right."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yep."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay so the agenda today is, uh, getting to know each other, then the project plan, then we'll talk about the budget and, um, how we split up the next phase."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Did anyone watch the match last night by the way?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Oh don't, I'm still annoyed about the second half."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Ha, yeah, let's, let's keep that for the coffee break. So. The client wants a new remote control for televisions. Original, trendy and user friendly."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Trendy, okay. That's, that's quite vague."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "It is a bit vague, which is why the marketing input matters. Hannah?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah so I had a quick look. Um, the main thing is that people say they hate how many buttons their remote has. Like, most of them use maybe five buttons."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Mm-hmm. That matches what I see. Channel, volume, power, and then, yeah, basically nothing."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "So fewer buttons. That makes my life easier actually, for the casing."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "And the younger market, the sixteen to thirty-five group, they care about how it looks. They want it to look fancy, like a gadget."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So are we agreed we're going after the younger market with a fancy look and feel?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, I'm fine with that."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yeah. Agreed."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yes, that's the data."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay good, so that's decided, younger market, fancy look and feel. Let's write that down."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Should it control just the television or, um, also the DVD player and so on?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Good question. Hannah, what does the research say?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Um, the universal ones are, they're bigger and they cost more, and the clients' brief just says television."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "And a universal remote has all those extra modes, which is, which is exactly the many-buttons problem."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right. So just the TV. Single device. Everybody okay with that?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Fine by me."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah. Single device."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yep."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, decision made, single-device TV remote."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "What's the budget, do we know?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Yes, so the production cost has to be under, um, twelve fifty euros per unit. Twelve and a half. And the selling price is twice that."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Twelve fifty. Okay. That's tight if we do anything with, like, a fancy material."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Plastic with a rubber coating is cheap though."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yeah, yeah, that might work."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So that's the budget, twelve fifty. It is fixed, we go with that."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Hang on, have we thought about, like, maybe we should look into speech recognition? Like you shout at it to find the remote. Everyone's got a phone that does voice."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Ha, that's the find-my-remote thing. That would be cool."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "It would add, uh, a microphone and a chip. Not under twelve fifty I think."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah no, I just, I don't know, maybe worth a look at some point."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Let's park that. Nobody is taking it on right now but it's a fair idea, we can revisit."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "If we had the money, we could do a touch screen, but, you know, if we had the money."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "If we had the money I'd have a different job."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Ha."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay. Let's move on to who does what. For the next phase, we each go away and work on our own thing individually. Priya, you'd do the working design."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yeah, I can do that. I'll draft a sketch of the casing, like rough shapes and materials, and get it to you all by Friday."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "This Friday, the sixth?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes, Friday the sixth."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Great. Leo?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "So I will, um, I'll try to look at the interface, like the minimum button layout. I'm a bit swamped with the other project though, so, I'll try, but I can't promise it's done."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, noted. Hannah, you have the market research already."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Right. I'll send you all the summary of it. Wednesday okay? I just need to tidy up the charts."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Wednesday the fourth, perfect."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yep."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "And I'll write up the minutes and email them out after this, today."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Thanks Sam."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Oh, one thing. Batteries. Who's going to talk to the battery supplier? Because the type of battery changes the thickness of the whole thing."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Hmm. Good point. I don't know. Who, who is going to do that?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Not me, I don't have contacts with the, with the hardware people."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Don't look at me."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "I mean, it affects me most, but I haven't got the account."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, so that's open. We'll sort out who does it next meeting."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Anything else? No? Okay, so, um, thank you all, this was a good start."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Thanks. Bye."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Bye all."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "See you."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "The remote will target a younger market with a fancy look and feel"
+   },
+   {
+    "text": "The remote control will be a single-device TV remote, not a universal one"
+   },
+   {
+    "text": "Production budget is twelve and a half euros per unit"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Send the market research summary to the team",
+    "owner": "Hannah Cole",
+    "due": "2026-03-04",
+    "label": "confirmed"
+   },
+   {
+    "title": "Draft the working design sketch of the remote casing",
+    "owner": "Priya Nair",
+    "due": "2026-03-06",
+    "label": "confirmed"
+   },
+   {
+    "title": "Look at the user interface for a minimal button layout",
+    "owner": "Leo Brandt",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Investigate a speech recognition feature",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Who is going to talk to the battery supplier",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Write up the minutes and email them out",
+    "owner": "Sam Whitaker",
+    "due": "2026-03-02",
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

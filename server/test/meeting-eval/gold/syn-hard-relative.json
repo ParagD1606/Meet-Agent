@@ -1,0 +1,301 @@
+{
+ "id": "syn-hard-relative",
+ "title": "Harbor Cafe renewal prep (hard: pronouns and relative dates)",
+ "source": "synthetic",
+ "date": "2026-06-17",
+ "participants": [
+  "Dana Okafor",
+  "Marcus Lee",
+  "Sofia Alvarez",
+  "Priya Raman"
+ ],
+ "transcript": [
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, it's the seventeenth today, Wednesday. Let's go through the Harbor Cafe renewal. Sofia, you know the account best."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Yeah. So, um, they want to renew. They said it on the call yesterday. But they want a longer term, three years instead of one, in return for a better rate."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Three years. Hm. Marcus, any engineering reason not to?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "No, the portal doesn't care. It's a contract thing."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Priya?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "From supply, three years is fine. Kessler gave us volume pricing anyway."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Then I'm in favour. Anyone against? No? Okay, three-year renewal, decided."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Great, they'll be happy."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Do they know about the migration?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Not yet. Um, that's a problem, because the migration slips by a week."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Right. The delay. Is anyone going to tell them, who is going to tell Harbor Cafe about the delay? Because it should not come as a surprise."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "I don't want to be the one to say it on the same call as the renewal."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "It's not a supply thing."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Technically it's mine, but I don't speak to customers."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Leave that. Who has the contract?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Right, so the contract. Lena in legal wants it by next week. Sofia has the draft, I mean I have the draft. It's on my laptop. And Tom said the legal office needs a day."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Which day next week?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "A week from tomorrow, that gives them time before the board meeting."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "A week from tomorrow, so, tomorrow is the eighteenth, a week after that is the twenty-fifth. Okay."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Yes, the twenty-fifth."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "And who is sending it?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Priya, can you send it? You have Lena's email."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Oh, I thought Sofia would, since she has the draft. I just forwarded Lena an email last week."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Priya, are you sending it or not?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "No, I think Sofia is. She'll send it to legal, it's her draft. I'll just give her the address."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Fine. Okay. I'll send the contract to legal then, for the twenty-fifth."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Good. Now the migration risks. Marcus."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "So, um, the plan is, we do it on a Tuesday night. If something goes wrong with the invoices, he, that is I, would roll back from the snapshot. It's a ten minute job, but you have to know the commands."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "And that is you."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Yes. If it fails, I'll handle the rollback. I won't be on holiday. Nobody else knows the commands."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay. Noted. Sofia, did you say something about the site visit?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Yeah, I think we should go see the main cafe, show the new portal, and, I could probably book that. It depends on the cafe manager, I'd have to check her calendar."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Try to arrange it if you can."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "I'll try to book the site visit. Um, no date, it depends."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Do we have the board pack? The board meets on the thirtieth."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "It's the thirtieth, a Tuesday. And the pack should go out the day after the board meeting?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "No, before. The day before. I mean the directors want it the day before. So that is, um, the twenty-ninth."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Hm. Hold on. It's not the thirtieth. The board is on the thirtieth, the pack goes out the day after for the minutes. The pre-read goes before."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Oh. The post-meeting pack. Right. That's what I was thinking. So the pack to the directors goes out the day after the board meeting, July first."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Yes. The first of July. And you'll send it, Priya?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yes. She, um, I mean I'll send the board pack to the directors on July first."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Good."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Sorry, I am confused, who sends what?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Priya sends the board pack, Sofia sends the contract."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Okay."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "And I'll prepare the renewal pricing sheet. I need that by two weeks from Friday, because that's when we sign."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Two weeks from Friday. So Friday is the nineteenth, plus two weeks."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "The third of July. Yes."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Perfect."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Anyone want coffee? I'm going down."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Oat flat white please."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Just water for me, thanks."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Does anyone have the Harbor logo for the deck?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Check the shared drive. There is a folder."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Found it."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, thank you everyone. I think we're done."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Thanks."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Harbor Cafe renewal moves to a three-year term"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Send the Harbor Cafe contract to legal",
+    "owner": "Sofia Alvarez",
+    "due": "2026-06-25",
+    "label": "confirmed"
+   },
+   {
+    "title": "Handle the rollback if the migration fails",
+    "owner": "Marcus Lee",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the board pack to the directors",
+    "owner": "Priya Raman",
+    "due": "2026-07-01",
+    "label": "confirmed"
+   },
+   {
+    "title": "Prepare the renewal pricing sheet",
+    "owner": "Dana Okafor",
+    "due": "2026-07-03",
+    "label": "confirmed"
+   },
+   {
+    "title": "Book the Harbor Cafe site visit",
+    "owner": "Sofia Alvarez",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Who is going to tell Harbor Cafe about the delay",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

@@ -1,0 +1,288 @@
+{
+ "id": "syn-allhands",
+ "title": "Monthly all-hands (mostly announcements and past actions)",
+ "source": "synthetic",
+ "date": "2026-07-03",
+ "participants": [
+  "Dana Okafor",
+  "Priya Raman",
+  "Marcus Lee",
+  "Sofia Alvarez",
+  "Tom Becker"
+ ],
+ "transcript": [
+  {
+   "speaker": "Dana Okafor",
+   "text": "Okay, welcome everyone to the July all-hands. Happy Friday. We have a short agenda, a few announcements, some wins, and then questions."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Happy Friday!"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Hello hello."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Morning."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Morning all."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "First, the wins. The Reserve plan launched last week and it's already got forty signups."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Forty-three, actually, I checked this morning."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Forty-three, even better. Great job, everyone."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "The portal held up, no incidents."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Nice, thank you Marcus. And the Lantern beta, how did that go?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "We shipped it on the fourteenth like we planned. Harbor Cafe has been on it for two weeks. The feedback is good."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "They love the new checkout. I got two thank-you emails."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "That's lovely. Priya, the supplier thing."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yeah, Lotus Valley is on board as the backup. Tom signed the order form on Monday and the first sample arrived Tuesday."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "And Marcus did the quality check already, it passed."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "It was fine. Moisture was good. I posted the results in the channel last week."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Brilliant. So everything from last month's list is done. That's rare."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "We should celebrate."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "We will. That leads to the next item. For the next all-hands we want to meet in person, in the office, rather than on a huddle. Is everyone okay with that?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Yes please."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Yes, I'm in."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Works for me. I can bring cake."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Great. So the next all-hands is in the office. Decided."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Then I'll need to book the space. I'll book the office for the next all-hands by next Friday."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Next Friday, the tenth. Thank you Priya."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Oh, and the expense policy. Finance has changed the rules for travel, receipts over fifty euros now need approval before the trip."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Right, that one is important. Tom, can you send it round?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Yes, I'll send the new expense policy to everyone. Probably Monday, but I'll see what finance says."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "No problem."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Does it apply to client dinners too?"
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "It does. Everything."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Ugh. Okay."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "By the way, the Wi-Fi in the meeting room is fixed. I replaced the access point on Wednesday."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Thanks, I noticed the call was smooth. Also I already sent the holiday calendar to everyone, did that arrive?"
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Yes, got it."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Got it."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Good. Moving on. Priya, did you want to say something about the hiring?"
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Yeah, we hired the marketing coordinator. She starts the first of August. Sofia interviewed her last month."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "She's great. I had a long chat with her, she knows the tea market well."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Welcome her when she arrives. Now, for questions. Does anyone have a question for me?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Is there going to be a bonus this year?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Ask me again in December. I really don't know yet."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Ha, fair."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Is the office moving?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Not this year. If it were, you would know."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Maybe we should collect questions from the team beforehand next time? So that people who are shy can ask anonymously."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "That's a good idea. Like a form."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Interesting. I'm not sure how we'd do it yet. Let's keep it as an idea."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Sure."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Hey, did the thing with the coffee machine get sorted?"
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "The coffee machine was replaced, yes. Marcus brought a new one on Monday."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "It is the good one."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "Does the new one do oat milk?"
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "It does. And the grinder is quiet."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "That is the real win of the quarter."
+  },
+  {
+   "speaker": "Dana Okafor",
+   "text": "Alright, anything else? No? Then thank you, everybody, have a great weekend."
+  },
+  {
+   "speaker": "Sofia Alvarez",
+   "text": "You too."
+  },
+  {
+   "speaker": "Priya Raman",
+   "text": "Bye all."
+  },
+  {
+   "speaker": "Tom Becker",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Marcus Lee",
+   "text": "Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "The next all-hands will be held in the office instead of a huddle"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Book the office for the next all-hands",
+    "owner": "Priya Raman",
+    "due": "2026-07-10",
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the new expense policy to everyone",
+    "owner": "Tom Becker",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Collect questions for the Q&A from the team",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   }
+  ],
+  "duplicates": [],
+  "conflicts": []
+ }
+}

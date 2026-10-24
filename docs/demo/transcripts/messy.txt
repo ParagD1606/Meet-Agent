@@ -1,0 +1,59 @@
+Dana Okafor: ok um can everyone hear me yeah ok so this is the weekly sync, uh, let's try to be quick
+Marcus Lee: morning, sorry, yeah, i was on mute
+Tom Becker: hi
+Sofia Alvarez: hey hey, sorry i'm walking in
+Dana Okafor: so, the invoice thing. tom you saw the duplicate invoices right
+Tom Becker: yeah um three customers got two emails for the same order, it's the retry job i think
+Marcus Lee: yeah the retry creates a second invoice when the email provider times out
+Tom Becker: right so, um, yeah i'll fix the duplicate invoice bug by thursday
+Dana Okafor: great, thursday is a deploy day so that works
+Sofia Alvarez: did anybody see the game last night
+Marcus Lee: don't, i'm still sad
+Dana Okafor: ok let's, let's stay on the agenda. harbor cafe. sofia
+Sofia Alvarez: yeah so they asked for a sample of the consolidated invoice, um, and i'll send harbor the invoice sample, i think friday works
+Dana Okafor: ok friday
+Priya Raman: and kessler, the order form, i'll send the order form to kessler by friday, i have the draft
+Dana Okafor: good
+Marcus Lee: um before i forget, we need the staging environment to stop resetting on sunday night, people lose their stuff
+Tom Becker: yeah that bit me last week
+Marcus Lee: so, uh, maybe we should move the staging reset to saturday night? like it's a one line change
+Dana Okafor: i don't know who owns that cron though. let's not decide that now
+Marcus Lee: ok fair
+Dana Okafor: dark mode. are we doing dark mode for the beta
+Marcus Lee: it's a big change in the stylesheets, i'd say no
+Priya Raman: i'd say no too, we don't have the people
+Dana Okafor: ok then dark mode is after the beta, decided
+Tom Becker: fine by me
+Dana Okafor: uh what else, the certificate, the ssl cert for the portal expires in three weeks
+Marcus Lee: oh right
+Tom Becker: i thought it auto renews
+Marcus Lee: it did but we changed the provider in march so i'm not sure
+Dana Okafor: so who's going to renew the ssl cert
+Priya Raman: not me
+Marcus Lee: i don't think me
+Tom Becker: i don't know who set it up
+Dana Okafor: ok so nobody. we'll leave it
+Sofia Alvarez: also we still need the beta announcement to go out to harbor, somebody should write that, like the email
+Dana Okafor: yeah yeah that needs doing
+Marcus Lee: mm
+Priya Raman: yeah
+Dana Okafor: ok. moving on
+Tom Becker: um the on-call doc is out of date by the way, priya joined the rotation and it still has the old list
+Dana Okafor: oh yeah that's mine, i'll probably update the on-call doc at some point this week, it's just a text file, but i might not get to it before friday
+Tom Becker: no rush
+Priya Raman: hey one thing on the kessler form, um, tom said the bank cut-off is monday so
+Tom Becker: yeah the finance cut-off, it's monday not friday, so the order form is monday
+Priya Raman: oh ok, then i'll send the order form to kessler on monday
+Dana Okafor: ok monday then
+Sofia Alvarez: oh and um, so yeah i'm sending the sample invoice over to harbor, i'll get that to them friday
+Dana Okafor: sofia you said that already
+Sofia Alvarez: oh yeah sorry, same thing
+Marcus Lee: i'll review the checkout pr today, um, i know it's a big one
+Dana Okafor: thanks marcus
+Tom Becker: if we had more people we could do everything lol
+Dana Okafor: ha, yeah. ok anything else
+Marcus Lee: no
+Sofia Alvarez: nope
+Dana Okafor: ok thanks everyone, bye
+Marcus Lee: bye
+Tom Becker: bye

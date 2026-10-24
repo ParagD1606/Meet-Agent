@@ -1,0 +1,382 @@
+{
+ "id": "ami-conceptual",
+ "title": "Remote control project: conceptual design",
+ "source": "AMI-style",
+ "date": "2026-03-09",
+ "participants": [
+  "Sam Whitaker",
+  "Priya Nair",
+  "Leo Brandt",
+  "Hannah Cole"
+ ],
+ "transcript": [
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right, um, shall we start? It's the ninth. Everyone here?"
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Here."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Here, yeah."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Hi, yeah, I'm here. Sorry, one second, I'm muting the other call."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So last time we decided younger market, single device TV remote, twelve fifty budget. Today it's conceptual design. Each of us presents, then we pick directions."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Okay, can I go first? Because I have some sketches."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Please."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "So, um, I looked at two shapes. One is the flat rectangle, like every remote ever. The other is a curved case, kind of like a, a pebble, that sits in your hand."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Oh I like the pebble."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Mm, yeah, the curved one is nicer to hold, but, um, it affects where the buttons go."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Right, you'd have a sort of dip in the middle. And I'd do it with a rubber coating, so it's soft and not slippery."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "How much does the rubber add to the cost?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Um, not much I think, but I don't have an actual number."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I can ask. I have a contact at a plastics firm. I'll try to get a quote for the rubber coating, but, um, they're not always quick."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, Hannah will try. Don't stress about a date."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yeah."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "So who's for the curved case with rubber coating?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Me."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yes, me too."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yeah, obviously."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Good, so that's decided, curved case with a rubber coating."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Cool. So from my side, the interface. I looked at the usual remotes and, yeah, the volume and channel buttons are, they are the most used."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Mm."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "And I was thinking, um, a scroll wheel. Like on the old music players. One wheel does volume and channel, you press the side to switch."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "That would actually save space. Two fewer buttons."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Would people understand it though? My mum would not."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Well, we'd put icons, plus and minus. It's, I think it's intuitive."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Hmm. I mean, are we okay with the scroll wheel instead of the volume and channel buttons?"
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Okay, yeah, if it has icons."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, definitely icons."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Alright, scroll wheel, that's decided. Leo, you'll turn that into a layout mock-up?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Sure. I'll build the button layout mock-up and have it ready by end of the week."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "End of the week, so Friday the thirteenth."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Friday, yeah."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Can I do the trends, quickly?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Go ahead."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "So the trend watching, um, fashion says, fruit and vegetables. Like, spongy, bright colours, the whole thing. And, uh, the thing that is, that they, that people keep saying is \"fancy\"."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Bright colours, okay, that works with the rubber."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "I'll send the full trend watching report around Wednesday, it's mostly written."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Wednesday the eleventh. Good."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Yep."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Now, batteries. Last time we said someone has to check, who did we say?"
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "We didn't. It's still open. Who is going to check the battery thickness with the supplier?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Honestly I'd say whoever has the supplier relationship."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Which is nobody here."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Yeah. It's open. I'll flag it to the management."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "For the case I'm assuming a single AA battery for now. If it's two AAA we might need to redo it."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Does single AA work for everyone?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yes, no impact on me."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Okay, single AA, decided for now."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Okay good. And for my part, I'll do a clay model of the casing so we can hold it. I want to bring it to the next meeting. So the prototype casing model, in clay, I'd say by Friday as well."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Friday the thirteenth. That's your deliverable then."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Yes."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Oh, you know what, maybe we should test the prototype on a few people? Like grab five colleagues, hand them the clay thing and see if it feels right."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Ooh, that's a good idea. We should do that."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "It is a good idea. I'd say let's keep it as an idea, I can't say who has time. We can see after the models exist."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Okay, yeah, that's fair."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "What did we say about the, the colour? Just so I know for the clay."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Clay's grey, doesn't matter. Colour is later."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Right. I think that's it. Anything else? Leo, the last time you, um, said you were swamped, are you okay with Friday?"
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "Yeah, yeah, it's fine. The other project finished."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Good. Then we're done. Thanks everybody."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Thank you."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Bye."
+  },
+  {
+   "speaker": "Leo Brandt",
+   "text": "See you."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Oh, and, um, I'll send the meeting minutes tonight but it's nothing special."
+  },
+  {
+   "speaker": "Hannah Cole",
+   "text": "Fine."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "Great."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "And Priya, once more, the model is the clay model, yes? Not the, not the CAD."
+  },
+  {
+   "speaker": "Priya Nair",
+   "text": "The clay one. Right. The clay prototype, I'll make that."
+  },
+  {
+   "speaker": "Sam Whitaker",
+   "text": "Good. Bye."
+  }
+ ],
+ "gold": {
+  "decisions": [
+   {
+    "text": "Use a curved case with a rubber coating"
+   },
+   {
+    "text": "Use a single AA battery layout for now"
+   },
+   {
+    "text": "A scroll wheel replaces the volume and channel buttons"
+   }
+  ],
+  "tasks": [
+   {
+    "title": "Prepare the prototype casing model in clay",
+    "owner": "Priya Nair",
+    "due": "2026-03-13",
+    "label": "confirmed"
+   },
+   {
+    "title": "Build the button layout mock-up",
+    "owner": "Leo Brandt",
+    "due": "2026-03-13",
+    "label": "confirmed"
+   },
+   {
+    "title": "Get a quote for the rubber coating from the plastics firm",
+    "owner": "Hannah Cole",
+    "due": null,
+    "label": "tentative"
+   },
+   {
+    "title": "Test the prototype with five colleagues",
+    "owner": null,
+    "due": null,
+    "label": "suggestion"
+   },
+   {
+    "title": "Make the clay prototype casing model",
+    "owner": "Priya Nair",
+    "due": "2026-03-13",
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the trend watching report to the team",
+    "owner": "Hannah Cole",
+    "due": "2026-03-11",
+    "label": "confirmed"
+   },
+   {
+    "title": "Who is going to check the battery thickness with the supplier",
+    "owner": null,
+    "due": null,
+    "label": "question"
+   },
+   {
+    "title": "Flag the open battery supplier question to management",
+    "owner": "Sam Whitaker",
+    "due": null,
+    "label": "confirmed"
+   },
+   {
+    "title": "Send the meeting minutes tonight",
+    "owner": "Sam Whitaker",
+    "due": "2026-03-09",
+    "label": "confirmed"
+   }
+  ],
+  "duplicates": [
+   [
+    0,
+    4
+   ]
+  ],
+  "conflicts": []
+ }
+}
