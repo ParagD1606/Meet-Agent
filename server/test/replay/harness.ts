@@ -96,6 +96,8 @@ export async function boot(o: { extractFacts?: string[] } = {}): Promise<Slack> 
 type Msg = { channel: string; ts: string; thread_ts?: string; user: string; text: string };
 const store: Msg[] = [];
 const pub = ({ channel: _c, ...m }: Msg) => m;
+/** Pre-existing Slack history for conversations.replies/history (not routed through any handler). */
+export const seedMessage = (channel: string, ts: string, thread_ts: string | undefined, user: string, text: string) => void store.push({ channel, ts, thread_ts, user, text });
 
 export function teardown() {
   setLoopModel(); setModelResolverForTest(); setMemoryLlm(null); setEmbedder(null); setDepthClassifier();

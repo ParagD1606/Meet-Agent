@@ -14,9 +14,15 @@ import { scanMemoryText } from "../memory/core-blocks";
 import { openDm, postMessage } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
 import { withAliases } from "./ask-teammate";
+import { proposeConfirmWrite } from "./confirm-write";
 import type { ToolContext } from "./tools";
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "no due date");
+/** Untrusted text is in this turn: park the write behind a Confirm card for the asker instead of executing it. */
+async function holdForConfirm(ctx: ToolContext, tool: "assign_task" | "update_task", args: unknown, summary: string): Promise<string> {
+  await proposeConfirmWrite({ tool, args, summary, userId: ctx.userId!, channelId: ctx.channelId, threadTs: ctx.threadTs, messageTs: ctx.messageTs, scope: ctx.scope });
+  return "Posted a confirmation card for the asker because outside text was part of this request. Nothing was changed yet; tell them you are waiting for their OK.";
+}
 const clean = (s: string) => s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
 const fallbackLink = (channel: string, ts: string) => `https://slack.com/app_redirect?channel=${channel}&message_ts=${ts}`;
 
@@ -54,6 +60,7 @@ export function taskTools(ctx: ToolContext): ToolSet {
         if ("error" in p) return p.error;
         const dueAt = due ? parseDue(due) : null;
         if (due && !dueAt) return `ERROR: "${due}" is not a valid date; pass an ISO date like 2026-06-12.`;
+        if (ctx.untrustedContext) return holdForConfirm(ctx, "assign_task", { title, assignee, due, priority, notify }, `Assign "${t}" to <@${p.id}>${dueAt ? `, due ${day(dueAt)}` : ""}${priority === "urgent" ? ", urgent" : ""}.`);
         const ts = ctx.messageTs;
         const permalink = ts ? (await ambientIo.permalink(ctx.channelId, ts).catch(() => null)) ?? fallbackLink(ctx.channelId, ts) : null;
         const { row, created } = await upsertTask({
@@ -79,6 +86,10 @@ export function taskTools(ctx: ToolContext): ToolSet {
       execute: async ({ id, title, status, owner, due, priority }) => {
         if (!ctx.userId) return "ERROR: no asker.";
         if (!id && !title) return "ERROR: give the task id or some words of its title.";
+        // marking done / in progress is low-impact; reopening, dropping, reassigning or re-dating from outside text needs the asker's OK
+        if (ctx.untrustedContext && (owner || due || priority || status === "dropped" || status === "open")) {
+          return holdForConfirm(ctx, "update_task", { id, title, status, owner, due, priority }, `Change task ${id ?? `"${title}"`}:${status ? ` status ${status};` : ""}${owner ? ` owner ${owner};` : ""}${due ? ` due ${due};` : ""}${priority ? ` priority ${priority};` : ""}`);
+        }
         let target: Commitment | undefined;
         if (id) {
           const [row] = await db.select().from(commitments).where(eq(commitments.id, id));

@@ -1,5 +1,5 @@
 import { streamText, type LanguageModel, type ModelMessage, type SystemModelMessage, type ToolSet } from "ai";
-import { getModel, estimateCostMicros, withFallback } from "../llm";
+import { getModel, estimateCostMicros, thinkingLevel, withFallback } from "../llm";
 import { log } from "../log";
 import { createTurnBudget, type TurnBudget } from "../limits";
 import { clearOldToolResults, spillIfLarge } from "./spill";
@@ -129,7 +129,7 @@ export type LoopArgs = {
 /** Gemini 3.x spends hidden "thinking" tokens out of maxOutputTokens: on memory turns that was ~90% of the budget and cut answers mid-link. Keep it small for quick turns; deep turns keep the model default. Other providers ignore these keys. */
 export const thinkingOptions = (depth: Depth) => {
   const level = depth === "direct" || depth === "memory" ? "minimal" : depth === "tools" ? "low" : undefined;
-  return level ? { vertex: { thinkingConfig: { thinkingLevel: level } }, google: { thinkingConfig: { thinkingLevel: level } } } : undefined;
+  return level ? thinkingLevel(level) : undefined;
 };
 
 const WRAP_UP = "[host] You are almost out of room for this request. Answer now with what you have found. Say plainly what you did not get to and what would let you go further. Do not call tools.";
@@ -227,6 +227,7 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   const signals = [AbortSignal.timeout(a.timeoutMs ?? TURN_TIMEOUT_MS), budget.signal, ...(a.abortSignal ? [a.abortSignal] : [])];
   const abortSignal = AbortSignal.any(signals);
   let stopped: LoopResult["stopped"];
+  let wrapUp = false; // the last-step "answer now" nudge was sent
 
   const res = streamText({
     model,
@@ -241,7 +242,7 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
     prepareStep: async ({ stepNumber, messages }: { stepNumber: number; messages: ModelMessage[] }) => {
       const msgs = clearOldToolResults(messages);
       if (cap > 1 && stepNumber >= cap - 1) {
-        stopped ??= "step_cap";
+        wrapUp = true;
         return { messages: [...msgs, { role: "user", content: WRAP_UP } as ModelMessage], activeTools: [] as never, toolChoice: "none" as const };
       }
       const active = a.activeTools?.();
@@ -251,6 +252,7 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
 
   let step = "";
   let last = "";
+  let finish = ""; // finishReason of the latest step
   let waitingApproval = false;
   let streamError: unknown;
   const started = new Map<string, number>();
@@ -261,6 +263,9 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
         case "start-step":
           if (step.trim()) last = step;
           step = "";
+          break;
+        case "finish-step":
+          finish = String(part.finishReason?.unified ?? part.finishReason ?? "");
           break;
         case "text-delta":
           step += part.text ?? part.delta ?? "";
@@ -289,6 +294,8 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   if (budget.exceeded) stopped = "ceiling";
   else if (a.abortSignal?.aborted) stopped = "cancelled";
   else if (abortSignal.aborted) stopped = "timeout";
+  // step_cap = the wrap-up step did NOT land a complete answer (empty, cut off, or still calling tools); a finished answer is just an answer
+  else if (wrapUp && (!step.trim() || finish === "tool-calls" || finish === "length")) stopped = "step_cap";
   const text = (step.trim() ? step : last).trim();
   if (streamError && !stopped && !text) throw streamError instanceof Error ? streamError : new Error(String(streamError));
   if (streamError) log.warn("stream error after output", { error: String(streamError) });

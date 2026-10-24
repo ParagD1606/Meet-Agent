@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { jsonrepair } from "jsonrepair";
 import type { z } from "zod";
-import { type ModelRole, withFallback } from "../llm";
+import { auxThinking, type ModelRole, withFallback } from "../llm";
 import { log } from "../log";
 
 export type MemoryLlm = (a: { system: string; prompt: string; role?: ModelRole }) => Promise<string>;
@@ -15,12 +15,12 @@ export function setMemoryLlm(fn: MemoryLlm | null): void {
 const TIMEOUT_MS = 60_000;
 
 /** Plain-text completion on a cheap role with timeout, output cap and cross-provider fallback. */
-export async function completeText(a: { system: string; prompt: string; role?: ModelRole; maxOutputTokens?: number }): Promise<string> {
+export async function completeText(a: { system: string; prompt: string; role?: ModelRole; maxOutputTokens?: number; providerOptions?: Record<string, any> }): Promise<string> {
   if (override) return override(a);
   const { text } = await withFallback(a.role ?? "extract", (model) =>
     generateText({
       model, system: a.system, prompt: a.prompt, temperature: 0,
-      maxOutputTokens: a.maxOutputTokens ?? 1200, abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+      maxOutputTokens: a.maxOutputTokens ?? 1200, providerOptions: (a.providerOptions ?? auxThinking) as never, abortSignal: AbortSignal.timeout(TIMEOUT_MS),
     }));
   return text;
 }
@@ -60,7 +60,7 @@ export function parseModelJson<S extends z.ZodType>(raw: string, schema: S): z.i
 
 /** Runs the LLM and parses the first JSON object in its reply against `schema`. Throws on any failure. */
 export async function completeJson<S extends z.ZodType>(
-  a: { system: string; prompt: string; role?: ModelRole; maxOutputTokens?: number },
+  a: { system: string; prompt: string; role?: ModelRole; maxOutputTokens?: number; providerOptions?: Record<string, any> },
   schema: S,
 ): Promise<z.infer<S>> {
   const raw = await completeText(a);

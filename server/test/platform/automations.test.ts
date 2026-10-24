@@ -42,7 +42,7 @@ test("cron validation and minimum interval", async () => {
   expect(cronMinGapSeconds("0,5 9 * * 1")).toBe(300); // sparse pattern with a tight pair later on
   expect(await code(createAutomation(digest({ cron: "*/2 * * * *" }), mia))).toBe("invalid");
   expect(await code(createAutomation(digest({ cron: "*/3 * * * *" }), mia))).toBeNull();
-  expect(await code(createAutomation(digest({ cron: "0,30 * * * *" }), mia))).toBe("invalid");
+  expect(await code(createAutomation(digest({ cron: "* * * * *" }), mia))).toBe("invalid"); // minimum is now 3 minutes (team change 39f66bc)
   expect(await code(createAutomation(digest({ cron: "garbage" }), mia))).toBe("invalid");
   expect(await code(createAutomation(digest({ cron: "0 * * * *" }), mia))).toBeNull();
 });
@@ -72,7 +72,7 @@ test("list / update / delete respect ownership; admins manage others", async () 
   expect(await code(updateAutomation(a.id, { prompt: "hijack" }, max))).toBe("forbidden");
   expect(await code(deleteAutomation(a.id, max))).toBe("forbidden");
   expect((await updateAutomation(a.id, { prompt: "new", enabled: false }, admin)).prompt).toBe("new");
-  expect(await code(updateAutomation(a.id, { cron: "*/10 * * * *" }, mia))).toBe("invalid");
+  expect(await code(updateAutomation(a.id, { cron: "*/2 * * * *" }, mia))).toBe("invalid");
   await deleteAutomation(a.id, mia);
   expect(await code(deleteAutomation(a.id, mia))).toBe("not_found");
 });
@@ -209,7 +209,7 @@ test("ai tools: schedule/cancel only propose; nothing changes until the requeste
   const mk = (userId: string | null) => automationTools({ turnId: "t", userId, channelId: "CPRIV", scope: {} as any, readOnly: false, orgConnectionsOnly: false }) as any;
   const run = (t: any, name: string, input: unknown) => t[name].execute(input, { toolCallId: "x", messages: [] });
   const t = mk("UMEM");
-  expect(await run(t, "schedule_automation", { kind: "digest", prompt: "recap", cron: "*/5 * * * *" })).toMatch(/too often/);
+  expect(await run(t, "schedule_automation", { kind: "digest", prompt: "recap", cron: "*/2 * * * *" })).toMatch(/too often/);
   const proposed = await run(t, "schedule_automation", { kind: "reminder", prompt: "stand up <!channel> now", cron: "0 9 * * 1", destination: "here" });
   expect(proposed.status).toBe("awaiting_approval");
   expect(await db.select().from(automations)).toHaveLength(0); // nothing scheduled yet

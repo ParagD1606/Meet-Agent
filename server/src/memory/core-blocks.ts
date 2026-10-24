@@ -5,7 +5,7 @@ import { channelMembers, coreBlocks, memoryReviews } from "../db/schema";
 import { type SlackScope } from "./scope";
 
 /** Who is acting. Only "primary" (an interactive turn) and admin-approved reviews may write shared company state. */
-export type AgentContext = "primary" | "automation" | "research" | "consolidation" | "reflection";
+export type AgentContext = "primary" | "automation" | "research" | "consolidation" | "reflection" | "untrusted";
 export type BlockLabel = "company" | "channel" | "user";
 export type Block = { scopeTag: string; label: BlockLabel; text: string; charLimit: number; version: number };
 export type Actor = { userId: string | null; role: "owner" | "admin" | "member" | "bot"; agentContext: AgentContext };
