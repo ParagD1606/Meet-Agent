@@ -584,14 +584,22 @@ async function syncHuddles(opts: { force?: boolean; maxPages?: number }): Promis
 /** The extension acts for one signed-in person, so it reads memory as a DM with them: shared, their own DMs, and private channels they belong to. */
 export const personScope = (userId: string): SlackScope => ({ channelId: `ext_${userId}`, isPrivate: false, isIm: true, userId });
 
+/** Slack stores people as <@U123ABC>; turn those into names so neither the model nor the reader sees raw ids. */
+async function withNames(texts: string[]): Promise<(t: string) => string> {
+  const ids = [...new Set(texts.flatMap((t) => [...t.matchAll(/<@([A-Z0-9_]+)(?:\|[^>]*)?>/g)].map((m) => m[1]!)))];
+  const names = new Map(ids.length ? (await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids))).map((u) => [u.id, u.name]) : []);
+  return (t) => t.replace(/<@([A-Z0-9_]+)(?:\|([^>]*))?>/g, (_m, id: string, label?: string) => `@${names.get(id) || label || "a teammate"}`);
+}
+
 export type MemorySource = { text: string; source: string; date: string; url?: string };
 /** What the team already knows (Slack and Brain memory) that this person may read, with its sources. Never throws: no memory just means no background. */
-export async function recallForMeeting(userId: string, query: string, opts: { rewrite?: boolean; budgetTokens?: number } = {}): Promise<{ text: string; sources: MemorySource[] }> {
+export async function recallForMeeting(userId: string, query: string, opts: { rewrite?: boolean; budgetTokens?: number; sourceChars?: number } = {}): Promise<{ text: string; sources: MemorySource[] }> {
   try {
     const r = await buildRecall({ scope: personScope(userId), query, budgetTokens: opts.budgetTokens ?? 1_800, rewrite: opts.rewrite ?? false });
+    const name = await withNames([r.text, ...r.hits.map((h) => h.text)]);
     return {
-      text: r.text,
-      sources: r.hits.slice(0, 8).map((h) => ({ text: h.text.slice(0, 240), source: h.source, date: (h.validAt ?? h.createdAt).toISOString().slice(0, 10), ...(h.permalink && /^https?:\/\//.test(h.permalink) ? { url: h.permalink } : {}) })),
+      text: name(r.text),
+      sources: r.hits.slice(0, 8).map((h) => ({ text: name(h.text).slice(0, opts.sourceChars ?? 240), source: h.source, date: (h.validAt ?? h.createdAt).toISOString().slice(0, 10), ...(h.permalink && /^https?:\/\//.test(h.permalink) ? { url: h.permalink } : {}) })),
     };
   } catch (err) {
     log.warn("meeting memory recall failed", { error: err instanceof Error ? err.message : String(err) });
@@ -600,7 +608,7 @@ export async function recallForMeeting(userId: string, query: string, opts: { re
 }
 
 const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript and the meeting context provided.
-For what is happening in THIS meeting, the transcript is the truth. For questions about earlier conversations, decisions, people or projects, use the team memory block when one is given and say it comes from memory, with its date; if the transcript and memory disagree about this meeting, the transcript wins.
+"I", "me" and "my" in a question mean the person asking (named under "The person asking"): if they ask who they are, tell them their name and what they said or did in this meeting, when the transcript shows it. For what is happening in THIS meeting, the transcript is the truth. For questions about earlier conversations, decisions, people or projects, use the team memory block when one is given and say it comes from memory, with its date; if the transcript and memory disagree about this meeting, the transcript wins.
 Be brief and concrete, name people when relevant, and say plainly when neither the transcript nor memory covers the question. Never invent facts, owners or dates.`;
 
 const LIVE_ANALYZE_SYSTEM = `You read the WHOLE transcript of a meeting and flag items for a human to approve. Transcript lines are numbered like [12]. Use only what is written there; never outside knowledge or what such a meeting "usually" covers.
@@ -631,7 +639,7 @@ const liveAnalysisSchema = z.object({
 });
 
 export type LiveLine = { speaker: string; text: string };
-export type LiveContext = { title?: string; startedAt?: string; roster?: string[] };
+export type LiveContext = { title?: string; startedAt?: string; roster?: string[]; /** the person using the assistant, so "me", "I" and "who am I" can be answered */ me?: string };
 
 /** Numbered transcript, keeping the most recent ~50k characters and the original numbering. */
 function numbered(lines: LiveLine[]): string {
@@ -650,7 +658,7 @@ function contextBlock(ctx: LiveContext): string {
   const start = ctx.startedAt ? new Date(ctx.startedAt) : null;
   const when = start && !Number.isNaN(start.getTime())
     ? `${start.toISOString()} (${start.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })} UTC)` : "unknown";
-  return [`Meeting: ${ctx.title ?? "untitled"}`, `Started: ${when}`, `Roster: ${(ctx.roster ?? []).join(", ") || "unknown"}`].join("\n");
+  return [`Meeting: ${ctx.title ?? "untitled"}`, `Started: ${when}`, `Roster: ${(ctx.roster ?? []).join(", ") || "unknown"}`, ...(ctx.me ? [`The person asking: ${ctx.me}`] : [])].join("\n");
 }
 
 /** Answers a question about an in-progress call. Nothing is stored. */

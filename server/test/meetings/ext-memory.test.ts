@@ -55,6 +55,24 @@ describe("extension memory", () => {
     expect(body.sources.some((s: any) => /launch date/.test(s.text))).toBe(true);
   });
 
+  test("the assistant knows who is asking, from the token owner or the name typed in the panel", async () => {
+    let prompt = "";
+    setMemoryLlm(async (a) => { prompt = a.prompt; return "You are the person asking."; });
+    const tok = await token();
+    await post("/ext/ask", tok, { lines: [{ speaker: "Ana", text: "hello" }], question: "tell me who am i" });
+    expect(prompt).toContain("The person asking: User U_ME");            // the token owner's name
+    await post("/ext/ask", tok, { lines: [{ speaker: "Ana", text: "hello" }], question: "tell me who am i", context: { me: "Parag" } });
+    expect(prompt).toContain("The person asking: Parag");                // the name typed in the panel wins
+  });
+
+  test("raw Slack mentions in memory become names, for the model and for the sources shown", async () => {
+    await seedMemory("shared", "Please create a task for <@U_OTHER> about the frontend and backend split.");
+    const { text, sources } = await recallForMeeting("U_ME", "create a task about the frontend and backend split");
+    expect(text).toContain("@User U_OTHER");
+    expect(text).not.toContain("<@U_OTHER>");
+    expect(sources.some((x) => x.text.includes("@User U_OTHER") && !x.text.includes("<@"))).toBe(true);
+  });
+
   test("the final pass may use memory to understand references but can never make an item from it", async () => {
     let prompt = "";
     setMemoryLlm(async (a) => {

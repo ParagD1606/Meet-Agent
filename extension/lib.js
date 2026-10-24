@@ -70,7 +70,7 @@
     return [["Today", iso(now)], ["Tomorrow", iso(d(1))], ["Friday", iso(d(toFri))], ["Next week", iso(d(7))]];
   }
 
-  const LABELS = { confirmed: "Confirmed commitment", tentative: "Tentative", suggestion: "Suggestion" };
+  const LABELS = { confirmed: "Confirmed", tentative: "Tentative", suggestion: "Suggestion" };
   const badge = (item) => item.kind === "question" ? "Open question" : item.kind === "decision" && item.label === "confirmed" ? "Decision" : LABELS[item.label] ?? "Tentative";
 
   const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

@@ -1,5 +1,15 @@
 const $ = (id) => document.getElementById(id);
 const { renderNotes, uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
+const ICONS = {
+  call: '<svg viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="m16 10 6-3v10l-6-3"/></svg>',
+  captions: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 11h2M14 11h2M8 15h5"/></svg>',
+  notes: '<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+  items: '<svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>',
+  people: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>',
+  chat: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+};
+const emptyHtml = (icon, title, body) => `<div class="ico">${ICONS[icon]}</div><b>${title}</b>${body}`;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const hue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 50% 42%)`; };
 const ask = (msg) => chrome.runtime.sendMessage(msg);
@@ -102,7 +112,7 @@ function renderLive() {
   $("capBanner").hidden = !(state.snap && !state.snap.captionsOn && !state.manual);
   $("capOn").hidden = !state.snap?.canEnableCaptions;
   const box = $("transcript");
-  $("liveEmpty").innerHTML = !s ? "<b>No call detected</b>Open a Google Meet, Teams, Zoom (web) or Slack call in this window, or import a transcript." : !s.lines.length ? "<b>Waiting for captions</b>Turn captions on in the call (the CC button) and they will appear here." : "";
+  $("liveEmpty").innerHTML = !s ? emptyHtml("call", "No call detected", "Open a Google Meet, Teams, Zoom (web) or Slack call in this window, or import a transcript.") : !s.lines.length ? emptyHtml("captions", "Waiting for captions", "Turn captions on in the call (the CC button) and they will appear here.") : "";
   const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
   const hl = box.querySelector(".hl")?.dataset.i;
   box.innerHTML = lines().map((l, i) => `<div class="line${String(i + 1) === hl ? " hl" : ""}" data-i="${i + 1}"><div class="av" style="background:${hue(l.speaker || "?")}">${esc(initials(l.speaker))}</div><div><div class="who">${esc(l.speaker || "Unknown")}<span class="ts">${hhmm(l.t)}</span></div><div class="say">${esc(l.text)}</div></div></div>`).join("");
@@ -148,7 +158,7 @@ $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim
 const sourcesHtml = (src) => !src?.length ? "" : `<details class="src"><summary>From team memory · ${src.length}</summary><ul>${src.map((x) => `<li>${esc(x.text)} <span class="muted">${esc(x.source)}, ${esc(x.date)}</span>${x.url && /^https?:\/\//.test(x.url) ? ` <a href="${esc(x.url)}" target="_blank" rel="noreferrer">open</a>` : ""}</li>`).join("")}</ul></details>`;
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}${sourcesHtml(m.sources)}</div>`).join("") : `<div class="empty"><b>Ask about the call or the past</b>I also search the team's Slack and Brain memory, so you can ask “What did we decide about this before?”</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}${sourcesHtml(m.sources)}</div>`).join("") : `<div class="empty">${emptyHtml("chat", "Ask about the call or the past", "I also search the team's Slack and Brain memory, so you can ask “What did we decide about this before?”")}</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -157,7 +167,7 @@ function needReady() {
   return null;
 }
 const failText = (r) => r?.status === 429 ? "Too many requests. Wait a moment." : r?.status === 401 ? "Token rejected. Check Settings." : "Something went wrong reaching the server. Try again.";
-const context = () => ({ title: src()?.title, startedAt: src()?.startedAt, roster: roster() });
+const context = () => ({ title: src()?.title, startedAt: src()?.startedAt, roster: roster(), me: me() || undefined });
 const notes = () => state.store.items.filter((i) => i.status !== "rejected").map((i) => `- [${i.kind}${i.status === "approved" ? ", approved" : ""}] ${i.title}${i.assignee ? ` (${i.assignee}${i.due ? ", " + i.due : ""})` : ""}`).join("\n");
 const workloadNote = () => Object.entries(state.load).map(([n, c]) => `${n}: ${c} open task${c === 1 ? "" : "s"}`).join("; ");
 
@@ -202,7 +212,7 @@ function maybeAutoDetect() {
 // ---------- live notes ----------
 function renderNotesTab() {
   const n = state.store.notes;
-  $("notesBody").innerHTML = n?.text ? renderNotes(n.text) : `<div class="empty"><b>No notes yet</b>Live notes appear here and refresh every 2 minutes while the call runs. Press “Update now” to write the first ones.</div>`;
+  $("notesBody").innerHTML = n?.text ? renderNotes(n.text) : `<div class="empty">${emptyHtml("notes", "No notes yet", "Live notes appear here and refresh every 2 minutes while the call runs. Press “Update now” to write the first ones.")}</div>`;
   $("notesMsg").textContent = n?.at ? `Updated ${hhmm(n.at)} · ${n.upTo} lines covered` : "";
 }
 async function updateNotes(auto = false) {
@@ -240,7 +250,7 @@ function renderItems() {
   const dups = findDuplicates(items), byId = Object.fromEntries(items.map((i) => [i.id, i]));
   const rank = { pending: 0, approved: 1, rejected: 2 };
   const sorted = [...items].sort((a, b) => rank[a.status] - rank[b.status]);
-  if (!sorted.length) { $("itemList").innerHTML = `<div class="empty"><b>Nothing detected yet</b>Decisions, tasks and open questions show up here for you to approve, edit or reject. Nothing is saved until you approve it and send.</div>`; return; }
+  if (!sorted.length) { $("itemList").innerHTML = `<div class="empty">${emptyHtml("items", "Nothing detected yet", "Decisions, tasks and open questions show up here for you to approve, edit or reject. Nothing is saved until you approve it and send.")}</div>`; return; }
   $("itemList").innerHTML = sorted.map((i) => {
     const edit = state.editing.has(i.id), isTask = i.kind === "task";
     const dup = dups[i.id] && byId[dups[i.id].otherId];
@@ -252,8 +262,8 @@ function renderItems() {
       ${i.reason ? `<div class="why">${esc(i.reason)}</div>` : ""}
       ${(i.evidence ?? []).map((n) => `<button class="ev" data-act="jump" data-n="${n}">line ${n}</button>`).join("")}
       ${isTask ? `<div class="fields"><input data-f="assignee" list="people" placeholder="Assign to…" value="${esc(i.assignee)}"><input data-f="due" placeholder="Due" value="${esc(i.due)}"></div>
-        ${!i.assignee && roster().length ? `<div class="chipsrow"><span class="q">Who owns this?</span>${roster().slice(0, 6).map((n) => `<button class="sm" data-act="owner" data-v="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
-        ${!i.due ? `<div class="chipsrow"><span class="q">When?</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="due" data-v="${v}">${l}</button>`).join("")}</div>` : ""}` : ""}
+        ${!i.assignee && roster().length ? `<div class="chipsrow"><span class="q">Owner</span>${roster().slice(0, 4).map((n) => `<button class="sm" data-act="owner" data-v="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
+        ${!i.due ? `<div class="chipsrow"><span class="q">Due</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="due" data-v="${v}">${l}</button>`).join("")}</div>` : ""}` : ""}
       ${hint ? `<div class="warn">${esc(i.assignee)} already has ${hint.count} open tasks; ${esc(hint.alt)} has ${hint.altCount}. <button class="sm" data-act="owner" data-v="${esc(hint.alt)}">Reassign to ${esc(hint.alt)}</button></div>` : ""}
       ${dup ? `<div class="warn ${dups[i.id].conflict ? "conflict" : ""}">${dups[i.id].conflict ? `Deadline conflict with “${esc(dup.title)}” (${esc(dup.due)} vs ${esc(i.due)}).` : `Similar to “${esc(dup.title)}”.`} <button class="sm" data-act="merge">Merge</button><button class="sm" data-act="keep">Keep both</button><button class="sm" data-act="reject">Dismiss</button></div>` : ""}
       <div class="acts">${i.status === "pending" ? `<button class="sm ok" data-act="approve">${i.kind === "question" ? "Keep" : "Approve"}</button><button class="sm" data-act="edit">${edit ? "Done" : "Edit"}</button><button class="sm no" data-act="reject">Reject</button>`
@@ -314,23 +324,28 @@ const AVAIL = { light: "Light load", busy: "Busy", overloaded: "Overloaded" };
 function renderSuggest() {
   const items = state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected");
   const data = state.suggest.data, byTask = Object.fromEntries((data?.tasks ?? []).map((t) => [t.id, t]));
+  $("suggestBasis").className = data?.basis?.degraded ? "warn" : "muted";
   $("suggestBasis").textContent = data?.basis ? `${data.basis.note} Based on ${data.basis.people} people and ${data.basis.tasksSeen} tasks you can see${data.basis.usedMemory ? ", plus team memory" : ""}.` : "";
-  if (!items.length) { $("suggestList").innerHTML = `<div class="empty"><b>No tasks yet</b>Generate decisions and tasks first (Items tab), then come back to see who is best placed to take each one.</div>`; return; }
+  if (!items.length) { $("suggestList").innerHTML = `<div class="empty">${emptyHtml("people", "No tasks yet", "Generate decisions and tasks first (Items tab), then come back to see who is best placed to take each one.")}</div>`; return; }
+  if (state.suggest.loading && !data) { $("suggestList").innerHTML = '<div class="skel"></div><div class="skel"></div>'; return; }
   $("suggestList").innerHTML = items.map((i) => {
     const t = byTask[i.id];
-    const cur = i.assignee ? `<span class="muted">Assigned to <b>${esc(i.assignee)}</b></span>` : `<span class="muted">Unassigned</span>`;
     const cands = !t ? `<p class="muted">${state.suggest.loading ? "Looking…" : "No suggestions yet. Press Refresh."}</p>` : t.candidates.map((c) => {
       const mine = i.assigneeId === c.userId;
+      const first = c.skill > 0 ? (c.reasons[0] ?? "") : "";
       return `<div class="cand" data-task="${esc(i.id)}" data-uid="${esc(c.userId)}" data-name="${esc(c.name)}">
-        <div><div class="nm">${esc(c.name)}</div>${c.title ? `<div class="tt">${esc(c.title)}</div>` : ""}</div>
+        <span class="av sm" style="background:${hue(c.name)}">${esc(initials(c.name))}</span>
+        <div class="pid"><div class="nm">${esc(c.name)}</div>${c.title ? `<div class="tt">${esc(c.title)}</div>` : ""}</div>
         <button class="sm go ${mine ? "" : "primary"}" data-act="assign" ${mine ? "disabled" : ""}>${mine ? "Assigned ✓" : "Assign"}</button>
-        <div class="match" title="Skill match"><i style="width:${Math.round(c.skill * 100)}%"></i></div>
-        <div class="pills"><span class="pill ${c.availability}">${AVAIL[c.availability]}</span>${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}<span class="pill">${c.skill > 0 ? `Skill match ${Math.round(c.skill * 100)}%` : "No skill signal"}</span></div>
+        ${first ? `<div class="line1">${esc(first)}</div>` : ""}
+        ${c.skill > 0 ? `<div class="match" title="Skill match ${Math.round(c.skill * 100)}%"><i style="width:${Math.round(c.skill * 100)}%"></i></div>` : ""}
+        <div class="pills">${c.availability ? `<span class="pill ${c.availability}">${AVAIL[c.availability]}</span>` : ""}${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}${c.skill > 0 ? `<span class="pill">Skill ${Math.round(c.skill * 100)}%</span>` : ""}</div>
         <details><summary>Why</summary><ul>${c.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details></div>`;
-    }).join("") + (t?.noSkillSignal ? `<p class="muted">Nobody has a clear track record for this, so these are ranked by availability.</p>` : "");
+    }).join("") + (t?.noSkillSignal ? `<p class="muted nonskill">No one has a track record for this, so these are ranked by availability.</p>` : "");
     const iso = isoDue(i.due);
-    const when = iso ? `<span class="muted">Due <b>${esc(iso)}</b></span>` : `<span class="chipsrow"><span class="q">${i.due ? `Due “${esc(i.due)}” is not a date. ` : ""}Due when? Availability depends on it.</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="setdue" data-task="${esc(i.id)}" data-v="${v}">${l}</button>`).join("")}</span>`;
-    return `<div class="sug"><div class="t">${esc(i.title)}</div><div class="cur">${cur} · ${when}</div>${cands}</div>`;
+    const cur = `<span class="pill who">${i.assignee ? `Assigned to ${esc(i.assignee)}` : "Unassigned"}</span>${iso ? `<span class="pill due">Due ${esc(iso)}</span>` : ""}`;
+    const setDue = iso ? "" : `<div class="chipsrow"><span class="q">${i.due ? `“${esc(i.due)}” is not a date. ` : ""}Due</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="setdue" data-task="${esc(i.id)}" data-v="${v}">${l}</button>`).join("")}</div>`;
+    return `<div class="sug"><div class="t">${esc(i.title)}</div><div class="cur">${cur}</div>${setDue}${cands}</div>`;
   }).join("");
 }
 $("suggestList").addEventListener("click", async (e) => {
