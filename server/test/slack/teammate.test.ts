@@ -5,16 +5,31 @@ import { channelMembers, memories, users } from "../../src/db/schema";
 import { handleInteraction } from "../../src/slack/interactions";
 import { askDeps, attemptDelivery, captureOwnerReply, getAsk, nextWindow, proposeAsk } from "../../src/slack/teammate";
 import { installFakes, removeFakes } from "../memory/helpers";
+import { setMemoryLlm } from "../../src/memory/llm";
+import { settings } from "../../src/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 process.env.QUIET_HOURS = "1"; // quiet hours are opt-in; these tests cover the opt-in behaviour
 
-beforeAll(installFakes);
+// the owner-reply classifier is a model call: scripted here (default ANSWER); tests flip `classify`
+let classify: (message: string) => string | Promise<string> = () => "ANSWER";
+let classifyCalls = 0;
+const scriptedLlm = async (a: { system: string; prompt: string }) => {
+  if (!a.system.includes("classify a Slack DM")) return '{"superseded":[],"facts":[]}';
+  classifyCalls++;
+  return classify(a.prompt);
+};
+beforeAll(() => {
+  installFakes();
+  setMemoryLlm(scriptedLlm);
+});
 afterAll(removeFakes);
 
 const WED_10 = new Date("2026-10-21T10:00:00Z");
 let ctx: Awaited<ReturnType<typeof setup>>;
 let deferred: { id: string; at: Date }[];
 beforeEach(async () => {
+  classify = () => "ANSWER"; classifyCalls = 0;
   ctx = await setup();
   deferred = [];
   askDeps.now = () => WED_10;
@@ -182,5 +197,120 @@ describe("owner DM answer without a thread", () => {
     const id = await sendTo("UOWN");
     expect(await captureOwnerReply(dm("in thread answer", "UOWN", "999.1"))).toBe(true);
     expect((await getAsk(id))!.status).toBe("answered");
+  });
+});
+
+describe("owner DM: a request is not an answer", () => {
+  const sendTo = async (owner = "UOWN", question = q) => {
+    const id = await proposeAsk({ asker: "UASK", owner, question, origin: { channelId: "CPRIV", threadTs: "1.1", isPrivate: true, isIm: false } });
+    await click("UASK", "brain_ask_yes", id);
+    return id;
+  };
+  const dm = (text: string, thread_ts?: string) => ({ user: "UOWN", channel: "D_UOWN", text, ...(thread_ts ? { thread_ts } : {}) });
+  const reopen = (id: string) => db.update(settings).set({ value: sql`value || '{"status":"sent"}'::jsonb` }).where(eq(settings.key, `ask:${id}`));
+  const FAILING = "cna you please create a task for <@UMUNEER> about the seperation of frontend and the backend in vhsmo also tell him about it as well pelase";
+
+  test("the live failing DM is not consumed: ask stays open, nothing relayed, classifier never asked", async () => {
+    const id = await sendTo();
+    const before = posts().length;
+    expect(await captureOwnerReply(dm(FAILING))).toBe(false);
+    expect((await getAsk(id))!.status).toBe("sent");
+    expect(posts()).toHaveLength(before);
+    expect(classifyCalls).toBe(0);
+  });
+
+  test("classifier says OTHER, errors, or gibberish: normal turn (fail closed); the ask stays open", async () => {
+    const id = await sendTo();
+    classify = () => "OTHER";
+    expect(await captureOwnerReply(dm("sounds good, thanks"))).toBe(false);
+    classify = () => { throw new Error("vertex down"); };
+    expect(await captureOwnerReply(dm("sounds good, thanks"))).toBe(false);
+    classify = () => "gibberish";
+    expect(await captureOwnerReply(dm("sounds good, thanks"))).toBe(false);
+    expect((await getAsk(id))!.status).toBe("sent");
+    expect(classifyCalls).toBe(3);
+  });
+
+  test("a hung classifier is cut at 4s", async () => {
+    const id = await sendTo();
+    classify = () => new Promise<string>(() => {});
+    const t0 = Date.now();
+    expect(await captureOwnerReply(dm("sounds good, thanks"))).toBe(false);
+    expect(Date.now() - t0).toBeLessThan(6000);
+    expect((await getAsk(id))!.status).toBe("sent");
+  }, 10_000);
+
+  test("classifier prompt carries the question and the message; triage role, >= 32 output tokens", async () => {
+    const seen: any[] = [];
+    setMemoryLlm(async (a: any) => { seen.push(a); return a.system.includes("classify a Slack DM") ? "ANSWER" : "{}"; });
+    await sendTo();
+    await captureOwnerReply(dm("the CFO signs them"));
+    setMemoryLlm(scriptedLlm);
+    const c = seen.find((a) => a.system.includes("classify a Slack DM"));
+    expect(c.role).toBe("triage");
+    expect(c.maxOutputTokens).toBeGreaterThanOrEqual(32);
+    expect(c.prompt).toContain(q);
+    expect(c.prompt).toContain("the CFO signs them");
+  });
+
+  test("owner_reply_classifier=off skips the model but keeps the request guard", async () => {
+    const id = await sendTo();
+    await db.insert(settings).values({ key: "owner_reply_classifier", value: "off" });
+    classify = () => "OTHER";
+    expect(await captureOwnerReply(dm(FAILING))).toBe(false);
+    expect((await getAsk(id))!.status).toBe("sent");
+    expect(await captureOwnerReply(dm("the CFO signs them"))).toBe(true);
+    expect(classifyCalls).toBe(0);
+    expect((await getAsk(id))!.status).toBe("answered");
+  });
+
+  test("inside the ask's thread it always matches, without a classifier call", async () => {
+    const id = await sendTo();
+    classify = () => "OTHER";
+    expect(await captureOwnerReply(dm("create a task for me please", "999.1"))).toBe(true);
+    expect((await getAsk(id))!.status).toBe("answered");
+    expect(classifyCalls).toBe(0);
+  });
+
+  test("two open asks: picker unchanged for an answer; a request gets no picker", async () => {
+    const a = await sendTo();
+    const b = await sendTo("UOWN", "Who owns the staging cluster budget?");
+    expect(await captureOwnerReply(dm(FAILING))).toBe(false);
+    expect(posts().some((p) => /Which question/.test(String(p.text)))).toBe(false);
+    expect(await captureOwnerReply(dm("yes go ahead"))).toBe(true);
+    expect(JSON.stringify(posts().at(-1)!.blocks)).toContain("brain_ask_pick");
+    expect([(await getAsk(a))!.status, (await getAsk(b))!.status]).toEqual(["sent", "sent"]);
+  });
+
+  test("the delivery DM tells the owner to answer in the thread", async () => {
+    await sendTo();
+    expect(posts().find((p) => p.channel === "CPRIV" || p.channel === "D_UOWN")).toBeTruthy();
+    expect(posts().some((p) => String(p.text).includes("Reply in the thread under this message to answer"))).toBe(true);
+  });
+
+  test("confusion set: 10 real answers captured, 10 requests/questions never", async () => {
+    const answers = ["no, not interested", "Yes, approved", "next week", "It's the CFO", "ok tell him i am not interested", "We use Stripe", "I paid it yesterday", "Probably Friday", "yes go ahead", "Dana signs them off"];
+    const others = [
+      FAILING,
+      "can you remind me tomorrow at 9",
+      "please create a task for <@UASK> about the invoice",
+      "create an issue in linear for the login bug",
+      "what's the status of the Tales launch?",
+      "who owns billing?",
+      "ask Parag about the deploy",
+      "schedule a call with <@UASK> next week",
+      "ping Eve about it",
+      "Pixel what did I decide yesterday",
+    ];
+    const id = await sendTo();
+    for (const t of others) expect([t, await captureOwnerReply(dm(t))]).toEqual([t, false]);
+    expect((await getAsk(id))!.status).toBe("sent");
+    expect(classifyCalls).toBe(0);
+    for (const t of answers) {
+      expect([t, await captureOwnerReply(dm(t))]).toEqual([t, true]);
+      expect((await getAsk(id))!.status).toBe("answered");
+      await reopen(id);
+    }
+    expect(classifyCalls).toBe(10);
   });
 });

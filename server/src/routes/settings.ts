@@ -14,6 +14,7 @@ import { DEFAULT_PERSONA, getPersona, PERSONA_LIMITS, setPersona } from "../pers
 import { getFreshness, saveFreshness, TUNING } from "../memory/freshness";
 import { setObserve } from "../memory/ambient";
 import { log } from "../log";
+import { getDmIdleHours, MAX_DM_IDLE_HOURS } from "../turn/reset";
 import { applyManagerSchedules, quietHoursOn, workingHours } from "../manager";
 import { backfillDays, MAX_DAYS } from "../memory/backfill";
 import { httpError, readBody, codedError } from "./util";
@@ -86,6 +87,15 @@ settingsRoutes.put("/settings/workspace-hours", requireAuth("admin"), async (c) 
   const jobs = await import("../jobs"); // deferred asks may now be deliverable (quiet hours off / window changed)
   if (jobs.jobsStarted()) await jobs.sweepAskDeliveries().catch((e) => log.warn("ask-deliver sweep failed", { err: String(e) }));
   return c.json(await workspaceHours());
+});
+
+// ---------- conversation: DM idle auto-reset (0 disables) ----------
+const conversation = async () => ({ dmIdleResetHours: await getDmIdleHours() });
+settingsRoutes.get("/settings/conversation", requireAuth("admin"), async (c) => c.json(await conversation()));
+settingsRoutes.put("/settings/conversation", requireAuth("admin"), async (c) => {
+  const b = await readBody(c, z.object({ dmIdleResetHours: z.number().min(0).max(MAX_DM_IDLE_HOURS) }));
+  await putSetting("dm_idle_reset_hours", b.dmIdleResetHours);
+  return c.json(await conversation());
 });
 
 // ---------- ambient capture: the bot learns from every channel it is in unless an admin opts the channel out ----------

@@ -28,6 +28,13 @@ const textStream = (text: string, usage = u(10, 5)): any => ({
     ] as any,
   }),
 });
+/** A reply the provider cut off at the output cap (finishReason length). */
+const cutOff = (text: string): any => ({
+  stream: simulateReadableStream({ chunks: [
+    { type: "stream-start", warnings: [] }, { type: "text-start", id: "t" }, { type: "text-delta", id: "t", delta: text }, { type: "text-end", id: "t" },
+    { type: "finish", finishReason: { unified: "length", raw: "length" }, usage: u(10, 5) },
+  ] as any }),
+});
 const callStream = (name: string, input: unknown, id: string, usage = u(100, 20)): any => ({
   stream: simulateReadableStream({
     chunks: [
@@ -126,7 +133,7 @@ describe("loop", () => {
     const tools = { ping: tool({ description: "p", inputSchema: z.object({ n: z.number() }), execute: async () => "pong" }) };
     const r = await runLoop({ ...baseArgs, tools, maxSteps: 3 });
     expect(r.text).toBe("Here is what I have so far.");
-    expect(r.stopped).toBe("step_cap");
+    expect(r.stopped).toBeUndefined(); // the wrap-up step landed a complete answer: not a cut-off
     expect(r.steps).toBe(3);
     expect(model.doStreamCalls.at(-1)!.toolChoice).toMatchObject({ type: "none" });
   });
@@ -192,11 +199,24 @@ describe("runTurn replies", () => {
     expect((t!.promptBreakdown as any).system).toBeGreaterThan(0);
   });
 
+  test("a wrap-up that lands a complete answer gets no 'continue' hint", async () => {
+    await setLimits({ ...(await getLimits()), maxStepsByDepth: { direct: 1, memory: 2, tools: 2, deep: 2 } });
+    invalidateLimits();
+    setLoopModel(new MockLanguageModelV4({
+      doStream: async (o: any) => (JSON.stringify(o.prompt.at(-1)).includes("out of room") ? textStream("Complete answer.") : callStream("people_search", { query: "x" }, `c${Math.random()}`)),
+    }) as any);
+    await runTurn(input({ text: "show me open issues on github" }));
+    const last = slack.of("update").at(-1)!.args.text as string;
+    expect(last).toContain("Complete answer.");
+    expect(last).not.toContain("continue");
+    invalidateLimits();
+  });
+
   test("step-capped reply tells the user how to continue", async () => {
     await setLimits({ ...(await getLimits()), maxStepsByDepth: { direct: 1, memory: 2, tools: 2, deep: 2 } });
     invalidateLimits();
     setLoopModel(new MockLanguageModelV4({
-      doStream: async (o: any) => (JSON.stringify(o.prompt.at(-1)).includes("out of room") ? textStream("Partial answer.") : callStream("people_search", { query: "x" }, `c${Math.random()}`)),
+      doStream: async (o: any) => (JSON.stringify(o.prompt.at(-1)).includes("out of room") ? cutOff("Partial answer.") : callStream("people_search", { query: "x" }, `c${Math.random()}`)),
     }) as any);
     await runTurn(input({ text: "show me open issues on github" }));
     const last = slack.of("update").at(-1)!.args.text as string;

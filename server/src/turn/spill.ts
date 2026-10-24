@@ -17,6 +17,8 @@ const READ_MAX = 4000;
 const used = new Map<string, number>();
 /** Forget a turn's running total (call from the turn's `finally`). */
 export const endTurnSpill = (turnId: string) => void used.delete(turnId);
+/** Turns with a running spill total (test hook: must be 0 once their turns ended). */
+export const spillTracked = () => used.size;
 
 const isEmpty = (v: unknown) =>
   v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0) ||

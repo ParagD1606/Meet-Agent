@@ -96,6 +96,12 @@ export function askConfirmCard(a: { id: string; owner: string; question: string 
   return { text, blocks: [section(text), { type: "actions", elements: [button("Ask them", "brain_ask_yes", { value: a.id, style: "primary" }), button("No thanks", "brain_ask_no", { value: a.id })] }] };
 }
 
+/** Generic "confirm this write" card for actions the model proposed after untrusted text entered the turn. Only the asker's click counts. */
+export function confirmWriteCard(a: { id: string; summary: string }): Card {
+  const text = `Outside text (a document, another person's message or a web page) was part of this request, so I won't act on it without your OK. Do this? ${escapeSlackText(a.summary)}`;
+  return { text, blocks: [section(text), { type: "actions", elements: [button("Confirm", "brain_cw_yes", { value: a.id, style: "primary" }), button("Cancel", "brain_cw_no", { value: a.id })] }] };
+}
+
 /** Consent card for "follow up with @X": the requester sees the exact text and time before anyone is messaged. */
 export function followUpConfirmCard(a: { id: string; target: string; text: string; at: Date; repeatDays?: number | null }): Card {
   const when = `${a.at.toISOString().slice(0, 16).replace("T", " ")} UTC${a.repeatDays ? `, then every ${a.repeatDays} day(s)` : ""}`;

@@ -7,6 +7,12 @@ import { generateText, type LanguageModel, type SystemModelMessage } from "ai";
 import { config } from "./config";
 
 /** Legacy profiles stay valid: fast -> cheap roles, thorough -> main. */
+/** Gemini 3.x spends hidden reasoning tokens out of maxOutputTokens. Both provider keys; other providers ignore them. */
+export const thinkingLevel = (level: "minimal" | "low" | "medium" | "high") =>
+  ({ vertex: { thinkingConfig: { thinkingLevel: level } }, google: { thinkingConfig: { thinkingLevel: level } } });
+/** Default for every auxiliary (non-main-loop) call: classifiers, rewrite, extraction, summaries. */
+export const auxThinking = thinkingLevel("minimal");
+
 export type ModelProfile = "fast" | "thorough";
 export type ModelRole = "main" | "triage" | "extract" | "summarize" | "research";
 export const MODEL_ROLES: ModelRole[] = ["main", "triage", "extract", "summarize", "research"];

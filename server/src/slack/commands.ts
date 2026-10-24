@@ -11,6 +11,7 @@ import { taskCommand } from "./task-commands";
 import { slackClient } from "./client";
 import { button, section } from "./cards";
 import { escapeSlackText } from "./format";
+import { FRESH_START_REPLY, resetContext } from "../turn/reset";
 
 export type SlashPayload = { command?: string; text?: string; user_id?: string; channel_id?: string; trigger_id?: string; response_url?: string };
 export type Msg = { response_type: "ephemeral"; text: string; blocks?: unknown[]; replace_original?: boolean };
@@ -112,6 +113,15 @@ async function openReview(userId: string, triggerId: string | undefined): Promis
   return null;
 }
 
+/** /brain-new: fresh chat history for the DM it is typed in. Slack gives slash commands no thread, so a channel thread says "new chat" instead. */
+async function newChat(p: SlashPayload): Promise<Msg> {
+  const channel = p.channel_id ?? "";
+  const [c] = await db.select().from(channels).where(eq(channels.id, channel));
+  if (!(c?.isIm ?? channel.startsWith("D"))) return say('Run `/brain-new` in your DM with me. In a channel thread, reply `@me new chat` there (or start a new thread).');
+  await resetContext(channel, "dm");
+  return say(FRESH_START_REPLY);
+}
+
 // ---- entrypoints ----
 
 /** Runs a slash command and returns the ephemeral reply (null when a modal was opened instead). */
@@ -125,6 +135,7 @@ export async function runSlashCommand(p: SlashPayload): Promise<Msg | null> {
     case "/forget": return forget(p, userId);
     case "/whatdoyouknow": return whatDoYouKnow(p, userId);
     case "/brain-review": return openReview(userId, p.trigger_id);
+    case "/brain-new": return newChat(p);
     default: return say("Unknown command.");
   }
 }

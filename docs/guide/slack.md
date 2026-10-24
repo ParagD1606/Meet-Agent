@@ -1,7 +1,7 @@
 # Slack: commands, manifest, huddles
 
 ## Slash commands
-All eight are in `docs/slack-app-manifest.yaml` and `server/src/slack/manifest.ts`. Replies are private (ephemeral).
+All nine are in `docs/slack-app-manifest.yaml` and `server/src/slack/manifest.ts`. Replies are private (ephemeral).
 
 | Command | Usage | Who | Does |
 |---|---|---|---|
@@ -9,6 +9,7 @@ All eight are in `docs/slack-app-manifest.yaml` and `server/src/slack/manifest.t
 | `/forget` | `/forget <what>` | anyone (admins wider) | Finds matching memories you may delete, then confirms |
 | `/whatdoyouknow` | `/whatdoyouknow [@person or topic]` | anyone | Shows what is remembered that you can read |
 | `/brain-review` | `/brain-review` | admins | Pending memory changes to approve or reject |
+| `/brain-new` | `/brain-new` (or DM exactly `new chat`, `/new`, `reset`, `start over`) | anyone | Fresh chat: drops this conversation's chat history only. Memories, tasks, notes and open asks are kept. A DM idle longer than `dm_idle_reset_hours` (admin setting, default 6, 0 = off, max 72; `GET/PUT /api/settings/conversation {dmIdleResetHours}`) starts fresh on its own. Needs the manifest paste and reinstall below. |
 | `/brain-pause` | `/brain-pause` | admins, channel creator | Stop learning from this channel, see [ambient-capture](ambient-capture.md) |
 | `/brain-resume` | `/brain-resume` | admins, channel creator | Resume learning |
 | `/brain-tasks` | `/brain-tasks` | anyone | Your open tasks and ones you assigned, see [tasks](tasks.md) |
