@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Brain Meeting Notes",
+  "version": "0.1.0",
+  "description": "Captures live captions from Google Meet, Microsoft Teams and Zoom (web) and sends them to your Company Brain for summaries and action items.",
+  "permissions": ["storage", "alarms"],
+  "optional_host_permissions": ["https://*/*", "http://localhost/*"],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "https://teams.microsoft.com/*",
+    "https://teams.live.com/*",
+    "https://*.zoom.us/wc/*",
+    "https://app.zoom.us/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Brain Meeting Notes" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*",
+        "https://teams.microsoft.com/*",
+        "https://teams.live.com/*",
+        "https://*.zoom.us/wc/*",
+        "https://app.zoom.us/*"
+      ],
+      "js": ["adapters.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

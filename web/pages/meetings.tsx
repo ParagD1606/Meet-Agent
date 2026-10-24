@@ -51,7 +51,7 @@ export default function Meetings() {
   useEffect(() => { if (!selected && list.data?.[0]) setSelected(list.data[0].id) }, [selected, list.data])
   const detail = useQuery({ queryKey: ["meeting", selected], queryFn: () => api.meeting(selected!), enabled: Boolean(selected) })
   return <>
-    <PageHeader title="Meeting notes" desc="Saved Slack Huddle transcripts, AI summaries, and extracted action items. Jira links appear here after issues are created." actions={isAdmin(me.data?.role) ? <Button size="sm" loading={sync.isPending} onClick={() => sync.mutate()}>Sync Slack Huddles</Button> : undefined} />
+    <PageHeader title="Meeting notes" desc="Saved meeting transcripts (Slack Huddles and the browser extension), AI summaries, and extracted action items. Jira links appear here after issues are created." actions={isAdmin(me.data?.role) ? <Button size="sm" loading={sync.isPending} onClick={() => sync.mutate()}>Sync Slack Huddles</Button> : undefined} />
     <Async q={list} rows={4}>{(meetings) => meetings.length === 0 ? <Panel><EmptyState icon="book" title="No meeting notes yet" action={isAdmin(me.data?.role) ? <Button loading={sync.isPending} onClick={() => sync.mutate()}>Sync Slack Huddles</Button> : undefined}>When Slack saves AI notes for a completed Huddle, Company Brain will add its transcript and summary here.</EmptyState></Panel> : (
       <Panel className="overflow-hidden p-0"><div className="grid min-h-[520px] md:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="border-b border-line bg-sunken p-2 md:border-b-0 md:border-r">

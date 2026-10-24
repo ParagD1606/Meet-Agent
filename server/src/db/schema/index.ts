@@ -167,6 +167,10 @@ export const meetings = pgTable("meetings", {
   sourceFileId: text("source_file_id").notNull(),
   channelId: text("channel_id").notNull(),
   threadTs: text("thread_ts"),
+  /** Where the transcript came from: "slack" or a browser-extension platform (meet, teams, zoom, ...). */
+  platform: text("platform").notNull().default("slack"),
+  /** Set for extension uploads, which have no Slack channel; only the owner (and admins) can read them. */
+  ownerId: text("owner_id"),
   title: text("title").notNull(),
   transcript: text("transcript").notNull(),
   summary: text("summary"),

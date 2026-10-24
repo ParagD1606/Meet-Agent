@@ -34,8 +34,8 @@ const analysisSchema = z.object({
   tasks: z.array(taskSchema).max(50),
 });
 
-const SUMMARY_SYSTEM = `You turn completed Slack Huddle source material into useful meeting notes.
-Use only the supplied transcript or Slack AI Huddle notes. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
+const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes.
+Use only the supplied text. Write a concise Markdown summary with headings for Decisions, Discussion, and Open questions when applicable.
 Extract only explicit commitments as tasks. Never invent an owner or due date. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
@@ -45,7 +45,7 @@ const asStrings = (value: unknown): string[] => Array.isArray(value) ? value.fil
 /** Public channels are visible to every member; private-channel records require membership. */
 const readable = (actor: Actor) => admin(actor)
   ? undefined
-  : or(eq(channels.isPrivate, false), eq(channelMembers.userId, actor.userId));
+  : or(eq(meetings.ownerId, actor.userId), eq(channels.isPrivate, false), eq(channelMembers.userId, actor.userId));
 
 async function rowsFor(actor: Actor) {
   const q = db.select({ meeting: meetings })
@@ -121,6 +121,42 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
   };
 }
 
+async function analyze(sourceFileId: string, text: string): Promise<void> {
+  try {
+    const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
+    await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+  } catch (err) {
+    await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+export type ExtensionTranscript = {
+  /** Stable per-call id from the extension; re-sending the same id replaces the earlier upload. */
+  externalId: string;
+  platform: string;
+  title: string;
+  lines: { speaker: string; text: string }[];
+  startedAt?: Date;
+  endedAt?: Date;
+};
+
+/** Stores a transcript captured by the browser extension and summarizes it. Private to its uploader (and admins). */
+export async function ingestExtensionTranscript(userId: string, t: ExtensionTranscript): Promise<{ id: string }> {
+  const text = t.lines.map((l) => (l.speaker ? `${l.speaker}: ${l.text}` : l.text)).join("\n");
+  // Namespaced by user so one person's id can never overwrite another's record.
+  const sourceFileId = `ext:${userId}:${t.platform}:${t.externalId}`;
+  const base = {
+    channelId: `ext_${userId}`, platform: t.platform, ownerId: userId, title: t.title, transcript: text, participantIds: [] as string[],
+    startedAt: t.startedAt ?? null, endedAt: t.endedAt ?? new Date(), updatedAt: new Date(),
+  };
+  const [row] = await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
+    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } })
+    .returning({ id: meetings.id });
+  await analyze(sourceFileId, text);
+  return { id: row!.id };
+}
+
 /** Ingests a Huddle transcript exposed by Slack's files API. Other files are ignored. */
 export async function ingestHuddleFile(fileId: string, hintedChannelId?: string): Promise<boolean> {
   const client = await slackClient();
@@ -145,13 +181,7 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
   };
   await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
     .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } });
-  try {
-    const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: parsed.text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
-    await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
-  } catch (err) {
-    await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
-    log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
-  }
+  await analyze(sourceFileId, parsed.text);
   return true;
 }
 

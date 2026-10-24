@@ -129,7 +129,7 @@ export interface MeetingTask {
   jiraKey?: string | null; jiraUrl?: string | null
 }
 export interface Meeting {
-  id: string; sourceFileId: string; channelId: string; threadTs?: string | null; title: string
+  id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
   transcript?: string; summary?: string | null; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
   startedAt?: string | null; endedAt?: string | null; createdAt: string; updatedAt: string
 }

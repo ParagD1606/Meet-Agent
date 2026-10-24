@@ -14,7 +14,7 @@ import { mountSkillsUploadRoutes } from "./skills-upload";
 import { behavior } from "./behavior";
 import { core } from "./core";
 import { memory } from "./memory";
-import { meetingRoutes } from "./meetings";
+import { extensionRoutes, meetingRoutes } from "./meetings";
 import { settingsRoutes } from "./settings";
 import { syncRoutes } from "./sync";
 
@@ -48,7 +48,7 @@ const WEB_DIST = () => resolve(process.env.WEB_DIST ?? `${import.meta.dir}/../..
 function mountStatic(app: Hono<any>): void {
   app.get("*", async (c) => {
     const path = c.req.path;
-    if (/^\/(api|auth|slack|mcp|mcp-oauth|sync)(\/|$)/.test(path)) return c.json({ error: "not_found" }, 404);
+    if (/^\/(api|auth|slack|mcp|mcp-oauth|sync|ext)(\/|$)/.test(path)) return c.json({ error: "not_found" }, 404);
     const root = WEB_DIST();
     let file: string;
     try { file = resolve(root, `.${decodeURIComponent(path)}`); } catch { return c.json({ error: "not_found" }, 404); }
@@ -69,6 +69,7 @@ export function mountRoutes(app: Hono<any>): void {
   mountAuth(app);
   mountMcpServer(app);
   mountSyncOAuth(app);
+  app.route("/ext", extensionRoutes);
   app.route("/api", buildApi());
   mountStatic(app);
 }

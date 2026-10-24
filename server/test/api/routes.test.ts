@@ -155,3 +155,22 @@ describe("static web", () => {
     } finally { delete process.env.WEB_DIST; }
   });
 });
+
+describe("extension upload", () => {
+  test("rejects bad tokens and bodies", async () => {
+    expect((await app.request("/ext/meetings", { method: "POST", body: "{}" })).status).toBe(401);
+    expect((await app.request("/ext/ping", { headers: { authorization: "Bearer nope" } })).status).toBe(401);
+  });
+
+  test("stores an upload privately for its owner", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const body = { externalId: "abc", platform: "meet", title: "Standup", lines: [{ speaker: "Ana", text: "Ship it Friday." }] };
+    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" }, body: JSON.stringify(b) });
+    expect((await post({ ...body, lines: [] })).status).toBe(400);
+    expect((await post(body)).status).toBe(201);
+    expect((await post(body)).status).toBe(201); // same externalId replaces, not duplicates
+    const mine = await json(await call("GET", "/api/meetings", { cookie: admin }));
+    expect(mine.filter((m: any) => m.platform === "meet")).toHaveLength(1);
+    expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
+  });
+});
