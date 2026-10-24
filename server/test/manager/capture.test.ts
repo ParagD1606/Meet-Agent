@@ -263,8 +263,8 @@ describe("task digest + commands", () => {
     const r = await runSlashCommand({ command: "/brain-tasks", user_id: "UBOB", channel_id: "C1" });
     const json = JSON.stringify(r);
     expect(r!.response_type).toBe("ephemeral");
-    expect(json).toContain("Assigned to you");
-    expect(json).toContain("You assigned");
+    expect(json).toContain("*No due date* (2)"); // neither task has a date: exceptions come first
+    expect(json).toContain("Waiting on others (1)");
     expect(json).toContain("Send the report");
     expect(json).toContain("brain_task_done");
     await handleCommitmentAction({ user: { id: "UBOB" } }, { action_id: "brain_task_done", value: (await rows()).find((c) => c.text === "Send the report")!.id });

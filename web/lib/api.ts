@@ -199,7 +199,11 @@ export interface CostReport {
   month?: { spentUsd: number; alertUsd: number | null }
 }
 export type TaskStatus = "open" | "in_progress" | "overdue" | "done" | "dropped"
+export type TaskFlag = "overdue" | "unassigned" | "noDue" | "dueSoon" | "stale" | "urgent"
+export interface TaskCounts { total: number; open: number; overdue: number; unassigned: number; noDue: number; dueSoon: number; done7d: number }
 export interface Task {
+  /** Computed server-side for active tasks; absent on older servers. */
+  flags?: TaskFlag[]
   id: string; title: string; status: TaskStatus; priority: "normal" | "urgent"; dueAt: string | null; overdue: boolean
   ownerId: string | null; ownerName: string | null; ownerAvatar: string | null
   assignerId: string | null; assignerName: string | null; assignerAvatar: string | null
@@ -215,8 +219,27 @@ export interface Commitment {
   permalink: string | null; channelId: string | null; status: CommitmentStatus; nudgeCount: number; completedAt: string | null; createdAt: string
 }
 
+export type BoardTarget = "trello" | "github"
+export interface TrelloSettings { configured: boolean; keyLast4: string; boardId: string; listId: string; memberMap: Record<string, string> }
+export interface GithubIssuesSettings { configured: boolean; repo: string; assigneeMap: Record<string, string>; labels: string[] }
+export interface PushResult { ref: string; title: string; status: "created" | "existing" | "skipped" | "failed"; url?: string; reason?: string }
+export interface PushSummary { results: PushResult[]; created: number; existing: number; skipped: number; failed: number }
+export interface NamedId { id: string; name: string }
+export interface BoardTest { ok: boolean; message?: string; username?: string; repo?: string }
+
 export const api = {
-  me: () => get<Me | { user: Me }>("/api/me").then((m) => ("user" in m ? m.user : m)),
+  boardTargets: () => get<Record<BoardTarget, boolean>>("/api/integrations/targets"),
+  trelloSettings: () => get<TrelloSettings>("/api/settings/integrations/trello"),
+  saveTrello: (b: { key?: string; token?: string; boardId: string; listId: string; memberMap: Record<string, string> }) => send<TrelloSettings>("PUT", "/api/settings/integrations/trello", b),
+  testTrello: (b: { key?: string; token?: string }) => send<BoardTest>("POST", "/api/settings/integrations/trello/test", b),
+  trelloBoards: () => get<{ boards: NamedId[] }>("/api/integrations/trello/boards").then((d) => d.boards),
+  trelloLists: (board: string) => get<{ lists: NamedId[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/lists`).then((d) => d.lists),
+  trelloMembers: (board: string) => get<{ members: (NamedId & { username: string })[] }>(`/api/integrations/trello/boards/${encodeURIComponent(board)}/members`).then((d) => d.members),
+  githubSettings: () => get<GithubIssuesSettings>("/api/settings/integrations/github-issues"),
+  saveGithub: (b: { repo: string; token?: string; assigneeMap: Record<string, string>; labels: string[] }) => send<GithubIssuesSettings>("PUT", "/api/settings/integrations/github-issues", b),
+  testGithub: (b: { repo?: string; token?: string }) => send<BoardTest>("POST", "/api/settings/integrations/github-issues/test", b),
+  pushTasks: (target: BoardTarget, ids: string[]) => send<PushSummary>("POST", "/api/tasks/push", { target, ids }),
+  pushMeeting: (meetingId: string, target: BoardTarget, which: { itemIds: string[] } | { all: "approved" }) => send<PushSummary>("POST", `/api/meetings/${encodeURIComponent(meetingId)}/push`, { target, ...which }),  me: () => get<Me | { user: Me }>("/api/me").then((m) => ("user" in m ? m.user : m)),
   users: () => get<unknown>("/api/users").then((d) => list<UserRow>(d, "users")),
   setupStatus: () => get<SetupStatus>("/api/setup/status"),
   setupManifest: () => fetch("/api/setup/manifest").then(async (r) => { if (!r.ok) throw new ApiError(r.status, "Could not load the manifest"); return r.text() }),
@@ -241,7 +264,7 @@ export const api = {
   saveProactiveFeatures: (f: Partial<ProactiveFeatures>) => send<ProactiveFeatures>("PUT", "/api/settings/proactive-features", f),
   costReport: (days: number) => get<CostReport>(`/api/usage/cost${qs({ days })}`),
   commitments: (status: string) => get<unknown>(`/api/manager/commitments${qs({ status, limit: 200 })}`).then((d) => list<Commitment>(d, "commitments")),
-  tasks: () => get<{ tasks: Task[]; me: string }>(`/api/tasks${qs({ limit: 500 })}`),
+  tasks: () => get<{ tasks: Task[]; me: string; counts?: TaskCounts }>(`/api/tasks${qs({ limit: 500 })}`),
   people: () => get<{ people: Person[] }>("/api/people").then((d) => d.people),
   patchTask: (id: string, p: TaskPatch) => send<{ ok: boolean }>("PATCH", `/api/tasks/${encodeURIComponent(id)}`, p),
   createTask: (t: NewTask) => send<{ ok: boolean; created: boolean }>("POST", "/api/tasks", t),

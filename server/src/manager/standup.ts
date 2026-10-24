@@ -6,7 +6,8 @@ import { SHARED_TAG } from "../memory/scope";
 import { slackClient } from "../slack/client";
 import { featureChannels } from "../slack/proactive-features";
 import { sanitizeForSlack } from "../slack/sanitize";
-import type { Commitment } from "./commitments";
+import { canRead, type Commitment } from "./commitments";
+import { taskFlags } from "./tasks";
 
 const DAY = 86_400_000;
 type Ch = { id: string; isPrivate: boolean };
@@ -27,6 +28,25 @@ async function channelCommitments(ch: Ch, since: Date): Promise<Commitment[]> {
 
 const line = (c: Commitment) => `• ${clip(c.text)}${c.dueAt ? ` (due ${day(c.dueAt)})` : ""}${c.permalink ? ` <${c.permalink}|source>` : ""}`;
 
+/** "@owner" only when the owner can read the task's scope (a private-channel task never pings an outsider); otherwise the plain name. */
+const who = async (c: Commitment) => (c.ownerId && (await canRead(c, c.ownerId)) ? `<@${c.ownerId}>` : c.ownerName ?? "no owner");
+
+/**
+ * Team-level exception block from already scope-filtered rows: unassigned, no due date, top-5 overdue with owners, stale.
+ * `weekly` adds the stale line and the overdue top 5 (the daily standup already lists overdue per person as Blocked).
+ */
+export async function exceptionBlock(rows: Commitment[], now: Date, weekly = false): Promise<string> {
+  const f = rows.map((c) => ({ c, fl: taskFlags(c, now) }));
+  const pick = (k: string) => f.filter((x) => x.fl.includes(k as never)).map((x) => x.c);
+  const unassigned = pick("unassigned"), noDue = pick("noDue"), stale = pick("stale");
+  const overdue = pick("overdue").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
+  const sec = async (t: string, l: Commitment[], withOwner: boolean) => l.length
+    ? `*${t}* (${l.length})\n${(await Promise.all(l.slice(0, 5).map(async (c) => `${line(c)}${withOwner ? ` - ${await who(c)}` : ""}`))).join("\n")}${l.length > 5 ? `\n_...and ${l.length - 5} more._` : ""}` : "";
+  const parts = [await sec("Unassigned", unassigned, false), await sec("No due date", noDue, true),
+    ...(weekly ? [await sec("Overdue (oldest first)", overdue, true), await sec("Stale (open > 14 days, untouched)", stale, true)] : [])].filter(Boolean);
+  return parts.length ? `:rotating_light: *Needs attention*\n${parts.join("\n\n")}` : "";
+}
+
 /** Per-person daily summary (done in the last 24h / in progress / blocked) for one channel, or null when there is nothing to say. */
 export async function buildDailyStandup(ch: Ch, now = new Date()): Promise<string | null> {
   const rows = await channelCommitments(ch, new Date(now.getTime() - DAY));
@@ -34,18 +54,19 @@ export async function buildDailyStandup(ch: Ch, now = new Date()): Promise<strin
   const names = new Map((await db.select({ id: users.id, name: users.name }).from(users)).map((u) => [u.id, u.name]));
   const byPerson = new Map<string, Commitment[]>();
   for (const c of rows) {
-    const who = (c.ownerId && names.get(c.ownerId)) || c.ownerName || "Unassigned";
-    byPerson.set(who, [...(byPerson.get(who) ?? []), c]);
+    const name = (c.ownerId && names.get(c.ownerId)) || c.ownerName || "Unassigned";
+    byPerson.set(name, [...(byPerson.get(name) ?? []), c]);
   }
   const sections: string[] = [];
-  for (const [who, list] of [...byPerson].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [name, list] of [...byPerson].sort(([a], [b]) => a.localeCompare(b))) {
     const done = list.filter((c) => c.status === "done");
     const blocked = list.filter((c) => c.status === "overdue" || (c.status === "open" && BLOCKED.test(c.text)));
     const prog = list.filter((c) => c.status === "open" && !blocked.includes(c));
     const part = (t: string, l: Commitment[]) => (l.length ? `_${t}_\n${l.map(line).join("\n")}` : "");
-    sections.push(`*${who}*\n${[part("Done", done), part("In progress", prog), part("Blocked", blocked)].filter(Boolean).join("\n")}`);
+    sections.push(`*${name}*\n${[part("Done", done), part("In progress", prog), part("Blocked", blocked)].filter(Boolean).join("\n")}`);
   }
-  return sanitizeForSlack(`:sunrise: *Daily standup*\n\n${sections.join("\n\n")}`);
+  const attention = await exceptionBlock(rows, now);
+  return sanitizeForSlack(`:sunrise: *Daily standup*\n\n${[...sections, attention].filter(Boolean).join("\n\n")}`);
 }
 
 /** Weekly per-project (channel) status from commitments, recent facts, thread summaries, meetings and GitHub/Linear facts. Null when quiet. */
@@ -68,6 +89,7 @@ export async function buildWeeklyStatus(ch: Ch, now = new Date()): Promise<strin
   const open = cs.filter((c) => c.status === "open");
   const sec = (t: string, l: string[]) => (l.length ? `*${t}*\n${l.map((x) => `• ${clip(x)}`).join("\n")}` : "");
   const owner = (c: Commitment) => `${c.ownerName ? `${c.ownerName}: ` : ""}${c.text}`;
+  const attention = await exceptionBlock(cs, now, true);
   const parts = [
     cs.length ? `${done.length} done, ${open.length} in progress, ${overdue.length} overdue` : "",
     sec("Done", done.map(owner)), sec("Overdue", overdue.map(owner)), sec("In progress", open.map(owner)),
@@ -75,6 +97,7 @@ export async function buildWeeklyStatus(ch: Ch, now = new Date()): Promise<strin
     sec("GitHub / Linear", ext.map((e) => e.text)),
     sec("Discussions", threads.map((t) => t.summary)),
     sec("Meetings", meets.map((m) => (m.summary ? `${m.title}: ${m.summary}` : m.title))),
+    attention,
   ].filter(Boolean);
   if (!parts.length) return null;
   return sanitizeForSlack(`:bar_chart: *Weekly project status*\n\n${parts.join("\n\n")}`);

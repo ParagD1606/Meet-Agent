@@ -107,9 +107,96 @@ function WriteSetting() {
   )
 }
 
+// ---------- Task boards: where approved tasks are sent (Trello cards / GitHub issues) ----------
+const mapRows = (people: { id: string; name: string | null }[] | undefined, map: Record<string, string>, set: (m: Record<string, string>) => void, input: (id: string, v: string) => React.ReactNode) => (
+  <div className="mt-2 max-h-64 overflow-auto rounded-md border border-line">
+    <table className="w-full text-sm"><tbody>{(people ?? []).map((p) => (
+      <tr key={p.id} className="border-b border-line last:border-0"><td className="px-3 py-1.5">{p.name ?? p.id}</td><td className="w-1/2 px-3 py-1.5">{input(p.id, map[p.id] ?? "")}</td></tr>
+    ))}</tbody></table>
+    {!people?.length && <p className="p-3 text-xs text-muted">No people loaded.</p>}
+  </div>
+)
+const withMapped = (m: Record<string, string>, id: string, v: string) => { const n = { ...m }; if (v) n[id] = v; else delete n[id]; return n }
+
+function TrelloPanel() {
+  const toast = useToast()
+  const s = useQuery({ queryKey: ["trello-settings"], queryFn: api.trelloSettings })
+  const people = useQuery({ queryKey: ["people"], queryFn: api.people })
+  const [f, setF] = useState({ key: "", token: "", boardId: "", listId: "", map: {} as Record<string, string> })
+  const [seeded, setSeeded] = useState(false)
+  if (s.data && !seeded) { setSeeded(true); setF({ key: "", token: "", boardId: s.data.boardId, listId: s.data.listId, map: s.data.memberMap }) }
+  const ready = !!s.data?.configured
+  const boards = useQuery({ queryKey: ["trello-boards"], queryFn: api.trelloBoards, enabled: ready, retry: false })
+  const lists = useQuery({ queryKey: ["trello-lists", f.boardId], queryFn: () => api.trelloLists(f.boardId), enabled: ready && !!f.boardId, retry: false })
+  const members = useQuery({ queryKey: ["trello-members", f.boardId], queryFn: () => api.trelloMembers(f.boardId), enabled: ready && !!f.boardId, retry: false })
+  const save = useAction(() => api.saveTrello({ key: f.key || undefined, token: f.token || undefined, boardId: f.boardId, listId: f.listId, memberMap: f.map }), {
+    invalidate: [["trello-settings"], ["trello-boards"], ["board-targets"]], ok: "Trello settings saved", inline: true, onSuccess: () => setF((v) => ({ ...v, token: "" })),
+  })
+  const test = useAction(() => api.testTrello({ key: f.key || undefined, token: f.token || undefined }), {
+    inline: true, onSuccess: (r) => toast.push(r.ok ? { kind: "success", title: `Trello works${r.username ? ` (signed in as ${r.username})` : ""}`, body: "Nothing was created." } : { kind: "error", title: "Trello rejected these credentials", body: r.message }),
+  })
+  return (
+    <Panel className="mb-4 p-4">
+      <div className="mb-3 flex items-center gap-2"><h2 className="text-sm font-semibold">Trello</h2><Badge tone={s.data?.listId ? "ok" : "neutral"} dot>{s.data?.listId ? "Ready" : ready ? "Pick a list" : "Not set up"}</Badge></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label="API key" hint={ready ? `Saved (ends in ${s.data!.keyLast4}). Leave empty to keep it.` : "From trello.com/power-ups/admin"}>{(p) => <Input {...p} autoComplete="off" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} />}</FormField>
+        <FormField label="Token" hint={ready ? "Saved encrypted. Leave empty to keep it." : "Authorize the key to get a token (read and write)."}>{(p) => <Input {...p} type="password" autoComplete="off" value={f.token} onChange={(e) => setF({ ...f, token: e.target.value })} />}</FormField>
+        <FormField label="Board" hint={!ready ? "Save the key and token first." : boards.error ? "Could not load boards." : undefined}>{(p) => <Select {...p} disabled={!ready} value={f.boardId} onChange={(e) => setF({ ...f, boardId: e.target.value, listId: "", map: {} })}><option value="">Choose a board</option>{boards.data?.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</Select>}</FormField>
+        <FormField label="List for new cards">{(p) => <Select {...p} disabled={!f.boardId} value={f.listId} onChange={(e) => setF({ ...f, listId: e.target.value })}><option value="">Choose a list</option>{lists.data?.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>}</FormField>
+      </div>
+      {f.boardId && <div className="mt-4"><div className="text-sm font-medium">Member mapping</div><p className="text-xs text-muted">Cards are assigned to the mapped Trello member. Unmapped owners are named in the card description.</p>
+        {mapRows(people.data, f.map, (m) => setF({ ...f, map: m }), (id, v) => <Select aria-label="Trello member" value={v} onChange={(e) => setF({ ...f, map: withMapped(f.map, id, e.target.value) })}><option value="">Not mapped</option>{members.data?.map((m) => <option key={m.id} value={m.id}>{m.name} (@{m.username})</option>)}</Select>)}</div>}
+      {(save.error || test.error) && <p role="alert" className="mt-3 text-sm text-danger">{(save.error ?? test.error)!.message}</p>}
+      <div className="mt-4 flex gap-2"><Button variant="primary" loading={save.isPending} disabled={!ready && !(f.key && f.token)} onClick={() => save.mutate()}>Save</Button><Button loading={test.isPending} disabled={!ready && !(f.key && f.token)} onClick={() => test.mutate()}>Test</Button></div>
+    </Panel>
+  )
+}
+
+function GithubPanel() {
+  const toast = useToast()
+  const s = useQuery({ queryKey: ["github-issues-settings"], queryFn: api.githubSettings })
+  const people = useQuery({ queryKey: ["people"], queryFn: api.people })
+  const [f, setF] = useState({ repo: "", token: "", labels: "pixel", map: {} as Record<string, string> })
+  const [seeded, setSeeded] = useState(false)
+  if (s.data && !seeded) { setSeeded(true); setF({ repo: s.data.repo, token: "", labels: s.data.labels.join(", "), map: s.data.assigneeMap }) }
+  const ready = !!s.data?.configured
+  const labels = f.labels.split(",").map((l) => l.trim()).filter(Boolean)
+  const save = useAction(() => api.saveGithub({ repo: f.repo.trim(), token: f.token || undefined, assigneeMap: f.map, labels }), {
+    invalidate: [["github-issues-settings"], ["board-targets"]], ok: "GitHub Issues settings saved", inline: true, onSuccess: () => setF((v) => ({ ...v, token: "" })),
+  })
+  const test = useAction(() => api.testGithub({ repo: f.repo.trim() || undefined, token: f.token || undefined }), {
+    inline: true, onSuccess: (r) => toast.push(r.ok ? { kind: "success", title: `GitHub works (${r.repo})`, body: "Nothing was created." } : { kind: "error", title: "GitHub check failed", body: r.message }),
+  })
+  const can = !!f.repo.trim() && (ready || !!f.token)
+  return (
+    <Panel className="mb-4 p-4">
+      <div className="mb-3 flex items-center gap-2"><h2 className="text-sm font-semibold">GitHub Issues</h2><Badge tone={ready ? "ok" : "neutral"} dot>{ready ? "Ready" : "Not set up"}</Badge></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label="Repository" hint="owner/name">{(p) => <Input {...p} placeholder="acme/web" value={f.repo} onChange={(e) => setF({ ...f, repo: e.target.value })} />}</FormField>
+        <FormField label="Personal access token" hint={ready ? "Saved encrypted. Leave empty to keep it." : "Needs Issues: read and write on that repository."}>{(p) => <Input {...p} type="password" autoComplete="off" value={f.token} onChange={(e) => setF({ ...f, token: e.target.value })} />}</FormField>
+        <FormField label="Labels" hint="Comma separated. A due:YYYY-MM-DD label is added automatically.">{(p) => <Input {...p} value={f.labels} onChange={(e) => setF({ ...f, labels: e.target.value })} />}</FormField>
+      </div>
+      <div className="mt-4"><div className="text-sm font-medium">GitHub login mapping</div><p className="text-xs text-muted">Issues are assigned only when the owner has a login here.</p>
+        {mapRows(people.data, f.map, (m) => setF({ ...f, map: m }), (id, v) => <Input aria-label="GitHub login" placeholder="login" value={v} onChange={(e) => setF({ ...f, map: withMapped(f.map, id, e.target.value.trim()) })} />)}</div>
+      {(save.error || test.error) && <p role="alert" className="mt-3 text-sm text-danger">{(save.error ?? test.error)!.message}</p>}
+      <div className="mt-4 flex gap-2"><Button variant="primary" loading={save.isPending} disabled={!can} onClick={() => save.mutate()}>Save</Button><Button loading={test.isPending} disabled={!can} onClick={() => test.mutate()}>Test</Button></div>
+    </Panel>
+  )
+}
+
+function TaskBoards() {
+  return (
+    <>
+      <p className="mb-3 text-sm text-muted">Approved tasks can be sent to a board from the Tasks and Meetings pages. Each task is sent once; sending it again returns the existing link. Test only checks the credentials and creates nothing.</p>
+      <TrelloPanel />
+      <GithubPanel />
+    </>
+  )
+}
+
 export default function Integrations() {
   const { me, admin } = useMe()
-  const [tab, setTab] = useState<"connected" | "browse">("connected")
+  const [tab, setTab] = useState<"connected" | "browse" | "boards">("connected")
   const [target, setTarget] = useState<Target | null>(null)
   const conns = useQuery({ queryKey: ["connections"], queryFn: api.connections })
   const inv = { invalidate: [["connections"], ["marketplace"], ["overview"]] }
@@ -135,9 +222,9 @@ export default function Integrations() {
   return (
     <>
       <PageHeader title="Integrations" desc="Connect tools over MCP so the bot can read from, and with your approval act in, your other apps." />
-      <div className="mb-4"><Tabs label="Integrations view" value={tab} onChange={setTab} items={[{ id: "connected", label: n != null ? `Connected (${n})` : "Connected" }, { id: "browse", label: "Browse apps" }]} /></div>
+      <div className="mb-4"><Tabs label="Integrations view" value={tab} onChange={setTab} items={[{ id: "connected", label: n != null ? `Connected (${n})` : "Connected" }, { id: "browse", label: "Browse apps" }, ...(admin ? [{ id: "boards" as const, label: "Task boards" }] : [])]} /></div>
       {tab === "connected" && admin && <WriteSetting />}
-      {tab === "browse" ? <Marketplace admin={admin} onInstall={setTarget} /> : (
+      {tab === "boards" && admin ? <TaskBoards /> : tab === "browse" ? <Marketplace admin={admin} onInstall={setTarget} /> : (
         <Async q={conns} rows={3}>{(rows) => rows.length === 0 ? (
           <Panel><EmptyState icon="plug" title="Nothing connected yet" action={<Button variant="primary" onClick={() => setTab("browse")}>Browse apps</Button>}>Connect GitHub, Linear, Notion or any MCP server to let the bot look things up.</EmptyState></Panel>
         ) : (

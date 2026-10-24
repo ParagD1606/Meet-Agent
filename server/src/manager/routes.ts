@@ -10,6 +10,7 @@ import { readTags } from "../memory/scope";
 import { readBody } from "../routes/util";
 import { ACTIVE, canRead, channelScope, listCommitments, type Commitment } from "./commitments";
 import { changeTask, notifyTaskOwner, upsertTask } from "./task-sync";
+import { flagSql, taskCounts, taskFlags } from "./tasks";
 
 export const managerRoutes = new Hono<AppEnv>();
 
@@ -35,42 +36,70 @@ const visible = async (userId: string) => {
   return or(inArray(commitments.scopeTag, tags), and(eq(commitments.ownerId, userId), like(commitments.scopeTag, "user\\_%"), like(commitments.sourceRef, "assign:%")))!;
 };
 
-managerRoutes.get("/tasks", requireAuth(), async (c) => {
-  const me = c.get("user");
-  const q = c.req.query();
-  const now = new Date();
-  const statuses = (q.status ?? "").split(",").filter((s): s is Commitment["status"] => STATUSES.includes(s as never));
-  const date = (s?: string) => { const d = s ? new Date(s) : null; return d && !Number.isNaN(d.getTime()) ? d : undefined; };
+export type TaskParams = Record<string, string | undefined>;
+const STATUS_SET = new Set<string>(STATUSES);
+const toDate = (s?: string) => { const d = s ? new Date(s) : null; return d && !Number.isNaN(d.getTime()) ? d : undefined; };
+
+/**
+ * WHERE clause for the task list: the actor's read scope AND every filter in `params`
+ * (status, owner, assigner, channel, mine, assignedByMe, overdue, unassigned, noDue, stale, dueSoon = "1", dueAfter, dueBefore, q).
+ * Scope is always applied and never depends on a join, so exports can reuse it with a plain `from(commitments)`.
+ */
+export async function buildTaskFilter(params: TaskParams, actor: { id: string; role?: string }, now = new Date()) {
+  const q = params;
+  const f = flagSql(now);
+  const statuses = (q.status ?? "").split(",").filter((s): s is Commitment["status"] => STATUS_SET.has(s));
   const pat = q.q?.trim() ? `%${q.q.trim().replace(/[\\%_]/g, "\\$&")}%` : null;
-  const rows = await db.select({
+  return and(
+    await visible(actor.id),
+    statuses.length ? inArray(commitments.status, statuses) : undefined,
+    q.owner ? eq(commitments.ownerId, q.owner) : undefined,
+    q.assigner ? eq(commitments.assignerId, q.assigner) : undefined,
+    q.channel ? eq(commitments.channelId, q.channel) : undefined,
+    q.mine === "1" ? eq(commitments.ownerId, actor.id) : undefined,
+    q.assignedByMe === "1" ? eq(commitments.assignerId, actor.id) : undefined,
+    q.overdue === "1" ? f.overdue : undefined,
+    q.unassigned === "1" ? f.unassigned : undefined,
+    q.noDue === "1" ? f.noDue : undefined,
+    q.stale === "1" ? f.stale : undefined,
+    q.dueSoon === "1" ? f.dueSoon : undefined,
+    toDate(q.dueAfter) ? gte(commitments.dueAt, toDate(q.dueAfter)!) : undefined,
+    toDate(q.dueBefore) ? lte(commitments.dueAt, toDate(q.dueBefore)!) : undefined,
+    pat ? or(ilike(commitments.text, pat), ilike(commitments.ownerName, pat), sql`exists (select 1 from users u where u.id = ${commitments.ownerId} and u.name ilike ${pat})`) : undefined,
+  );
+}
+
+/** The Tasks-tab query (scope-filtered to what `me` may read via buildTaskFilter). Shared by GET /tasks and the export routes so they can never disagree. */
+export async function queryTasks(me: { id: string; role?: string }, q: TaskParams, now = new Date()) {
+  const f = flagSql(now);
+  return db.select({
     id: commitments.id, title: commitments.text, status: commitments.status, priority: commitments.priority, dueAt: commitments.dueAt,
     ownerId: commitments.ownerId, ownerName: sql<string | null>`coalesce(${owner.name}, ${commitments.ownerName})`, ownerAvatar: owner.avatarUrl,
     assignerId: commitments.assignerId, assignerName: assigner.name, assignerAvatar: assigner.avatarUrl,
     permalink: commitments.permalink, channelId: commitments.channelId, channelName: channels.name, scopeTag: commitments.scopeTag,
-    sourceType: commitments.sourceType, createdAt: commitments.createdAt, completedAt: commitments.completedAt,
+    sourceType: commitments.sourceType, createdAt: commitments.createdAt, completedAt: commitments.completedAt, lastNudgedAt: commitments.lastNudgedAt, externalRefs: commitments.externalRefs,
   }).from(commitments)
     .leftJoin(owner, eq(owner.id, commitments.ownerId)).leftJoin(assigner, eq(assigner.id, commitments.assignerId)).leftJoin(channels, eq(channels.id, commitments.channelId))
-    .where(and(
-      await visible(me.id),
-      statuses.length ? inArray(commitments.status, statuses) : undefined,
-      q.owner ? eq(commitments.ownerId, q.owner) : undefined,
-      q.assigner ? eq(commitments.assignerId, q.assigner) : undefined,
-      q.channel ? eq(commitments.channelId, q.channel) : undefined,
-      q.mine === "1" ? eq(commitments.ownerId, me.id) : undefined,
-      q.assignedByMe === "1" ? eq(commitments.assignerId, me.id) : undefined,
-      q.overdue === "1" ? and(inArray(commitments.status, [...ACTIVE]), lte(commitments.dueAt, now)) : undefined,
-      date(q.dueAfter) ? gte(commitments.dueAt, date(q.dueAfter)!) : undefined,
-      date(q.dueBefore) ? lte(commitments.dueAt, date(q.dueBefore)!) : undefined,
-      pat ? or(ilike(commitments.text, pat), ilike(owner.name, pat), ilike(commitments.ownerName, pat)) : undefined,
-    ))
-    .orderBy(sql`case when ${commitments.status} in ('done','dropped') then 1 else 0 end`, sql`${commitments.dueAt} asc nulls last`, desc(commitments.createdAt))
+    .where(await buildTaskFilter(q, me, now))
+    .orderBy(
+      sql`case when ${commitments.status} in ('done','dropped') then 1 else 0 end`,
+      sql`case when ${or(f.overdue, f.unassigned, f.noDue)} then 0 else 1 end`,
+      sql`${commitments.dueAt} asc nulls last`, desc(commitments.createdAt))
     .limit(Math.min(Number(q.limit) || 300, 1000));
+}
+
+managerRoutes.get("/tasks", requireAuth(), async (c) => {
+  const me = c.get("user");
+  const now = new Date();
+  const rows = await queryTasks(me, c.req.query(), now);
   // the viewer's own permission to act on each row, so the UI can hide what the API would refuse
-  const tasks = rows.map((r) => ({
+  const tasks = rows.map(({ lastNudgedAt, ...r }) => ({
     ...r, overdue: !!r.dueAt && r.dueAt < now && !["done", "dropped"].includes(r.status),
+    flags: taskFlags({ ...r, lastNudgedAt }, now),
     canEdit: isAdmin(me) || r.ownerId === me.id || r.assignerId === me.id, canReassign: isAdmin(me) || r.assignerId === me.id,
   }));
-  return c.json({ tasks, me: me.id });
+  // counts cover the whole readable scope (not the page, not the filters), so the summary chips stay stable
+  return c.json({ tasks, me: me.id, counts: await taskCounts(await visible(me.id), now) });
 });
 
 const patchBody = z.object({

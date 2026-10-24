@@ -28,3 +28,10 @@ A task carries the scope of where it was made: public channel `shared`, private 
 
 ## Chasing
 Hourly (minute 41) Pixel nudges an owner when a task is due within 24 hours or overdue: first at that point, once more when it first goes overdue, then at most daily, 3 nudges per task in total. Each person gets at most 3 chase DMs per day. With `QUIET_HOURS=1` nudges wait for the workspace working window; assignment notices never wait. Daily standup (09:05 Mon-Fri), risk scan (09:30 Mon-Fri) and weekly status (Fri 16:00) run in the workspace timezone and are opt-in per channel on the Pixel page.
+
+## Exceptions: unassigned, no due date, overdue
+Flags are computed (nothing is stored): `overdue`, `unassigned`, `noDue`, `dueSoon` (due within 3 days), `stale` (still `open`, older than 14 days, not nudged for 14 days) and `urgent`. `GET /api/tasks` returns them on every task plus `counts` ({total, open, overdue, unassigned, noDue, dueSoon, done7d}) over everything the caller may read, and accepts `unassigned=1`, `noDue=1`, `stale=1`, `dueSoon=1` next to `overdue=1`. The Tasks tab shows the counts as clickable chips, a "Needs attention" tab (overdue, unassigned or no date), flag badges with inline Assign / Set date, and lists those tasks first.
+- `/brain-tasks` and the daily digest group tasks as Overdue, Unassigned (you assigned, no owner), No due date, Due soon (a task appears once), with an `Overdue (n) | No due date (n) | Waiting on others (n)` summary and Done/Drop buttons.
+- The daily standup and weekly status end with a "Needs attention" block (unassigned, no due date; weekly adds the oldest 5 overdue and stale). An owner is @mentioned only when they can read the channel's scope.
+- The risk scan adds `unassigned_aging` (no owner for more than 3 days) and `no_due_date` (urgent, no date for more than 3 days), de-duplicated by key like other risks.
+- Chasing: a task with an owner but no date is chased weekly (3 times at most) only when urgent or older than 14 days. A task with no owner is surfaced to its assigner only, every 3 days, 3 times at most. Both use the same per-person chase limit and quiet-hours setting.

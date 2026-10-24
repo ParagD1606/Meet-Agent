@@ -39,6 +39,13 @@ export async function scanRisks(now = new Date()): Promise<Risk[]> {
       text: `:hourglass_flowing_sand: Slipping: ${c.ownerName ? `${c.ownerName}: ` : ""}${clip(c.text)}${c.dueAt ? ` (due ${day(c.dueAt)})` : ""}` });
   }
 
+  // 1b. exceptions: unassigned for > 3 days, urgent task with no date for > 3 days (keys de-dup like every other risk)
+  const aged = new Date(now.getTime() - 3 * DAY);
+  const unowned = await db.select().from(commitments).where(and(inArray(commitments.status, [...ACTIVE]), sql`${commitments.ownerId} is null`, lt(commitments.createdAt, aged))).limit(50);
+  for (const c of unowned) out.push({ key: `unassigned_aging:${c.id}`, scopeTag: c.scopeTag, channelId: c.channelId ?? chanOf(c.scopeTag), text: `:bust_in_silhouette: Unassigned for ${Math.floor((now.getTime() - c.createdAt.getTime()) / DAY)} days: ${clip(c.text)}` });
+  const nodue = await db.select().from(commitments).where(and(inArray(commitments.status, [...ACTIVE]), eq(commitments.priority, "urgent"), sql`${commitments.dueAt} is null`, lt(commitments.createdAt, aged))).limit(50);
+  for (const c of nodue) out.push({ key: `no_due_date:${c.id}`, scopeTag: c.scopeTag, channelId: c.channelId ?? chanOf(c.scopeTag), text: `:calendar: Urgent task with no due date: ${c.ownerName ? `${c.ownerName}: ` : ""}${clip(c.text)}` });
+
   // 2. contradictions: open reviews (supersede / doc conflict) and recent supersessions that cross sources
   const reviews = await db.select({ id: memoryReviews.id, text: memories.text, scopeTag: memories.scopeTag }).from(memoryReviews)
     .innerJoin(memories, eq(memories.id, memoryReviews.memoryId))

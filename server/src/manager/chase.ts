@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lte } from "drizzle-orm";
 import { tuningEnv } from "../config";
 import { db } from "../db";
 import { channelMembers, commitments, users } from "../db/schema";
@@ -22,6 +22,18 @@ export function shouldNudge(c: Pick<Commitment, "status" | "ownerId" | "dueAt" |
   const overdue = c.dueAt <= now;
   if (!overdue) return false;
   return c.lastNudgedAt < c.dueAt || now.getTime() - c.lastNudgedAt.getTime() >= DAY;
+}
+
+/** Pure. No due date: chase weekly (max 3) the owner, only when urgent or older than 14 days. Reuses last_nudged_at / nudge_count (a task without a date is never due-nudged). */
+export function shouldChaseNoDue(c: Pick<Commitment, "status" | "ownerId" | "dueAt" | "priority" | "createdAt" | "lastNudgedAt" | "nudgeCount">, now: Date): boolean {
+  if (!c.ownerId || c.dueAt || !ACTIVE.includes(c.status as never) || c.nudgeCount >= MAX_NUDGES) return false;
+  if (c.priority !== "urgent" && now.getTime() - c.createdAt.getTime() <= 14 * DAY) return false;
+  return !c.lastNudgedAt || now.getTime() - c.lastNudgedAt.getTime() >= 7 * DAY;
+}
+/** Pure. No owner: tell the assigner (only) every 3 days, max 3. */
+export function shouldSurfaceUnassigned(c: Pick<Commitment, "status" | "ownerId" | "assignerId" | "lastNudgedAt" | "nudgeCount">, now: Date): boolean {
+  if (c.ownerId || !c.assignerId || !ACTIVE.includes(c.status as never) || c.nudgeCount >= MAX_NUDGES) return false;
+  return !c.lastNudgedAt || now.getTime() - c.lastNudgedAt.getTime() >= 3 * DAY;
 }
 
 // ---------- quiet hours ----------
@@ -74,13 +86,16 @@ function nudgeBlocks(c: Commitment, text: string) {
 }
 
 /** Posts in the original thread with an @mention when the owner is a member of that channel, else DMs them. */
-async function sendNudge(c: Commitment, now: Date): Promise<void> {
+async function sendNudge(c: Commitment, now: Date, kind: "due" | "noDue" | "unassigned" = "due"): Promise<void> {
   const slack = await slackClient();
   const overdue = !!c.dueAt && c.dueAt <= now;
   const src = c.permalink ? ` (<${c.permalink}|source>)` : "";
-  const body = `${overdue ? ":warning: Overdue" : ":alarm_clock: Due soon"}${c.dueAt ? ` (${day(c.dueAt)})` : ""}: ${c.text}${src}\nIs this done?`;
+  const body = kind === "noDue" ? `:calendar: No due date yet: ${c.text}${src}\nWhen should this be done? Set a date in the Tasks tab, or mark it done.`
+    : kind === "unassigned" ? `:bust_in_silhouette: Nobody owns this task you assigned: ${c.text}${src}\nAssign it in the Tasks tab, or drop it.`
+    : `${overdue ? ":warning: Overdue" : ":alarm_clock: Due soon"}${c.dueAt ? ` (${day(c.dueAt)})` : ""}: ${c.text}${src}\nIs this done?`;
+  const to = kind === "unassigned" ? c.assignerId! : c.ownerId!;
   let inThread = false;
-  if (c.channelId && c.threadTs) {
+  if (kind === "due" && c.channelId && c.threadTs) {
     const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.channelId), eq(channelMembers.userId, c.ownerId!)));
     inThread = !!m;
   }
@@ -89,7 +104,7 @@ async function sendNudge(c: Commitment, now: Date): Promise<void> {
     await slack.chat.postMessage({ channel: c.channelId!, thread_ts: c.threadTs!, text, blocks: nudgeBlocks(c, text) });
     return;
   }
-  const dm = await slack.conversations.open({ users: c.ownerId! });
+  const dm = await slack.conversations.open({ users: to });
   const channel = dm.channel?.id;
   if (!channel) throw new Error("could not open DM");
   const text = sanitizeForSlack(body);
@@ -117,6 +132,32 @@ export async function chaseTick(now = new Date()): Promise<number> {
     catch (e) {
       await db.update(commitments).set({ lastNudgedAt: c.lastNudgedAt, nudgeCount: c.nudgeCount }).where(eq(commitments.id, c.id));
       log.warn("commitment nudge failed", { id: c.id, err: String(e) });
+    }
+  }
+  sent += await exceptionChase(now);
+  return sent;
+}
+
+/** Weekly chase of dateless tasks (owner) and 3-day surfacing of ownerless tasks (assigner only). Same claim-first / rate-limit / scope rules as the due nudges. */
+async function exceptionChase(now: Date): Promise<number> {
+  const noDue = await db.select().from(commitments).where(and(inArray(commitments.status, [...ACTIVE]), isNotNull(commitments.ownerId), isNull(commitments.dueAt), lte(commitments.nudgeCount, MAX_NUDGES - 1))).limit(200);
+  const unowned = await db.select().from(commitments).where(and(inArray(commitments.status, [...ACTIVE]), isNull(commitments.ownerId), isNotNull(commitments.assignerId), lte(commitments.nudgeCount, MAX_NUDGES - 1))).limit(200);
+  let sent = 0;
+  const perUser = new Map<string, number>(); // max 3 chase DMs per person per tick
+  for (const [kind, list] of [["noDue", noDue], ["unassigned", unowned]] as const) {
+    for (const c of list) {
+      if (kind === "noDue" ? !shouldChaseNoDue(c, now) : !shouldSurfaceUnassigned(c, now)) continue;
+      const to = kind === "noDue" ? c.ownerId! : c.assignerId!;
+      if ((perUser.get(to + kind) ?? 0) >= 3 || !(await canRead(c, to))) continue;
+      if (!(await checkRate({ userId: to, channelId: c.channelId ?? "dm", kind: "chase" }, now.getTime())).ok) continue;
+      const claimed = await db.update(commitments).set({ lastNudgedAt: now, nudgeCount: c.nudgeCount + 1 })
+        .where(and(eq(commitments.id, c.id), eq(commitments.nudgeCount, c.nudgeCount))).returning({ id: commitments.id });
+      if (!claimed.length) continue;
+      try { await sendNudge(c, now, kind); sent++; perUser.set(to + kind, (perUser.get(to + kind) ?? 0) + 1); }
+      catch (e) {
+        await db.update(commitments).set({ lastNudgedAt: c.lastNudgedAt, nudgeCount: c.nudgeCount }).where(eq(commitments.id, c.id));
+        log.warn("exception chase failed", { id: c.id, kind, err: String(e) });
+      }
     }
   }
   return sent;

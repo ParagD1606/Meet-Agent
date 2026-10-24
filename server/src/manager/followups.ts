@@ -181,7 +181,8 @@ export async function digestTick(now = new Date()): Promise<{ digests: number; w
           `:memo: *Your week ahead*`,
           mine.length ? `*Follow-ups scheduled* (${mine.length})\n${mine.slice(0, 8).map((f) => `• ${f.text} (${f.dueAt.toISOString().slice(0, 10)}${f.targetId ? `, with <@${f.targetId}>` : ""})`).join("\n")}` : "",
           owned.length ? `*Open tasks assigned to you:* ${owned.length}${owned.filter((c) => c.status === "overdue").length ? ` (${owned.filter((c) => c.status === "overdue").length} overdue)` : ""}` : "",
-          assigned.length ? `*Tasks you assigned still open:* ${assigned.length}` : "",
+          owned.filter((c) => !c.dueAt).length ? `*No due date:* ${owned.filter((c) => !c.dueAt).length} (set one in the Tasks tab)` : "",
+          assigned.length ? `*Waiting on others:* ${assigned.length} task${assigned.length === 1 ? "" : "s"} you assigned still open${assigned.filter((c) => !c.ownerId).length ? ` (${assigned.filter((c) => !c.ownerId).length} with no owner)` : ""}` : "",
           "_Use /brain-tasks to see and close them._",
         ].filter(Boolean).join("\n");
         if (await sendCapped(userId, now, lines)) out.weekly++;

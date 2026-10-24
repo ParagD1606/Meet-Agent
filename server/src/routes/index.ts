@@ -21,6 +21,9 @@ import { extensionRoutes, meetingRoutes } from "./meetings";
 import { managerRoutes } from "../manager/routes";
 import { settingsRoutes } from "./settings";
 import { syncRoutes } from "./sync";
+import { taskExportRoutes } from "./task-export";
+import { taskIntegrationRoutes } from "./task-integrations";
+import { taskPushRoutes } from "./task-push";
 
 export function buildApi(): Hono<AppEnv> {
   const api = new Hono<AppEnv>();
@@ -40,6 +43,9 @@ export function buildApi(): Hono<AppEnv> {
   api.route("/", syncRoutes);
   api.route("/", limitsRoutes);
   api.route("/", managerRoutes);
+  api.route("/", taskExportRoutes);
+  api.route("/", taskPushRoutes);
+  api.route("/", taskIntegrationRoutes);
   api.notFound((c) => c.json({ error: "not_found" }, 404));
   api.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();

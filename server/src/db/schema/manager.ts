@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true }).defaultNow().notNull();
 
@@ -26,6 +26,7 @@ export const commitments = pgTable("commitments", {
   priority: text("priority", { enum: ["normal", "urgent"] }).notNull().default("normal"),
   memoryId: integer("memory_id"), // the active memory fact that mirrors this task (superseded on every status change)
   titleKey: text("title_key"), // normalized title: dedupe by owner + title + channel
+  externalRefs: jsonb("external_refs").$type<{ provider: string; id: string; url: string }[]>().notNull().default([]), // cards/issues this task was pushed to
 }, (t) => [
   index("commitments_dedupe_idx").on(t.ownerId, t.titleKey, t.channelId),
   index("commitments_source_ts_idx").on(t.channelId, t.sourceTs),
@@ -56,3 +57,16 @@ export const managerRisks = pgTable("manager_risks", {
   key: text("key").primaryKey(),
   postedAt: ts("posted_at"),
 }, (t) => [index("manager_risks_posted_at_idx").on(t.postedAt)]);
+
+/** Audit of every push of a task to an external board (Trello / GitHub Issues); `ok` rows double as the idempotency record. */
+export const integrationPushes = pgTable("integration_pushes", {
+  id: text("id").primaryKey(),
+  at: ts("at"),
+  userId: text("user_id").notNull(),
+  target: text("target").notNull(),
+  taskRef: text("task_ref").notNull(), // commitment:<id> | meeting:<meetingId>:<itemId>
+  externalId: text("external_id"),
+  externalUrl: text("external_url"),
+  status: text("status", { enum: ["ok", "failed"] }).notNull(),
+  error: text("error"),
+}, (t) => [index("integration_pushes_task_idx").on(t.target, t.taskRef, t.status)]);
