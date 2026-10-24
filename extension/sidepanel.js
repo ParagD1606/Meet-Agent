@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const { uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
+const { renderNotes, uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const hue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 50% 42%)`; };
 const ask = (msg) => chrome.runtime.sendMessage(msg);
@@ -8,7 +8,8 @@ const initials = (n) => (String(n || "?").trim().split(/\s+/).slice(0, 2).map((w
 const hhmm = (t) => (t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
 
 const state = {
-  cfg: { server: "https://slack.derpx06.live", token: "", autoSend: true, autoDetect: true },
+  cfg: { server: "https://slack.derpx06.live", token: "", autoSend: true, autoDetect: true, myName: "" },
+  pingName: null,   // the token owner's name from the server, used when captions say "You"
   snap: null,       // live capture from the call tab
   manual: null,     // imported transcript { key, externalId, title, lines, startedAt } while set, it replaces the live one
   store: { items: [] },
@@ -17,9 +18,11 @@ const state = {
   analyzing: false, lastRun: 0, lastCount: {},
 };
 const src = () => state.manual ?? state.snap;
-const lines = () => src()?.lines ?? [];
+const me = () => state.cfg.myName || state.snap?.self || state.pingName || "";
+// Captions label your own speech "You"; everything downstream (notes, questions, owners, uploads) gets your name instead.
+const lines = () => (src()?.lines ?? []).map((l) => (me() && /^you$/i.test(l.speaker) ? { ...l, speaker: me() } : l));
 const speakers = () => [...new Set(lines().map((l) => l.speaker).filter(Boolean))];
-const roster = () => [...new Set([...(state.manual ? [] : state.snap?.roster ?? []), ...speakers()])];
+const roster = () => [...new Set([...(state.manual ? [] : state.snap?.roster ?? []), ...(me() ? [me()] : []), ...speakers()])].filter((n) => n && !/^you$/i.test(n));
 const storeKey = () => `meeting:${src()?.key ?? "none"}`;
 
 // ---------- tabs ----------
@@ -32,8 +35,9 @@ $("tabs").onclick = (e) => { const t = e.target.closest("button")?.dataset.tab; 
 
 // ---------- settings (autosaved) ----------
 async function loadCfg() {
-  const s = await chrome.storage.local.get(["server", "token", "autoSend", "autoDetect"]);
-  state.cfg = { server: s.server || state.cfg.server, token: s.token || "", autoSend: s.autoSend !== false, autoDetect: s.autoDetect !== false };
+  const s = await chrome.storage.local.get(["server", "token", "autoSend", "autoDetect", "myName"]);
+  state.cfg = { server: s.server || state.cfg.server, token: s.token || "", autoSend: s.autoSend !== false, autoDetect: s.autoDetect !== false, myName: s.myName || "" };
+  $("myName").value = state.cfg.myName;
   $("server").value = state.cfg.server; $("token").value = state.cfg.token;
   $("autoSend").checked = state.cfg.autoSend; $("autoDetect").checked = state.cfg.autoDetect;
 }
@@ -41,12 +45,12 @@ let saveTimer;
 function saveCfg() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    state.cfg = { server: $("server").value.trim().replace(/\/+$/, ""), token: $("token").value.trim(), autoSend: $("autoSend").checked, autoDetect: $("autoDetect").checked };
+    state.cfg = { server: $("server").value.trim().replace(/\/+$/, ""), token: $("token").value.trim(), autoSend: $("autoSend").checked, autoDetect: $("autoDetect").checked, myName: $("myName").value.trim() };
     await chrome.storage.local.set(state.cfg);
     testConn();
   }, 500);
 }
-["server", "token", "autoSend", "autoDetect"].forEach((id) => $(id).addEventListener("input", saveCfg));
+["server", "token", "autoSend", "autoDetect", "myName"].forEach((id) => $(id).addEventListener("input", saveCfg));
 $("reveal").onclick = () => { const t = $("token"); t.type = t.type === "password" ? "text" : "password"; $("reveal").textContent = t.type === "password" ? "Show" : "Hide"; };
 
 async function testConn() {
@@ -54,7 +58,8 @@ async function testConn() {
   setConn("Checking…", "");
   const r = await ask({ type: "test" });
   state.connected = !!r?.ok;
-  setConn(r?.ok ? "Connected" : r?.status === 401 ? "Token rejected" : `Can't reach server${r?.error ? ": " + r.error : ""}`, r?.ok ? "ok" : "bad");
+  if (r?.name) state.pingName = r.name;
+  setConn(r?.ok ? (r.name ? `Connected as ${r.name}` : "Connected") : r?.status === 401 ? "Token rejected" : `Can't reach server${r?.error ? ": " + r.error : ""}`, r?.ok ? "ok" : "bad");
 }
 function setConn(text, cls) { $("conn").textContent = text; $("conn").className = "conn " + cls; }
 
@@ -62,6 +67,7 @@ function setConn(text, cls) { $("conn").textContent = text; $("conn").className 
 async function loadStore() {
   const s = (await chrome.storage.local.get(storeKey()))[storeKey()];
   state.store = migrate(s ?? { items: [] });
+  renderNotesTab();
   state.editing.clear();
   await refreshLoad();
 }
@@ -86,6 +92,7 @@ setInterval(poll, 1500);
 
 function renderLive() {
   const s = src();
+  if (me() !== state.lastMe) { state.lastMe = me(); chrome.storage.local.set({ meName: me() }); $("nameHint").textContent = me() ? `Your captions show as “You”; they will be written as ${me()}.` : "Open the participant list in Meet, or type your name here, so “You” in captions can be replaced."; }
   $("dot").classList.toggle("live", !!s?.lines.length && !state.manual);
   $("title").textContent = s ? s.title : "Brain";
   $("subText").textContent = s ? `${state.manual ? "imported" : s.platform} · ${s.lines.length} lines · ${speakers().length} speaker${speakers().length === 1 ? "" : "s"}` : "Waiting for a call…";
@@ -126,7 +133,7 @@ $("recap").onclick = async () => {
   const block = needReady(); if (block) { box.textContent = block; return; }
   box.textContent = "Catching you up…";
   const r = await callAsk("I just joined. Give me a short recap: what is being discussed now, decisions made, tasks assigned and to whom, and open questions.");
-  box.textContent = r.ok ? r.text : r.text;
+  if (r.ok) box.innerHTML = renderNotes(r.text); else box.textContent = r.text;
 };
 
 // ---------- ask ----------
@@ -137,7 +144,7 @@ $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim
 
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -169,8 +176,8 @@ async function detect(auto = false) {
   if (state.analyzing) return;
   const block = needReady();
   if (block) { if (!auto) $("detectMsg").textContent = block; return; }
-  state.analyzing = true; state.lastRun = Date.now(); state.lastCount[src().key] = lines().length;
-  $("detect").disabled = true; if (!auto) $("detectMsg").textContent = "Reading the transcript…";
+  state.analyzing = true; if (!auto) { state.lastRun = Date.now(); state.lastCount[src().key] = lines().length; }
+  $("detect").disabled = true; if (!auto) $("detectMsg").textContent = "Reading the whole transcript…";
   const r = await ask({ type: "api", path: "/ext/analyze", body: { lines: lines(), context: context(), known: state.store.items.map((i) => i.title) } });
   state.analyzing = false; $("detect").disabled = false;
   if (!r?.ok) { if (!auto) $("detectMsg").textContent = failText(r); return; }
@@ -181,10 +188,35 @@ async function detect(auto = false) {
   await persist();
 }
 $("detect").onclick = () => detect(false);
+const AUTO_MS = 120_000; // live notes refresh on this cycle; decisions and tasks are only made at the end
 function maybeAutoDetect() {
-  if (!state.cfg.autoDetect || !state.connected || state.analyzing || state.manual || !src()) return;
-  if (lines().length - (state.lastCount[src().key] ?? 0) >= 4 && Date.now() - state.lastRun > 45_000) detect(true);
+  if (!state.cfg.autoDetect || !state.connected || state.updatingNotes || state.manual || !src()) return;
+  if (lines().length - (state.lastCount[src().key] ?? 0) < 3 || Date.now() - state.lastRun < AUTO_MS) return;
+  updateNotes(true);
 }
+
+// ---------- live notes ----------
+function renderNotesTab() {
+  const n = state.store.notes;
+  $("notesBody").innerHTML = n?.text ? renderNotes(n.text) : `<div class="empty"><b>No notes yet</b>Live notes appear here and refresh every 2 minutes while the call runs. Press “Update now” to write the first ones.</div>`;
+  $("notesMsg").textContent = n?.at ? `Updated ${hhmm(n.at)} · ${n.upTo} lines covered` : "";
+}
+async function updateNotes(auto = false) {
+  if (state.updatingNotes) return;
+  const block = needReady();
+  if (block) { if (!auto) $("notesMsg").textContent = block; return; }
+  const prev = state.store.notes, all = lines(), upTo = Math.min(prev?.upTo ?? 0, all.length);
+  if (prev && upTo === all.length) { if (!auto) $("notesMsg").textContent = "Already up to date"; return; }
+  state.updatingNotes = true; state.lastRun = Date.now(); state.lastCount[src().key] = all.length;
+  $("notesNow").disabled = true; if (!auto) $("notesMsg").textContent = "Writing notes…";
+  const r = await ask({ type: "api", path: "/ext/notes", body: { lines: all.slice(upTo), offset: upTo, previous: prev?.text ?? "", context: context() } });
+  state.updatingNotes = false; $("notesNow").disabled = false;
+  if (!r?.ok) { if (!auto) $("notesMsg").textContent = failText(r); return; }
+  state.store.notes = { text: r.data.notes, at: Date.now(), upTo: all.length };
+  await chrome.storage.local.set({ [storeKey()]: state.store });
+  renderNotesTab();
+}
+$("notesNow").onclick = () => updateNotes(false);
 
 $("addForm").onsubmit = async (e) => {
   e.preventDefault(); const t = $("addText").value.trim(); if (!t) return;
@@ -210,7 +242,7 @@ function renderItems() {
     const hint = isTask && i.status !== "rejected" ? workloadHint(i.assignee, state.load, roster()) : null;
     return `<div class="item ${i.status} k-${i.kind === "question" || i.kind === "decision" ? i.kind : i.label}" data-id="${i.id}">
       <div class="top"><span class="badge ${i.kind === "question" ? "question" : i.kind === "decision" && i.label === "confirmed" ? "decision" : i.label}">${esc(badge(i))}</span><span class="muted">${esc(i.kind)}</span></div>
-      ${edit ? `<div class="fields"><input class="wide" data-f="title" value="${esc(i.title)}"><select data-f="kind"><option ${isTask ? "selected" : ""} value="task">Task</option><option ${i.kind === "decision" ? "selected" : ""} value="decision">Decision</option><option ${i.kind === "question" ? "selected" : ""} value="question">Question</option></select></div>`
+      ${edit ? `<div class="fields"><textarea data-f="title" rows="2">${esc(i.title)}</textarea><select data-f="kind"><option ${isTask ? "selected" : ""} value="task">Task</option><option ${i.kind === "decision" ? "selected" : ""} value="decision">Decision</option><option ${i.kind === "question" ? "selected" : ""} value="question">Question</option></select></div>`
         : `<div class="title ${i.done ? "done-t" : ""}">${esc(i.title)}</div>`}
       ${i.reason ? `<div class="why">${esc(i.reason)}</div>` : ""}
       ${(i.evidence ?? []).map((n) => `<button class="ev" data-act="jump" data-n="${n}">line ${n}</button>`).join("")}
@@ -253,22 +285,45 @@ $("itemList").addEventListener("change", async (e) => {
   await persist();
 });
 
-// ---------- send ----------
+// ---------- finish & send ----------
+const meetingsUrl = () => `${state.cfg.server}/meetings`;
+function renderFinal(m) {
+  const box = $("finalBox"); box.hidden = false;
+  const link = `<a href="${esc(meetingsUrl())}" target="_blank" rel="noreferrer">Open in Meeting notes ↗</a>`;
+  if (m.error) { box.innerHTML = `<h3>Not saved</h3><p>${esc(m.error)}</p><p class="muted">The transcript is kept on this device and will be retried.</p>`; return; }
+  if (m.status === "processing") { box.innerHTML = `<h3>Saved. Writing the final notes…</h3><p class="muted">Reading the whole transcript for decisions and tasks. This takes a moment.</p>${link}`; return; }
+  if (m.status === "failed") { box.innerHTML = `<h3>Saved, but the final notes failed</h3><p class="muted">The transcript is in Meeting notes. The model could not write the summary.</p>${link}`; return; }
+  const d = (m.decisions ?? []).map((x) => `<li>${esc(x)}</li>`).join(""), t = (m.tasks ?? []).map((k) => `<li><span class="who">${esc(k.assigneeName || "Unassigned")}</span>: ${esc(k.title)}${k.dueDate ? ` <span class="muted">(due ${esc(k.dueDate)})</span>` : ""}</li>`).join("");
+  box.innerHTML = `<h3>Final notes</h3><h5>Decisions</h5>${d ? `<ul>${d}</ul>` : `<p class="muted">No decisions were found in the transcript.</p>`}<h5>Tasks</h5>${t ? `<ul>${t}</ul>` : `<p class="muted">No tasks were found in the transcript.</p>`}<p>${link}</p>`;
+}
+async function followFinal(id) {
+  for (let i = 0; i < 40; i++) {
+    const r = await ask({ type: "api", path: `/ext/meetings/${id}` });
+    if (r?.ok && r.data.status !== "processing") return renderFinal(r.data);
+    renderFinal({ status: "processing" });
+    await new Promise((res) => setTimeout(res, 3000));
+  }
+  renderFinal({ status: "processing" });
+}
+function payloadNow() {
+  const s = src();
+  return { externalId: s.externalId, platform: s.platform, title: s.title, participants: state.manual ? speakers() : (s.participants ?? roster()),
+    lines: lines().map(({ speaker, text }) => ({ speaker, text })), startedAt: s.startedAt, endedAt: new Date().toISOString() };
+}
 $("sendNotes").onclick = () => {
   const block = needReady(); if (block) { $("sendMsg").textContent = block; return; }
   const ok = state.store.items.filter((i) => i.status === "approved");
-  const tasks = ok.filter((i) => i.kind === "task"), decisions = ok.filter((i) => i.kind === "decision");
-  const pending = state.store.items.filter((i) => i.status === "pending").length, rejected = state.store.items.filter((i) => i.status === "rejected").length;
-  modal(`<h4>Send to Meeting notes?</h4><p>This will save the transcript and:</p><ul><li><b>${tasks.length}</b> task${tasks.length === 1 ? "" : "s"}${tasks.length ? ` (${esc([...new Set(tasks.map((t) => t.assignee || "unassigned"))].join(", "))})` : ""}</li><li><b>${decisions.length}</b> decision${decisions.length === 1 ? "" : "s"}</li></ul>
-    <p class="muted">${pending ? `${pending} item${pending === 1 ? " is" : "s are"} still pending and won't be sent. ` : ""}${rejected ? `${rejected} rejected. ` : ""}Open questions aren't sent. Nobody is notified; the notes appear in the Brain web app.</p>`, async () => {
-    $("sendMsg").textContent = "Sending…";
-    if (state.manual) await ask({ type: "upload", manual: true, payload: { externalId: state.manual.externalId, platform: "import", title: state.manual.title, lines: state.manual.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: state.manual.startedAt, endedAt: new Date().toISOString() } });
-    else { const tab = await activeTab(); try { await chrome.tabs.sendMessage(tab.id, { type: "send" }); } catch { $("sendMsg").textContent = "Couldn't reach the call tab."; return; } }
-    setTimeout(async () => {
-      const { lastUpload } = await chrome.storage.local.get("lastUpload");
-      $("sendMsg").textContent = lastUpload?.ok ? "Sent. Open Meeting notes in the web app." : `Failed: ${lastUpload?.error ?? "unknown error"}`;
-    }, 1500);
-  }, "Send");
+  const tasks = ok.filter((i) => i.kind === "task").length, decisions = ok.filter((i) => i.kind === "decision").length;
+  modal(`<h4>Finish and send to Meeting notes?</h4><p>This saves the transcript, then Brain reads the <b>whole</b> of it to write the final decisions and tasks, with owner names.</p>
+    ${tasks || decisions ? `<p>Also included: the <b>${tasks}</b> task${tasks === 1 ? "" : "s"} and <b>${decisions}</b> decision${decisions === 1 ? "" : "s"} you approved.</p>` : ""}
+    <p class="muted">Nobody is notified. You can follow the result here and in the Brain web app.</p>`, async () => {
+    $("sendNotes").disabled = true; $("sendMsg").textContent = "Sending…"; show("items");
+    const r = await ask({ type: "upload", manual: true, payload: payloadNow() });
+    $("sendNotes").disabled = false;
+    if (!r?.ok) { $("sendMsg").textContent = "Failed"; return renderFinal({ error: r?.error ?? "unknown error" }); }
+    $("sendMsg").textContent = "Saved";
+    renderFinal({ status: "processing" }); followFinal(r.id);
+  }, "Finish & send");
 };
 
 // ---------- modal ----------

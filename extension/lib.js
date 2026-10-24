@@ -73,6 +73,90 @@
   const LABELS = { confirmed: "Confirmed commitment", tentative: "Tentative", suggestion: "Suggestion" };
   const badge = (item) => item.kind === "question" ? "Open question" : item.kind === "decision" && item.label === "confirmed" ? "Decision" : LABELS[item.label] ?? "Tentative";
 
-  const api = { uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
+  const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  /** Renders the small Markdown subset the notes use (## headings, - bullets, **bold**). Escapes first, so model text can't inject HTML. */
+  function renderNotes(md) {
+    const inline = (t) => escHtml(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const out = []; let open = false;
+    for (const raw of String(md).split(/\r?\n/)) {
+      const line = raw.trim();
+      const li = /^[-*•]\s+(.*)$/.exec(line), h = /^#{1,4}\s+(.*)$/.exec(line);
+      if (li) { if (!open) { out.push("<ul>"); open = true; } out.push(`<li>${inline(li[1])}</li>`); continue; }
+      if (open) { out.push("</ul>"); open = false; }
+      if (h) out.push(`<h4>${inline(h[1])}</h4>`); else if (line) out.push(`<p>${inline(line)}</p>`);
+    }
+    if (open) out.push("</ul>");
+    return out.join("");
+  }
+
+  /** Longest run where the end of `a` equals the start of `b`, in words (>= 3), as the merged text; else null. */
+  function overlapMerge(a, b) {
+    const x = a.split(/\s+/), y = b.split(/\s+/);
+    for (let n = Math.min(x.length, y.length); n >= 3; n--) {
+      if (x.slice(-n).join(" ") === y.slice(0, n).join(" ")) return [...x, ...y.slice(n)].join(" ");
+    }
+    return null;
+  }
+  const RECENT_MS = 20_000; // a caption not seen for this long has left the screen; the same words again are new speech
+  const wordList = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+  /** Share of the shorter text's words found in the longer one: high when a recognizer revises words mid-sentence. */
+  function containment(a, b) {
+    const x = new Set(wordList(a)), y = new Set(wordList(b));
+    if (x.size < 4 || y.size < 4) return 0;
+    let n = 0; for (const w of x) if (y.has(w)) n++;
+    return n / Math.min(x.size, y.size);
+  }
+  /**
+   * Whether `text` is the same utterance as `prev`, and what the merged text should be. Handles growth, repeats,
+   * Meet trimming the start of a long caption, and speech recognition rewriting earlier words as it hears more.
+   */
+  const startsWithWords = (long, short) => short.length > 0 && short.length <= long.length && short.every((w, i) => long[i] === w);
+  function continuation(prev, text) {
+    if (text === prev || text.startsWith(prev)) return text;
+    if (prev.startsWith(text)) return prev;
+    // Same words, different punctuation or capitalisation ("so." then "so we will...").
+    const pw = wordList(prev), tw = wordList(text);
+    if (startsWithWords(tw, pw)) return text;
+    if (startsWithWords(pw, tw)) return prev;
+    const joined = overlapMerge(prev, text);
+    if (joined) return joined;
+    if (containment(prev, text) >= 0.7) return text.length >= prev.length * 0.8 ? text : prev;
+    return null;
+  }
+
+  /**
+   * Folds the captions currently on screen into the running transcript. A caption block that keeps its DOM node
+   * (`key`) is the same line however its words change; without a key, or when the node is reused for new speech,
+   * a snapshot line only becomes a new transcript line when it is not a continuation of the speaker's recent lines.
+   */
+  function mergeCaptions(lines, snapshot, now = Date.now()) {
+    for (const { speaker, text, key } of snapshot) {
+      if (!text) continue;
+      let line = null, merged = null;
+      if (key !== undefined) {
+        const k = lines.find((l) => l.key === key && l.speaker === speaker);
+        if (k) {
+          merged = continuation(k.text, text);
+          if (merged !== null || k.text.length < 20) { line = k; merged ??= text; }
+          else delete k.key; // the node now carries new speech
+        }
+      }
+      if (!line) {
+        for (let i = lines.length - 1, seen = 0; i >= 0 && seen < 6; i--) {
+          const l = lines[i];
+          if (l.speaker !== speaker) continue;
+          seen++;
+          if (now - (l.u ?? l.t) > RECENT_MS) continue;
+          const m = continuation(l.text, text);
+          if (m !== null) { line = l; merged = m; break; }
+        }
+      }
+      if (line) { line.text = merged; line.u = now; if (key !== undefined) line.key = key; }
+      else lines.push({ speaker, text, t: now, u: now, ...(key !== undefined ? { key } : {}) });
+    }
+    return lines;
+  }
+
+  const api = { mergeCaptions, renderNotes, uid, parseTranscript, similarity, findDuplicates, workload, workloadHint, migrate, dueChips, badge };
   if (typeof module !== "undefined") module.exports = api; else globalThis.BrainLib = api;
 })();

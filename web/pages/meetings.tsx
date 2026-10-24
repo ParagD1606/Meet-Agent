@@ -24,7 +24,7 @@ function Task({ meetingId, task }: { meetingId: string; task: MeetingTask }) {
   const status = task.notification?.status ?? "needs_assignee"
   return <li className="rounded-lg border border-line bg-sunken px-3 py-3">
     <div className="flex flex-wrap items-start justify-between gap-2"><span className="font-medium">{task.title}</span><span className="flex gap-2"><Badge tone={deliveryTone[status]}>{deliveryLabel[status]}</Badge>{task.jiraUrl ? <a className="text-sm text-accent hover:underline" href={task.jiraUrl} target="_blank" rel="noreferrer">{task.jiraKey ?? "Open in Jira"}</a> : <Badge tone="neutral">Not created in Jira</Badge>}</span></div>
-    {task.description && <p className="mt-1 text-sm text-muted">{task.description}</p>}
+    {task.description && <p className="mt-1 whitespace-pre-line text-sm text-muted">{task.description}</p>}
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted"><span>Owner: {who}{task.dueDate ? ` · Due ${task.dueDate}` : ""}</span><Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)}>{editing ? "Cancel" : task.assigneeId ? "Change assignee" : "Assign"}</Button></div>
     {status === "failed" && task.notification?.error && <p className="mt-2 text-xs text-danger">{task.notification.error}</p>}
     {editing && <div className="mt-3 rounded-md border border-line bg-panel p-2">
@@ -46,7 +46,7 @@ function Detail({ meeting }: { meeting: Meeting }) {
       <div><h2 className="text-lg font-semibold">{meeting.title}</h2><p className="mt-1 text-sm text-muted">Completed {dateTime(date)} · {meeting.participantIds.length} participant{meeting.participantIds.length === 1 ? "" : "s"}</p></div>
       <span className="flex items-center gap-2"><Button size="sm" loading={send.isPending} disabled={!meeting.tasks.length} onClick={() => send.mutate()}>Send task DMs</Button><Badge tone={tone[meeting.status]}>{statusLabel[meeting.status]}</Badge></span>
     </div>
-    <Tabs label="Meeting content" value={tab} onChange={setTab} items={[{ id: "summary", label: `Summary & tasks (${meeting.tasks.length})` }, { id: "transcript", label: "Source notes" }]} />
+    <Tabs label="Meeting content" value={tab} onChange={setTab} items={[{ id: "summary", label: `Summary, decisions & tasks (${meeting.tasks.length})` }, { id: "transcript", label: "Source notes" }]} />
     {tab === "transcript" ? (
       <div className="mt-4 rounded-lg border border-line bg-sunken p-4"><pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6">{meeting.transcript || "The transcript is loading."}</pre></div>
     ) : (
@@ -54,6 +54,7 @@ function Detail({ meeting }: { meeting: Meeting }) {
         {meeting.status === "processing" && <p className="rounded-lg bg-sunken p-4 text-sm text-muted">Company Brain is reading the saved Huddle transcript and preparing notes.</p>}
         {meeting.status === "failed" && <p className="rounded-lg bg-danger-soft p-4 text-sm text-danger">The source notes were saved, but the summary could not be generated. You can still read them in the Source notes tab.</p>}
         {meeting.summary && <section><h3 className="text-sm font-semibold">Meeting summary</h3><div className="mt-2 whitespace-pre-wrap rounded-lg border border-line bg-sunken p-4 text-sm leading-6">{meeting.summary}</div></section>}
+        {(meeting.decisions?.length ?? 0) > 0 && <section><h3 className="text-sm font-semibold">Decisions ({meeting.decisions!.length})</h3><ul className="mt-2 space-y-2">{meeting.decisions!.map((d, i) => <li key={`${d}-${i}`} className="rounded-lg border border-line p-3 text-sm leading-6">{d}</li>)}</ul></section>}
         {send.isSuccess && <p className="rounded-lg bg-accent-soft p-3 text-sm text-accent-text">Task DMs: {send.data.sent} sent, {send.data.skipped} skipped, {send.data.failed} failed.</p>}
         {send.isError && <p className="rounded-lg bg-danger-soft p-3 text-sm text-danger">Could not send task DMs. Try again.</p>}
         <section><h3 className="text-sm font-semibold">Action items</h3>{meeting.tasks.length ? <ul className="mt-2 space-y-2">{meeting.tasks.map((task) => <Task key={task.id} meetingId={meeting.id} task={task} />)}</ul> : <p className="mt-2 text-sm text-muted">No explicit action items were found.</p>}</section>
@@ -62,8 +63,27 @@ function Detail({ meeting }: { meeting: Meeting }) {
   </div>
 }
 
+function ConnectExtension() {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const make = useMutation({ mutationFn: api.extensionToken, onSuccess: () => setCopied(false) })
+  return <Panel className="mb-4">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div><h3 className="text-sm font-semibold">Browser extension</h3><p className="mt-1 text-sm text-muted">Capture Google Meet, Teams and Zoom calls into your own Meeting notes. Generate a token for yourself and paste it into the extension's Settings.</p></div>
+      <Button size="sm" onClick={() => { setOpen(true); if (!make.data) make.mutate() }} loading={make.isPending}>{make.data ? "Show token" : "Get my token"}</Button>
+    </div>
+    {open && make.data && <div className="mt-3 rounded-lg border border-line bg-sunken p-3">
+      <p className="text-xs text-muted">Shown once. Making a new token replaces this one. Meetings uploaded with it appear under your account.</p>
+      <div className="mt-2 flex gap-2"><input readOnly className="min-w-0 flex-1 rounded border border-line bg-panel px-2 py-1.5 font-mono text-xs" value={make.data.token} onFocus={(e) => e.currentTarget.select()} />
+        <Button size="sm" onClick={() => { void navigator.clipboard?.writeText(make.data!.token).then(() => setCopied(true)) }}>{copied ? "Copied" : "Copy"}</Button>
+        <Button size="sm" variant="ghost" loading={make.isPending} onClick={() => make.mutate()}>New token</Button></div>
+    </div>}
+    {make.isError && <p className="mt-2 text-xs text-danger">Could not create a token. Try again.</p>}
+  </Panel>
+}
+
 export default function Meetings() {
-  const list = useQuery({ queryKey: ["meetings"], queryFn: api.meetings })
+  const list = useQuery({ queryKey: ["meetings"], queryFn: api.meetings, refetchInterval: (q) => (q.state.data?.some((m) => m.status === "processing") ? 4000 : false) })
   const me = useQuery({ queryKey: ["me"], queryFn: api.me })
   const queryClient = useQueryClient()
   const sync = useMutation({ mutationFn: api.syncMeetings, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["meetings"] }) })
@@ -72,6 +92,7 @@ export default function Meetings() {
   const detail = useQuery({ queryKey: ["meeting", selected], queryFn: () => api.meeting(selected!), enabled: Boolean(selected) })
   return <>
     <PageHeader title="Meeting notes" desc="Saved meeting transcripts (Slack Huddles and the browser extension), AI summaries, and extracted action items. Jira links appear here after issues are created." actions={isAdmin(me.data?.role) ? <Button size="sm" loading={sync.isPending} onClick={() => sync.mutate()}>Sync Slack Huddles</Button> : undefined} />
+    <ConnectExtension />
     <Async q={list} rows={4}>{(meetings) => meetings.length === 0 ? <Panel><EmptyState icon="book" title="No meeting notes yet" action={isAdmin(me.data?.role) ? <Button loading={sync.isPending} onClick={() => sync.mutate()}>Sync Slack Huddles</Button> : undefined}>When Slack saves AI notes for a completed Huddle, Company Brain will add its transcript and summary here.</EmptyState></Panel> : (
       <Panel className="overflow-hidden p-0"><div className="grid min-h-[520px] md:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="border-b border-line bg-sunken p-2 md:border-b-0 md:border-r">

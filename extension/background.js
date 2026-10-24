@@ -14,7 +14,10 @@ async function post(payload) {
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Server answered ${res.status}`);
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(`Server answered ${res.status}${detail?.issues ? `: ${[].concat(detail.issues).join("; ")}` : detail?.error ? `: ${detail.error}` : ""}`);
+  }
   return res.json();
 }
 
@@ -27,17 +30,22 @@ async function upload(payload) {
     // Only items the user approved in the side panel travel with the transcript.
     const notes = (await chrome.storage.local.get(`meeting:${key}`))[`meeting:${key}`];
     const approved = (notes?.items ?? []).filter((i) => i.status === "approved");
-    const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker, text })) };
+    const { meName } = await chrome.storage.local.get("meName");
+    const who = (n) => (meName && /^you$/i.test(n) ? meName : n);
+    const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker: who(speaker), text })), participants: (payload.participants ?? []).map(who).filter((n) => n && !/^you$/i.test(n)) };
     const decisions = approved.filter((i) => i.kind === "decision").map((i) => i.title);
     const tasks = approved.filter((i) => i.kind === "task").map((i) => ({ title: i.title, assignee: i.assignee || undefined, due: i.due || undefined, done: !!i.done }));
     if (decisions.length) body.decisions = decisions;
     if (tasks.length) body.tasks = tasks;
-    await post(body);
+    const out = await post(body);
     const p = await pending(); delete p[key]; await setPending(p);
-    await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: true } });
+    await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: true, id: out.id } });
+    return { ok: true, id: out.id };
   } catch (err) {
     const p = await pending(); p[key] = payload; await setPending(p);
-    await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: false, error: String(err.message ?? err) } });
+    const error = String(err.message ?? err);
+    await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: false, error } });
+    return { ok: false, error };
   }
 }
 
@@ -55,14 +63,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     return true;
   }
   if (msg?.type === "upload") {
-    chrome.storage.local.get("autoSend").then(({ autoSend }) => (autoSend === false && !msg.manual ? null : upload(msg.payload))).then(() => reply({ ok: true }));
+    chrome.storage.local.get("autoSend").then(({ autoSend }) => (autoSend === false && !msg.manual ? { ok: false, error: "auto-send is off" } : upload(msg.payload))).then(reply);
     return true;
   }
   if (msg?.type === "test") {
     settings().then(async ({ server, token }) => {
       try {
         const r = await fetch(`${server}/ext/ping`, { headers: { authorization: `Bearer ${token}` } });
-        reply({ ok: r.ok, status: r.status });
+        const j = r.ok ? await r.json().catch(() => null) : null;
+        reply({ ok: r.ok, status: r.status, name: j?.name ?? null });
       } catch (e) { reply({ ok: false, error: String(e.message ?? e) }); }
     });
     return true;

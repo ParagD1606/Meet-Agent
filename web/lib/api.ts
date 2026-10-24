@@ -135,7 +135,7 @@ export interface MeetingTask {
 }
 export interface Meeting {
   id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
-  transcript?: string; summary?: string | null; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
+  transcript?: string; summary?: string | null; decisions?: string[]; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
   startedAt?: string | null; endedAt?: string | null; createdAt: string; updatedAt: string
 }
 export type ProactivityMode = "default" | "proactive" | "quiet"
@@ -278,6 +278,7 @@ export const api = {
   turns: (f: TurnFilters = {}) => get<unknown>(`/api/turns${qs({ ...f, limit: f.limit ?? 100 })}`).then((d) => list<Turn>(d, "turns")),
   turn: (id: string) => get<Turn>(`/api/turns/${encodeURIComponent(id)}`),
   tokens: () => get<unknown>("/api/tokens").then((d) => list<ApiToken>(d, "tokens")),
+  extensionToken: () => send<{ token: string }>("POST", "/api/meetings/extension-token"),
   createToken: (name: string) => send<{ token: string } & Partial<ApiToken>>("POST", "/api/tokens", { name }),
   deleteToken: (id: string) => send("DELETE", `/api/tokens/${id}`),
   syncSources: () => get<unknown>("/api/sync/sources").then((d) => list<SyncSource>(d, "sources")),

@@ -6,30 +6,10 @@
   const externalId = `${adapter.meetingId()}:${startedAt.toISOString().slice(0, 10)}`;
   /** @type {{ speaker: string, text: string }[]} */
   const lines = [];
-  const last = new Map(); // speaker -> index in `lines` of that speaker's most recent line
   let timer = null;
   let sent = 0; // lines.length at last successful hand-off
 
-  // Captions are rewritten in place as the speaker talks, so a snapshot line that extends
-  // (or is a revision of) the speaker's previous line replaces it instead of adding a new one.
-  function merge(snapshot) {
-    for (const { speaker, text } of snapshot) {
-      const i = last.get(speaker);
-      const prev = i === undefined ? undefined : lines[i];
-      if (prev && (text.startsWith(prev.text) || prev.text.startsWith(text) || sharedPrefix(prev.text, text) > 0.6)) {
-        if (text.length >= prev.text.length) prev.text = text;
-      } else {
-        lines.push({ speaker, text, t: Date.now() });
-        last.set(speaker, lines.length - 1);
-      }
-    }
-  }
-  function sharedPrefix(a, b) {
-    const n = Math.min(a.length, b.length);
-    let k = 0;
-    while (k < n && a[k] === b[k]) k++;
-    return n ? k / Math.max(a.length, b.length) : 0;
-  }
+  const merge = (snapshot) => BrainLib.mergeCaptions(lines, snapshot);
 
   const tick = () => { timer = null; try { merge(adapter.read()); } catch { /* DOM shape changed; keep what we have */ } };
   new MutationObserver(() => { if (!timer) timer = setTimeout(tick, 400); })
@@ -37,7 +17,10 @@
 
   function payload() {
     tick();
-    return { externalId, platform: adapter.platform, title: adapter.title(), lines: lines.map((l) => ({ ...l })), startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
+    const me = adapter.selfName?.() ?? null;
+    const named = lines.map((l) => ({ ...l, speaker: me && /^you$/i.test(l.speaker) ? me : l.speaker }));
+    const participants = [...new Set([...(adapter.roster?.() ?? []), ...named.map((l) => l.speaker)].filter((n) => n && !/^you$/i.test(n)))];
+    return { externalId, platform: adapter.platform, title: adapter.title(), participants, lines: named, startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
   }
 
   function upload(manual = false) {
@@ -57,8 +40,8 @@
     if (msg?.type === "snapshot") {
       const p = payload();
       reply({
-        key: `${p.platform}:${p.externalId}`, platform: p.platform, title: p.title, code: adapter.meetingId(), startedAt: p.startedAt, lines: p.lines,
-        roster: [...new Set(adapter.roster?.() ?? [])], captionsOn: adapter.captionsOn ? adapter.captionsOn() : p.lines.length > 0, canEnableCaptions: !!adapter.enableCaptions,
+        key: `${p.platform}:${p.externalId}`, externalId: p.externalId, participants: p.participants, platform: p.platform, title: p.title, code: adapter.meetingId(), startedAt: p.startedAt, lines: p.lines,
+        roster: [...new Set(adapter.roster?.() ?? [])], self: adapter.selfName?.() ?? null, captionsOn: adapter.captionsOn ? adapter.captionsOn() : p.lines.length > 0, canEnableCaptions: !!adapter.enableCaptions,
       });
     }
     if (msg?.type === "enableCaptions") reply({ ok: !!adapter.enableCaptions?.() });

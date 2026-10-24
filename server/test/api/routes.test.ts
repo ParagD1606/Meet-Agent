@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { config } from "../../src/config";
 import { memories, channels, meetings, meetingTaskNotifications } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
+import { setMemoryLlm } from "../../src/memory/llm";
 import { setSlackClientForTest } from "../../src/slack/client";
 import { app, call, db, login, mkUser, resetDb } from "./helpers";
 
@@ -177,13 +178,16 @@ describe("extension upload", () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const auth = { authorization: `Bearer ${tok.token}` };
     expect((await post("/ext/ask", auth, { lines: [], question: "x" })).status).toBe(400);
+    expect((await post("/ext/notes", {}, { lines: [{ speaker: "A", text: "hi" }] })).status).toBe(401);
+    expect((await post("/ext/notes", auth, { lines: [] })).status).toBe(400);
+    expect((await post("/ext/notes", auth, { lines: [{ speaker: "A", text: "hi" }], offset: 3, previous: "- x" })).status).not.toBe(401);
     expect((await post("/ext/analyze", auth, { lines: [{ speaker: "A", text: "hi" }], context: { roster: ["A"] }, known: [] })).status).not.toBe(401);
   });
 
   test("stores an upload privately for its owner", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const body = { externalId: "abc", platform: "meet", title: "Standup", lines: [{ speaker: "Ana", text: "Ship it Friday." }] };
-    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" }, body: JSON.stringify(b) });
+    const post = (b: unknown) => app.request("/ext/meetings", { method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" }, body: JSON.stringify(b) });
     expect((await post({ ...body, lines: [] })).status).toBe(400);
     expect((await post(body)).status).toBe(201);
     expect((await post(body)).status).toBe(201); // same externalId replaces, not duplicates
@@ -192,18 +196,85 @@ describe("extension upload", () => {
     expect(await json(await call("GET", "/api/meetings", { cookie: member }))).toHaveLength(0);
   });
 
+  test("final pass builds decisions and tasks from the whole transcript and drops anything it cannot quote", async () => {
+    setMemoryLlm(async () => JSON.stringify({
+      summary: "Planned the launch.",
+      decisions: [
+        { text: "Launch on Friday", quote: "we decided to launch on Friday" },
+        { text: "Build the frontend AI integration", quote: "let's build the frontend AI integration" }, // never said
+      ],
+      tasks: [
+        { title: "Run the advertisement campaign", description: "", assigneeName: "Parag", assigneeId: null, dueDate: null, quote: "advertisement will be done by Parag" },
+        { title: "Send the deck", description: "", assigneeName: "Rahul", assigneeId: null, dueDate: null, quote: "Bob sends the deck" }, // Rahul was not on the call
+        { title: "Integrate the frontend AI", description: "", assigneeName: "Bob", assigneeId: null, dueDate: null, quote: "frontend AI integration will be done" }, // never said
+      ],
+    }));
+    try {
+      const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+      const res = await app.request("/ext/meetings", {
+        method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
+        body: JSON.stringify({ externalId: "fin", platform: "meet", title: "Planning", participants: ["Ana", "Bob", "Parag"],
+          lines: [{ speaker: "Ana", text: "we decided to launch on Friday." }, { speaker: "Ana", text: "The advertisement will be done by Parag." }, { speaker: "Bob", text: "Bob sends the deck, fine." }] }),
+      });
+      const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
+      expect(m.status).toBe("ready");
+      expect(m.decisions).toEqual(["Launch on Friday"]);
+      expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Run the advertisement campaign", "Parag"], ["Send the deck", null]]);
+      expect(m.tasks[0].description).toContain("advertisement will be done by Parag");
+      // A model's guess at an owner must never message a real person on its own.
+      expect((await db.select().from(meetingTaskNotifications)).length).toBe(0);
+    } finally { setMemoryLlm(null); }
+  });
+
+  test("an upload with oversized or empty fields is cleaned, not rejected, and replies before the model finishes", async () => {
+    const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
+    const res = await app.request("/ext/meetings", {
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
+      body: JSON.stringify({ externalId: "big", platform: "meet", title: "x".repeat(500), participants: ["P".repeat(400), ""],
+        lines: [{ speaker: "S".repeat(300), text: "hello" }, { speaker: "A", text: "   " }] }),
+    });
+    expect(res.status).toBe(201);
+    const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
+    expect(m.title.length).toBe(240);
+    const own = await json(await app.request(`/ext/meetings/${m.id}`, { headers: { authorization: `Bearer ${tok.token}` } }));
+    expect(own.id).toBe(m.id);
+    const other = await json(await call("POST", "/api/tokens", { cookie: member, body: { name: "x" } })); // members cannot mint tokens
+    expect(other.error).toBeDefined();
+  });
+
+  test("a member makes their own extension token, sees their uploads, and the token cannot open the MCP server", async () => {
+    const minted = await call("POST", "/api/meetings/extension-token", { cookie: member });
+    expect(minted.status).toBe(201);
+    const { token } = await json(minted);
+    const auth = { authorization: `Bearer ${token}` };
+    const up = await app.request("/ext/meetings", { method: "POST", headers: { ...auth, "content-type": "application/json", "x-wait": "1" }, body: JSON.stringify({ externalId: "m1", platform: "meet", title: "Member call", lines: [{ speaker: "M", text: "hello there" }] }) });
+    expect(up.status).toBe(201);
+    const mine = await json(await call("GET", "/api/meetings", { cookie: member }));
+    expect(mine.map((m: any) => m.title)).toEqual(["Member call"]); // the person using the extension sees it
+    expect((await app.request("/ext/ping", { headers: auth })).status).toBe(200);
+    expect((await app.request("/mcp", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: "{}" })).status).toBe(401); // extension-only
+    // an admin's older API token still serves the extension, but its uploads belong to the admin
+    const adminTok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "old" } }));
+    expect((await app.request("/ext/ping", { headers: { authorization: `Bearer ${adminTok.token}` } })).status).toBe(200);
+    // a new token replaces the old one
+    const again = await json(await call("POST", "/api/meetings/extension-token", { cookie: member }));
+    expect((await app.request("/ext/ping", { headers: auth })).status).toBe(401);
+    expect((await app.request("/ext/ping", { headers: { authorization: `Bearer ${again.token}` } })).status).toBe(200);
+    expect((await call("POST", "/api/meetings/extension-token", {})).status).toBe(401); // must be signed in
+  });
+
   test("keeps the decisions and tasks recorded in the side panel", async () => {
     const tok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "ext" } }));
     const res = await app.request("/ext/meetings", {
-      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json" },
+      method: "POST", headers: { authorization: `Bearer ${tok.token}`, "content-type": "application/json", "x-wait": "1" },
       body: JSON.stringify({ externalId: "n1", platform: "meet", title: "Planning", lines: [{ speaker: "Ana", text: "Bob sends the deck." }],
-        decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
+        participants: ["Ana", "Bob"], decisions: ["Launch on Friday"], tasks: [{ title: "Send the deck", assignee: "Bob", due: "Thu" }] }),
     });
     expect(res.status).toBe(201);
     const { id } = await json(res);
     const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
     expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
-    expect(m.summary).toContain("Launch on Friday");
+    expect(m.decisions).toContain("Launch on Friday");
   });
 });
 
