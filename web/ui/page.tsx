@@ -11,7 +11,7 @@ import { cn } from "./cn"
 export function PageHeader({ title, desc, actions }: { title: string; desc?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-      <div className="min-w-0"><h1 className="text-xl">{title}</h1>{desc && <p className="mt-1 max-w-2xl text-sm text-muted">{desc}</p>}</div>
+      <div className="min-w-0"><h1 className="text-2xl">{title}</h1>{desc && <p className="mt-1 max-w-2xl text-sm text-muted">{desc}</p>}</div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </header>
   )
