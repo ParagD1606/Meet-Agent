@@ -204,6 +204,7 @@ export const api = {
   uploadMemory: (file: File) => { const f = new FormData(); f.append("file", file); return request<{ name?: string; chunks?: number }>("POST", "/api/memories/upload", f) },
   exportMemoriesUrl: "/api/export/memories",
   coreBlock: (scope: string) => get<CoreBlock>(`/api/core-blocks${qs({ scope })}`),
+  bootstrapCoreBlock: (scope: string) => send<{ queued: boolean; results: { scope: string; status: "written" | "unchanged" | "skipped" | "failed"; line?: string; reason?: string }[] }>("POST", "/api/core-blocks/bootstrap", { scope }),
   saveCoreBlock: (scope: string, text: string) => send<{ block: CoreBlock; usage?: string; queuedForReview?: boolean }>("PUT", `/api/core-blocks${qs({ scope })}`, { text }),
   channels: () => get<Channel[]>("/api/channels"),
   persona: () => get<PersonaSettings>("/api/settings/persona"),

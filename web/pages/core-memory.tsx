@@ -36,7 +36,12 @@ function Editor({ scope, kind, admin }: { scope: string; kind: Kind; admin: bool
     invalidate: [["core-block", scope]], inline: true,
     onSuccess: (r) => toast.push(r.queuedForReview ? { kind: "info", title: "Sent for review", body: "An admin needs to approve this change before it goes live." } : { kind: "success", title: "Core memory saved" }),
   })
+  const generate = useAction(() => api.bootstrapCoreBlock(kind === "channel" ? `channel:${scope.slice("channel_".length)}` : "user:me"), {
+    invalidate: [["core-block", scope]],
+    onSuccess: (r) => { const x = r.results[0]; toast.push(x?.status === "written" ? { kind: "success", title: "Generated from Slack" } : x?.status === "unchanged" ? { kind: "info", title: "Already up to date" } : { kind: "info", title: "Nothing to generate yet", body: x?.reason ?? "Not enough information about this yet." }) },
+  })
   const canEdit = kind !== "company" || admin
+  const canGenerate = kind === "user" || (kind === "channel" && admin)
   const b: CoreBlock | undefined = q.data
   const about = text.split("\n").find((l) => l.startsWith("About: "))
   const limit = b?.charLimit ?? 1000
@@ -52,6 +57,7 @@ function Editor({ scope, kind, admin }: { scope: string; kind: Kind; admin: bool
         <div className="mt-3 flex items-center gap-3">
           {canEdit ? <Button type="submit" variant="primary" loading={save.isPending} disabled={!dirty || over}>Save</Button> : <span className="text-sm text-muted">Read-only. Ask an admin to change it.</span>}
           {dirty && <Button variant="ghost" onClick={() => setText(b!.text)}>Discard</Button>}
+          {canGenerate && <Button variant="ghost" loading={generate.isPending} onClick={() => generate.mutate()}>{text.trim() ? "Refresh from Slack" : "Generate from Slack"}</Button>}
           <span className={cn("ml-auto text-xs tabular-nums", over ? "text-danger" : "text-muted")}>{text.length.toLocaleString()} / {limit.toLocaleString()}</span>
         </div>
       </form>

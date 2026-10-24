@@ -4,6 +4,7 @@ import { db } from "../db";
 import { channels, users } from "../db/schema";
 import { log } from "../log";
 import { botUserId, slackClient } from "../slack/client";
+import { registerBootstrapJobs } from "./bootstrap";
 import { consolidate } from "./consolidate";
 import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
@@ -122,6 +123,7 @@ export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
     const n = await backfillContextPrefixes();
     if (n) log.info("context prefixes backfilled", { n });
   });
+  await registerBootstrapJobs(boss);
   await boss.schedule(MEMORY_QUEUES.backfill, "*/20 * * * *");
   await boss.schedule(MEMORY_QUEUES.observe, "*/30 * * * *");
   await boss.schedule(MEMORY_QUEUES.consolidate, "17 3 * * *");

@@ -6,6 +6,7 @@ import { claimEvent } from "./dedupe";
 import { handleChannelMessage } from "./chime";
 import { botUserId, getWorkspace, postMessage, slackClient } from "./client";
 import { deps } from "./deps";
+import { bootstrapIfEmpty } from "../memory/bootstrap";
 import { introduceInChannel, onAppHome, onUserJoined } from "./onboarding";
 import { ratingFor, recordFeedback, ack, done } from "./reactions";
 import { readSlackFiles } from "./attachments";
@@ -64,6 +65,7 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   else await ensureChannel({ id: ev.channel, isIm, isPrivate });
   if (ev.user) await ensureUser(ev.user);
   const [ch] = await db.select().from(channels).where(eq(channels.id, ev.channel));
+  if (ev.user && route.kind === "turn") void bootstrapIfEmpty(`user:${ev.user}`); // first DM/mention: build the user block if empty
 
   if (route.kind === "triage") {
     await handleChannelMessage(ev, { context: route.context, botUserId: me, channelName: ch?.name ?? undefined, isPrivate: Boolean(ch?.isPrivate) || isPrivate });
@@ -139,6 +141,7 @@ async function handleMemberJoined(ev: Record<string, any>): Promise<void> {
     const { syncChannelMembers } = await import("./sync");
     await syncChannelMembers(await slackClient(), ev.channel).catch((e) => log.warn("member sync failed", { error: (e as Error).message }));
     await introduceInChannel(ev.channel);
+    void bootstrapIfEmpty(`channel:${ev.channel}`);
     return;
   }
   await ensureUser(ev.user);

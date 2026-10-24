@@ -120,7 +120,7 @@ function applyOp(cur: string, op: EditArgs["op"], text: string | undefined, matc
 }
 
 /** Writes block text under a row lock: scan -> limit -> version bump. */
-async function commit(tag: string, label: BlockLabel, updatedBy: string | null, compute: (cur: string) => { next: string } | { error: string }): Promise<EditResult> {
+export async function commit(tag: string, label: BlockLabel, updatedBy: string | null, compute: (cur: string) => { next: string } | { error: string }): Promise<EditResult> {
   await ensureBlock(tag, label);
   return db.transaction(async (tx) => {
     const [row] = await tx.select().from(coreBlocks).where(and(eq(coreBlocks.scopeTag, tag), eq(coreBlocks.label, label))).for("update");
