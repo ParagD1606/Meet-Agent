@@ -1,9 +1,10 @@
 const $ = (id) => document.getElementById(id);
 const { uid, parseTranscript, findDuplicates, workload, workloadHint, migrate, dueChips, badge } = BrainLib;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const hue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 55% 45%)`; };
+const hue = (name) => { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 50% 42%)`; };
 const ask = (msg) => chrome.runtime.sendMessage(msg);
 const activeTab = async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+const initials = (n) => (String(n || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("") || "?").toUpperCase();
 const hhmm = (t) => (t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
 
 const state = {
@@ -87,15 +88,15 @@ function renderLive() {
   const s = src();
   $("dot").classList.toggle("live", !!s?.lines.length && !state.manual);
   $("title").textContent = s ? s.title : "Brain";
-  $("sub").textContent = s ? `${state.manual ? "imported" : s.platform} · ${s.lines.length} lines · ${speakers().length} speaker${speakers().length === 1 ? "" : "s"}` : "Waiting for a call…";
+  $("subText").textContent = s ? `${state.manual ? "imported" : s.platform} · ${s.lines.length} lines · ${speakers().length} speaker${speakers().length === 1 ? "" : "s"}` : "Waiting for a call…";
   $("backLive").hidden = !state.manual;
   $("capBanner").hidden = !(state.snap && !state.snap.captionsOn && !state.manual);
   $("capOn").hidden = !state.snap?.canEnableCaptions;
   const box = $("transcript");
-  $("liveEmpty").textContent = !s ? "Open a Google Meet, Teams, Zoom (web) or Slack call in this window, or import a transcript." : !s.lines.length ? "No captions yet. Turn captions on in the call (the CC button)." : "";
+  $("liveEmpty").innerHTML = !s ? "<b>No call detected</b>Open a Google Meet, Teams, Zoom (web) or Slack call in this window, or import a transcript." : !s.lines.length ? "<b>Waiting for captions</b>Turn captions on in the call (the CC button) and they will appear here." : "";
   const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
   const hl = box.querySelector(".hl")?.dataset.i;
-  box.innerHTML = lines().map((l, i) => `<div class="line${String(i + 1) === hl ? " hl" : ""}" data-i="${i + 1}"><div class="who" style="color:${hue(l.speaker || "?")}">${esc(l.speaker || "Unknown")}<span class="ts">${hhmm(l.t)}</span></div>${esc(l.text)}</div>`).join("");
+  box.innerHTML = lines().map((l, i) => `<div class="line${String(i + 1) === hl ? " hl" : ""}" data-i="${i + 1}"><div class="av" style="background:${hue(l.speaker || "?")}">${esc(initials(l.speaker))}</div><div><div class="who">${esc(l.speaker || "Unknown")}<span class="ts">${hhmm(l.t)}</span></div><div class="say">${esc(l.text)}</div></div></div>`).join("");
   if (stick && !hl) box.scrollTop = box.scrollHeight;
   $("people").innerHTML = roster().map((n) => `<option value="${esc(n)}">`).join("");
 }
@@ -136,7 +137,7 @@ $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim
 
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${esc(m.text)}</div>`).join("") : `<div class="empty">Ask anything about the call so far.</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -202,12 +203,12 @@ function renderItems() {
   const dups = findDuplicates(items), byId = Object.fromEntries(items.map((i) => [i.id, i]));
   const rank = { pending: 0, approved: 1, rejected: 2 };
   const sorted = [...items].sort((a, b) => rank[a.status] - rank[b.status]);
-  if (!sorted.length) { $("itemList").innerHTML = `<div class="empty">Nothing detected yet.<br>Items appear here for you to approve, edit or reject. Nothing is saved to Meeting notes until you approve it and send.</div>`; return; }
+  if (!sorted.length) { $("itemList").innerHTML = `<div class="empty"><b>Nothing detected yet</b>Decisions, tasks and open questions show up here for you to approve, edit or reject. Nothing is saved until you approve it and send.</div>`; return; }
   $("itemList").innerHTML = sorted.map((i) => {
     const edit = state.editing.has(i.id), isTask = i.kind === "task";
     const dup = dups[i.id] && byId[dups[i.id].otherId];
     const hint = isTask && i.status !== "rejected" ? workloadHint(i.assignee, state.load, roster()) : null;
-    return `<div class="item ${i.status}" data-id="${i.id}">
+    return `<div class="item ${i.status} k-${i.kind === "question" || i.kind === "decision" ? i.kind : i.label}" data-id="${i.id}">
       <div class="top"><span class="badge ${i.kind === "question" ? "question" : i.kind === "decision" && i.label === "confirmed" ? "decision" : i.label}">${esc(badge(i))}</span><span class="muted">${esc(i.kind)}</span></div>
       ${edit ? `<div class="fields"><input class="wide" data-f="title" value="${esc(i.title)}"><select data-f="kind"><option ${isTask ? "selected" : ""} value="task">Task</option><option ${i.kind === "decision" ? "selected" : ""} value="decision">Decision</option><option ${i.kind === "question" ? "selected" : ""} value="question">Question</option></select></div>`
         : `<div class="title ${i.done ? "done-t" : ""}">${esc(i.title)}</div>`}
