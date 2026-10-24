@@ -9,6 +9,7 @@ export const NAV: NavItem[] = [
   { to: "/tasks", label: "Tasks", icon: "check", group: "Knowledge", kw: "commitments assigned owner due overdue follow-up todo promises" },
   { to: "/review", label: "Review queue", icon: "review", group: "Knowledge", admin: true, keys: "r", kw: "approve reject pending" },
   { to: "/meetings", label: "Meeting notes", icon: "book", group: "Knowledge", keys: "n", kw: "huddle transcript summary tasks action items jira" },
+  { to: "/memory-health", label: "Memory health", icon: "gauge", group: "Knowledge", admin: true, kw: "freshness learn now consolidation undo observe channels export backfill" },
   { to: "/skills", label: "Skills", icon: "skills", group: "Agent", keys: "s", kw: "skill.md" },
   { to: "/automations", label: "Automations", icon: "clock", group: "Agent", keys: "a", kw: "cron schedule digest reminder" },
   { to: "/models", label: "Models", icon: "models", group: "Agent", kw: "llm provider fallback" },

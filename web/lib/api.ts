@@ -154,10 +154,20 @@ export interface Limits {
   maxStepsByDepth: { direct: number; memory: number; tools: number; deep: number }
 }
 export interface ApiToken { id: string; name: string; createdAt: string; lastUsedAt?: string | null }
+export type SyncProvider = "gdrive" | "onedrive" | "notion" | "github" | "linear" | "jira" | "gmail" | "gcal"
 export interface SyncSource {
-  id: string; provider: "gdrive" | "onedrive" | "notion"; lastSyncAt?: string | null; status?: string | null
-  selection?: { mode?: "all" | "selected"; ids?: string[]; label?: string } | null; error?: string | null
+  id: string; provider: SyncProvider; lastSyncAt?: string | null; status?: string | null
+  /** Server shape: ids are folder/page/repo/team/project ids; "*" = everything the account can see. */
+  selection?: { ids?: string[]; scopeTag?: string } | null; error?: string | null
+  connected?: boolean; configured?: boolean
 }
+export type TokenProvider = "github" | "linear" | "jira"
+export interface TokenSourceBody { provider: TokenProvider; token: string; email?: string; baseUrl?: string }
+export type MemoryJob = "capture-flush" | "observe" | "consolidate" | "sync" | "backfill-prefix" | "backfill-history" | "sync-tasks"
+export interface Freshness { mode: "normal" | "fast"; tuning: Record<string, number | string>; options: string[] }
+export interface ConsolidationEntry { id: number; runId: string; action: string; scopeTag: string | null; count: number; createdAt: string; undoneAt: string | null }
+export interface ObserveChannel { id: string; name: string | null; isPrivate: boolean; observe: boolean }
+export interface WorkspaceHours { timezone: string; start: number; end: number; quietHours: boolean; backfillDays: number }
 
 // ---- usage
 export type UsageRange = "1d" | "7d" | "30d" | "90d"
@@ -267,7 +277,6 @@ export const api = {
   marketplace: (q: string, limit = 60) => get<unknown>(`/api/marketplace${qs({ q, limit })}`).then((d): MarketPage => { const items = list<MarketItem>(d, "items"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
   installMarketplace: (key: string, body: { scope: "org" | "user"; token?: string; label?: string; url?: string }) => send<{ connection?: Connection; authUrl?: string }>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, body),
   connections: () => get<unknown>("/api/mcp/connections").then((d) => list<Connection>(d, "connections")),
-  createConnection: (c: { provider?: string; url?: string; label?: string; scope: "org" | "user" }) => send<Connection>("POST", "/api/mcp/connections", c),
   deleteConnection: (id: string) => send("DELETE", `/api/mcp/connections/${id}`),
   connect: (id: string) => send<{ authUrl: string }>("POST", `/api/mcp/connections/${id}/connect`),
   testConnection: (id: string) => send<ConnectionTest>("POST", `/api/mcp/connections/${id}/test`, {}),
@@ -282,7 +291,19 @@ export const api = {
   createToken: (name: string) => send<{ token: string } & Partial<ApiToken>>("POST", "/api/tokens", { name }),
   deleteToken: (id: string) => send("DELETE", `/api/tokens/${id}`),
   syncSources: () => get<unknown>("/api/sync/sources").then((d) => list<SyncSource>(d, "sources")),
-  createSyncSource: (provider: SyncSource["provider"]) => send<Partial<SyncSource> & { authUrl?: string }>("POST", "/api/sync/sources", { provider }),
+  createSyncSource: (provider: SyncProvider) => send<Partial<SyncSource> & { authUrl?: string }>("POST", "/api/sync/sources", { provider }),
   saveSyncSource: (id: string, selection: SyncSource["selection"]) => send("PUT", `/api/sync/sources/${id}`, { selection }),
   runSync: (id: string) => send("POST", `/api/sync/sources/${id}/run`),
+  deleteSyncSource: (id: string) => send("DELETE", `/api/sync/sources/${id}`),
+  connectTokenSource: (b: TokenSourceBody) => send<{ id: string }>("POST", "/api/sync/sources/token", b),
+  connectPersonal: (provider: "gmail" | "gcal") => send<{ authUrl?: string }>("POST", "/api/sync/personal", { provider }),
+  freshness: () => get<Freshness>("/api/settings/memory-freshness"),
+  saveFreshness: (mode: Freshness["mode"]) => send<Freshness>("PUT", "/api/settings/memory-freshness", { mode }),
+  runMemoryJob: (job: MemoryJob) => send<{ ok: true; job: MemoryJob; ms: number; counts: Record<string, unknown> }>("POST", "/api/memory/run", { job }),
+  consolidationLog: () => get<unknown>("/api/consolidation-log?limit=50").then((d) => list<ConsolidationEntry>(d, "log")),
+  undoConsolidation: (id: number) => send("POST", `/api/consolidation-log/${id}/undo`),
+  observeChannels: () => get<{ channels: ObserveChannel[] }>("/api/channels/observe").then((d) => d.channels),
+  setObserve: (id: string, observe: boolean) => send<{ id: string; observe: boolean }>("PUT", `/api/channels/${encodeURIComponent(id)}/observe`, { observe }),
+  workspaceHours: () => get<WorkspaceHours>("/api/settings/workspace-hours"),
+  saveWorkspaceHours: (w: WorkspaceHours) => send<WorkspaceHours>("PUT", "/api/settings/workspace-hours", w),
 }
