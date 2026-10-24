@@ -17,7 +17,6 @@ export const NAV: NavItem[] = [
   { to: "/proactivity", label: "Proactivity", icon: "radio", group: "Agent", admin: true, kw: "chime channels observe" },
   { to: "/prompt", label: "Workspace prompt", icon: "file", group: "Agent", kw: "instructions system" },
   { to: "/integrations", label: "Integrations", icon: "plug", group: "Connect", keys: "i", kw: "mcp connectors github linear notion" },
-  { to: "/sync", label: "Sync", icon: "sync", group: "Connect", admin: true, kw: "drive notion onedrive" },
   { to: "/tokens", label: "API tokens", icon: "key", group: "Connect", admin: true, kw: "mcp bearer" },
   { to: "/turns", label: "Turns", icon: "turns", group: "Admin", admin: true, keys: "t", kw: "runs log history" },
   { to: "/usage", label: "Usage & limits", icon: "usage", group: "Admin", admin: true, keys: "u", kw: "cost tokens budget" },
