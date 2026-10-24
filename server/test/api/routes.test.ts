@@ -221,6 +221,8 @@ describe("extension upload", () => {
       expect(m.decisions).toEqual(["Launch on Friday"]);
       expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Run the advertisement campaign", "Parag"], ["Send the deck", null]]);
       expect(m.tasks[0].description).toContain("advertisement will be done by Parag");
+      // A model's guess at an owner must never message a real person on its own.
+      expect((await db.select().from(meetingTaskNotifications)).length).toBe(0);
     } finally { setMemoryLlm(null); }
   });
 
@@ -238,6 +240,27 @@ describe("extension upload", () => {
     expect(own.id).toBe(m.id);
     const other = await json(await call("POST", "/api/tokens", { cookie: member, body: { name: "x" } })); // members cannot mint tokens
     expect(other.error).toBeDefined();
+  });
+
+  test("a member makes their own extension token, sees their uploads, and the token cannot open the MCP server", async () => {
+    const minted = await call("POST", "/api/meetings/extension-token", { cookie: member });
+    expect(minted.status).toBe(201);
+    const { token } = await json(minted);
+    const auth = { authorization: `Bearer ${token}` };
+    const up = await app.request("/ext/meetings", { method: "POST", headers: { ...auth, "content-type": "application/json", "x-wait": "1" }, body: JSON.stringify({ externalId: "m1", platform: "meet", title: "Member call", lines: [{ speaker: "M", text: "hello there" }] }) });
+    expect(up.status).toBe(201);
+    const mine = await json(await call("GET", "/api/meetings", { cookie: member }));
+    expect(mine.map((m: any) => m.title)).toEqual(["Member call"]); // the person using the extension sees it
+    expect((await app.request("/ext/ping", { headers: auth })).status).toBe(200);
+    expect((await app.request("/mcp", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: "{}" })).status).toBe(401); // extension-only
+    // an admin's older API token still serves the extension, but its uploads belong to the admin
+    const adminTok = await json(await call("POST", "/api/tokens", { cookie: admin, body: { name: "old" } }));
+    expect((await app.request("/ext/ping", { headers: { authorization: `Bearer ${adminTok.token}` } })).status).toBe(200);
+    // a new token replaces the old one
+    const again = await json(await call("POST", "/api/meetings/extension-token", { cookie: member }));
+    expect((await app.request("/ext/ping", { headers: auth })).status).toBe(401);
+    expect((await app.request("/ext/ping", { headers: { authorization: `Bearer ${again.token}` } })).status).toBe(200);
+    expect((await call("POST", "/api/meetings/extension-token", {})).status).toBe(401); // must be signed in
   });
 
   test("keeps the decisions and tasks recorded in the side panel", async () => {

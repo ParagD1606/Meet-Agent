@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 import { log } from "../log";
 import { requireAuth, type AppEnv } from "../auth/session";
-import { eq } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { id as newId, sha256 } from "../crypto";
 import { db } from "../db";
-import { users } from "../db/schema";
+import { apiTokens, users } from "../db/schema";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
 import { analyzeLiveMeeting, askLiveMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
@@ -24,6 +26,18 @@ meetingRoutes.get("/meetings/:id", requireAuth(), async (c) => {
 // A workspace-wide import can discover transcripts in channels other than the caller's;
 // keep the trigger with workspace admins while the resulting rows retain normal visibility rules.
 meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles({ force: c.req.query("force") === "1" })));
+
+/**
+ * Any signed-in person can mint an extension-only token for themselves, so what the extension uploads belongs to them and shows on
+ * their Meeting notes page. A new token replaces their previous one; it is returned once and only its hash is stored.
+ */
+meetingRoutes.post("/meetings/extension-token", requireAuth(), async (c) => {
+  const user = c.get("user");
+  await db.delete(apiTokens).where(and(eq(apiTokens.userId, user.id), eq(apiTokens.kind, "ext")));
+  const token = `cbt_${randomBytes(32).toString("base64url")}`;
+  await db.insert(apiTokens).values({ id: newId("tok_"), userId: user.id, name: "Browser extension", kind: "ext", hash: sha256(token) });
+  return c.json({ token }, 201);
+});
 
 const taskIdsSchema = z.object({ taskIds: z.array(z.string().trim().min(1).max(80)).max(100).optional() });
 const assigneeSchema = z.object({ assigneeId: z.string().trim().min(1).max(80).nullable() });
@@ -92,8 +106,10 @@ function sanitizeUpload(body: any) {
  * so it is mounted outside /api and its CSRF check; there is no ambient credential to forge.
  */
 export const extensionRoutes = new Hono();
+/** Extension tokens (made by each person for themselves) and the older admin-made API tokens both work here; only the latter open the MCP server. */
+const extAuth = (c: import("hono").Context) => authenticateToken(c.req.header("authorization"), ["ext", "mcp"]);
 extensionRoutes.post("/meetings", async (c) => {
-  const userId = await authenticateToken(c.req.header("authorization"));
+  const userId = await extAuth(c);
   if (!userId) return c.json({ error: "unauthorized" }, 401);
   const parsed = extSchema.safeParse(sanitizeUpload(await c.req.json().catch(() => null)));
   if (!parsed.success) return c.json({ error: "invalid_body", issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
@@ -102,13 +118,13 @@ extensionRoutes.post("/meetings", async (c) => {
   return c.json({ id }, 201);
 });
 extensionRoutes.get("/meetings/:id", async (c) => {
-  const userId = await authenticateToken(c.req.header("authorization"));
+  const userId = await extAuth(c);
   if (!userId) return c.json({ error: "unauthorized" }, 401);
   const m = await getOwnExtensionMeeting(userId, c.req.param("id"));
   return m ? c.json(m) : c.json({ error: "not_found" }, 404);
 });
 extensionRoutes.get("/ping", async (c) => {
-  const userId = await authenticateToken(c.req.header("authorization"));
+  const userId = await extAuth(c);
   if (!userId) return c.json({ error: "unauthorized" }, 401);
   const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   return c.json({ ok: true, name: u?.name ?? null });
@@ -122,7 +138,7 @@ const liveCtx = z.object({
 
 /** Shared by the side panel's live endpoints: bearer auth, rate limit, body validation. */
 async function live<S extends z.ZodType>(c: import("hono").Context, schema: S) {
-  const userId = await authenticateToken(c.req.header("authorization"));
+  const userId = await extAuth(c);
   if (!userId) return { res: c.json({ error: "unauthorized" }, 401) } as const;
   const rate = await checkRate({ userId, channelId: "ext-live", kind: "mcp" });
   if (!rate.ok) return { res: c.json({ error: "rate_limited", message: rate.message }, 429, { "retry-after": String(rate.retryAfterSec) }) } as const;

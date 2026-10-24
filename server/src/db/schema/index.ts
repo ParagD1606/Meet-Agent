@@ -259,6 +259,8 @@ export const apiTokens = pgTable("api_tokens", {
   userId: text("user_id").notNull(),
   name: text("name").notNull(),
   hash: text("hash").notNull(), // sha256 of token
+  /** "mcp" tokens (admin-made) open the outward MCP server; "ext" tokens, which anyone can make for themselves, only serve the browser extension. */
+  kind: text("kind", { enum: ["mcp", "ext"] }).notNull().default("mcp"),
   createdAt: ts("created_at"),
 }, (t) => [uniqueIndex("api_tokens_hash_idx").on(t.hash)]);
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Brain Meeting Notes",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "A live side panel for Meet, Teams, Zoom and Slack calls: follow the transcript, review detected tasks and decisions, ask questions, and send approved notes to Brain.",
   "permissions": [
     "storage",

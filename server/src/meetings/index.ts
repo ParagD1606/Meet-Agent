@@ -486,9 +486,9 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
     .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, decisions: [], tasks: [] } })
     .returning({ id: meetings.id });
   // The upload is saved; the model reads the whole transcript afterwards so the request returns at once.
+  // No task DMs go out from here: a model's guess at an owner must not message a real person. Use "Send task DMs" on the page.
   const done = analyze(sourceFileId, text, t.participants ?? [])
     .then(() => (t.decisions?.length || t.tasks?.length ? mergeUserNotes(sourceFileId, t) : undefined))
-    .then(() => queueMeetingTaskDms(row!.id))
     .catch((err) => log.warn("meeting finalize failed", { fileId: sourceFileId, error: String(err) }));
   return { id: row!.id, done };
 }

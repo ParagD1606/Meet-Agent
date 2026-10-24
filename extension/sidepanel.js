@@ -59,7 +59,7 @@ async function testConn() {
   const r = await ask({ type: "test" });
   state.connected = !!r?.ok;
   if (r?.name) state.pingName = r.name;
-  setConn(r?.ok ? "Connected" : r?.status === 401 ? "Token rejected" : `Can't reach server${r?.error ? ": " + r.error : ""}`, r?.ok ? "ok" : "bad");
+  setConn(r?.ok ? (r.name ? `Connected as ${r.name}` : "Connected") : r?.status === 401 ? "Token rejected" : `Can't reach server${r?.error ? ": " + r.error : ""}`, r?.ok ? "ok" : "bad");
 }
 function setConn(text, cls) { $("conn").textContent = text; $("conn").className = "conn " + cls; }
 

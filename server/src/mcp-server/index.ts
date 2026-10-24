@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { and, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import type { Hono } from "hono";
 import { z } from "zod";
 import { sha256 } from "../crypto";
@@ -58,14 +58,14 @@ export function buildMcpServer(): McpServer {
 export const TOKEN_TTL_MS = 365 * 24 * 3600 * 1000;
 
 /** Returns the token owner's id for a valid, unexpired, non-deactivated bearer token. */
-export async function authenticateToken(header: string | undefined): Promise<string | null> {
+export async function authenticateToken(header: string | undefined, kinds: ("mcp" | "ext")[] = ["mcp"]): Promise<string | null> {
   const m = /^Bearer\s+(\S+)$/i.exec(header ?? "");
   if (!m) return null;
   const [row] = await db
     .select({ userId: apiTokens.userId })
     .from(apiTokens)
     .innerJoin(users, eq(users.id, apiTokens.userId))
-    .where(and(eq(apiTokens.hash, sha256(m[1]!)), eq(users.deactivated, false), gt(apiTokens.createdAt, new Date(Date.now() - TOKEN_TTL_MS))))
+    .where(and(eq(apiTokens.hash, sha256(m[1]!)), inArray(apiTokens.kind, kinds), eq(users.deactivated, false), gt(apiTokens.createdAt, new Date(Date.now() - TOKEN_TTL_MS))))
     .limit(1);
   return row?.userId ?? null;
 }

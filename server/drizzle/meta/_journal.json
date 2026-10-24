@@ -92,6 +92,13 @@
       "when": 1793040009000,
       "tag": "0010_meeting_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793040010000,
+      "tag": "0011_api_token_kind",
+      "breakpoints": true
     }
   ]
 }

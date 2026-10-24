@@ -15,7 +15,7 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
 "Finish & send to Meeting notes…" saves the transcript; Brain then reads the whole of it and writes the final decisions and tasks (owners are real participant names; anything it cannot quote from the transcript is dropped), and the panel shows the result and a link. When a live call ends, the same happens automatically unless switched off.
 
 ## Install
-1. In Company Brain create an API token (Configure > API tokens).
+1. In Company Brain open **Meeting notes** and press **Get my token** (anyone signed in can; no admin needed). Meetings uploaded with it appear under your account.
 2. `chrome://extensions` > Developer mode > Load unpacked > this folder. Reload it after updates.
 3. Click the extension icon to open the panel, paste the token in Settings (once).
 
