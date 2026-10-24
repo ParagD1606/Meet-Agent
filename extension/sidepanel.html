@@ -57,6 +57,11 @@
       <p class="muted">Saved automatically on this device. Create a token in the Brain web app under Configure → API tokens.</p>
     </div>
     <div class="card">
+      <h3>You</h3>
+      <label for="myName">Your name</label><input id="myName" autocomplete="off" placeholder="Used instead of “You” in captions">
+      <p class="muted" id="nameHint"></p>
+    </div>
+    <div class="card">
       <h3>Behavior</h3>
       <label class="check"><input type="checkbox" id="autoDetect" checked><span>Update live notes automatically<br><span class="muted">Topics only, every 2 minutes during the call when there is something new. Uses the model.</span></span></label>
       <label class="check"><input type="checkbox" id="autoSend" checked><span>Send approved items when the call ends</span></label>

@@ -8,7 +8,8 @@ const initials = (n) => (String(n || "?").trim().split(/\s+/).slice(0, 2).map((w
 const hhmm = (t) => (t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
 
 const state = {
-  cfg: { server: "https://slack.derpx06.live", token: "", autoSend: true, autoDetect: true },
+  cfg: { server: "https://slack.derpx06.live", token: "", autoSend: true, autoDetect: true, myName: "" },
+  pingName: null,   // the token owner's name from the server, used when captions say "You"
   snap: null,       // live capture from the call tab
   manual: null,     // imported transcript { key, externalId, title, lines, startedAt } while set, it replaces the live one
   store: { items: [] },
@@ -17,9 +18,11 @@ const state = {
   analyzing: false, lastRun: 0, lastCount: {},
 };
 const src = () => state.manual ?? state.snap;
-const lines = () => src()?.lines ?? [];
+const me = () => state.cfg.myName || state.snap?.self || state.pingName || "";
+// Captions label your own speech "You"; everything downstream (notes, questions, owners, uploads) gets your name instead.
+const lines = () => (src()?.lines ?? []).map((l) => (me() && /^you$/i.test(l.speaker) ? { ...l, speaker: me() } : l));
 const speakers = () => [...new Set(lines().map((l) => l.speaker).filter(Boolean))];
-const roster = () => [...new Set([...(state.manual ? [] : state.snap?.roster ?? []), ...speakers()])];
+const roster = () => [...new Set([...(state.manual ? [] : state.snap?.roster ?? []), ...(me() ? [me()] : []), ...speakers()])].filter((n) => n && !/^you$/i.test(n));
 const storeKey = () => `meeting:${src()?.key ?? "none"}`;
 
 // ---------- tabs ----------
@@ -32,8 +35,9 @@ $("tabs").onclick = (e) => { const t = e.target.closest("button")?.dataset.tab; 
 
 // ---------- settings (autosaved) ----------
 async function loadCfg() {
-  const s = await chrome.storage.local.get(["server", "token", "autoSend", "autoDetect"]);
-  state.cfg = { server: s.server || state.cfg.server, token: s.token || "", autoSend: s.autoSend !== false, autoDetect: s.autoDetect !== false };
+  const s = await chrome.storage.local.get(["server", "token", "autoSend", "autoDetect", "myName"]);
+  state.cfg = { server: s.server || state.cfg.server, token: s.token || "", autoSend: s.autoSend !== false, autoDetect: s.autoDetect !== false, myName: s.myName || "" };
+  $("myName").value = state.cfg.myName;
   $("server").value = state.cfg.server; $("token").value = state.cfg.token;
   $("autoSend").checked = state.cfg.autoSend; $("autoDetect").checked = state.cfg.autoDetect;
 }
@@ -41,12 +45,12 @@ let saveTimer;
 function saveCfg() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    state.cfg = { server: $("server").value.trim().replace(/\/+$/, ""), token: $("token").value.trim(), autoSend: $("autoSend").checked, autoDetect: $("autoDetect").checked };
+    state.cfg = { server: $("server").value.trim().replace(/\/+$/, ""), token: $("token").value.trim(), autoSend: $("autoSend").checked, autoDetect: $("autoDetect").checked, myName: $("myName").value.trim() };
     await chrome.storage.local.set(state.cfg);
     testConn();
   }, 500);
 }
-["server", "token", "autoSend", "autoDetect"].forEach((id) => $(id).addEventListener("input", saveCfg));
+["server", "token", "autoSend", "autoDetect", "myName"].forEach((id) => $(id).addEventListener("input", saveCfg));
 $("reveal").onclick = () => { const t = $("token"); t.type = t.type === "password" ? "text" : "password"; $("reveal").textContent = t.type === "password" ? "Show" : "Hide"; };
 
 async function testConn() {
@@ -54,6 +58,7 @@ async function testConn() {
   setConn("Checking…", "");
   const r = await ask({ type: "test" });
   state.connected = !!r?.ok;
+  if (r?.name) state.pingName = r.name;
   setConn(r?.ok ? "Connected" : r?.status === 401 ? "Token rejected" : `Can't reach server${r?.error ? ": " + r.error : ""}`, r?.ok ? "ok" : "bad");
 }
 function setConn(text, cls) { $("conn").textContent = text; $("conn").className = "conn " + cls; }
@@ -87,6 +92,7 @@ setInterval(poll, 1500);
 
 function renderLive() {
   const s = src();
+  if (me() !== state.lastMe) { state.lastMe = me(); chrome.storage.local.set({ meName: me() }); $("nameHint").textContent = me() ? `Your captions show as “You”; they will be written as ${me()}.` : "Open the participant list in Meet, or type your name here, so “You” in captions can be replaced."; }
   $("dot").classList.toggle("live", !!s?.lines.length && !state.manual);
   $("title").textContent = s ? s.title : "Brain";
   $("subText").textContent = s ? `${state.manual ? "imported" : s.platform} · ${s.lines.length} lines · ${speakers().length} speaker${speakers().length === 1 ? "" : "s"}` : "Waiting for a call…";
@@ -127,7 +133,7 @@ $("recap").onclick = async () => {
   const block = needReady(); if (block) { box.textContent = block; return; }
   box.textContent = "Catching you up…";
   const r = await callAsk("I just joined. Give me a short recap: what is being discussed now, decisions made, tasks assigned and to whom, and open questions.");
-  box.textContent = r.ok ? r.text : r.text;
+  if (r.ok) box.innerHTML = renderNotes(r.text); else box.textContent = r.text;
 };
 
 // ---------- ask ----------
@@ -138,7 +144,7 @@ $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim
 
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -236,7 +242,7 @@ function renderItems() {
     const hint = isTask && i.status !== "rejected" ? workloadHint(i.assignee, state.load, roster()) : null;
     return `<div class="item ${i.status} k-${i.kind === "question" || i.kind === "decision" ? i.kind : i.label}" data-id="${i.id}">
       <div class="top"><span class="badge ${i.kind === "question" ? "question" : i.kind === "decision" && i.label === "confirmed" ? "decision" : i.label}">${esc(badge(i))}</span><span class="muted">${esc(i.kind)}</span></div>
-      ${edit ? `<div class="fields"><input class="wide" data-f="title" value="${esc(i.title)}"><select data-f="kind"><option ${isTask ? "selected" : ""} value="task">Task</option><option ${i.kind === "decision" ? "selected" : ""} value="decision">Decision</option><option ${i.kind === "question" ? "selected" : ""} value="question">Question</option></select></div>`
+      ${edit ? `<div class="fields"><textarea data-f="title" rows="2">${esc(i.title)}</textarea><select data-f="kind"><option ${isTask ? "selected" : ""} value="task">Task</option><option ${i.kind === "decision" ? "selected" : ""} value="decision">Decision</option><option ${i.kind === "question" ? "selected" : ""} value="question">Question</option></select></div>`
         : `<div class="title ${i.done ? "done-t" : ""}">${esc(i.title)}</div>`}
       ${i.reason ? `<div class="why">${esc(i.reason)}</div>` : ""}
       ${(i.evidence ?? []).map((n) => `<button class="ev" data-act="jump" data-n="${n}">line ${n}</button>`).join("")}
@@ -302,7 +308,7 @@ async function followFinal(id) {
 function payloadNow() {
   const s = src();
   return { externalId: s.externalId, platform: s.platform, title: s.title, participants: state.manual ? speakers() : (s.participants ?? roster()),
-    lines: s.lines.map(({ speaker, text }) => ({ speaker, text })), startedAt: s.startedAt, endedAt: new Date().toISOString() };
+    lines: lines().map(({ speaker, text }) => ({ speaker, text })), startedAt: s.startedAt, endedAt: new Date().toISOString() };
 }
 $("sendNotes").onclick = () => {
   const block = needReady(); if (block) { $("sendMsg").textContent = block; return; }

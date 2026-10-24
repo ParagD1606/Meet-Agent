@@ -89,11 +89,6 @@
     return out.join("");
   }
 
-  const sharedPrefix = (a, b) => {
-    const n = Math.min(a.length, b.length); let k = 0;
-    while (k < n && a[k] === b[k]) k++;
-    return n ? k / Math.max(a.length, b.length) : 0;
-  };
   /** Longest run where the end of `a` equals the start of `b`, in words (>= 3), as the merged text; else null. */
   function overlapMerge(a, b) {
     const x = a.split(/\s+/), y = b.split(/\s+/);
@@ -103,29 +98,61 @@
     return null;
   }
   const RECENT_MS = 20_000; // a caption not seen for this long has left the screen; the same words again are new speech
+  const wordList = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+  /** Share of the shorter text's words found in the longer one: high when a recognizer revises words mid-sentence. */
+  function containment(a, b) {
+    const x = new Set(wordList(a)), y = new Set(wordList(b));
+    if (x.size < 4 || y.size < 4) return 0;
+    let n = 0; for (const w of x) if (y.has(w)) n++;
+    return n / Math.min(x.size, y.size);
+  }
+  /**
+   * Whether `text` is the same utterance as `prev`, and what the merged text should be. Handles growth, repeats,
+   * Meet trimming the start of a long caption, and speech recognition rewriting earlier words as it hears more.
+   */
+  const startsWithWords = (long, short) => short.length > 0 && short.length <= long.length && short.every((w, i) => long[i] === w);
+  function continuation(prev, text) {
+    if (text === prev || text.startsWith(prev)) return text;
+    if (prev.startsWith(text)) return prev;
+    // Same words, different punctuation or capitalisation ("so." then "so we will...").
+    const pw = wordList(prev), tw = wordList(text);
+    if (startsWithWords(tw, pw)) return text;
+    if (startsWithWords(pw, tw)) return prev;
+    const joined = overlapMerge(prev, text);
+    if (joined) return joined;
+    if (containment(prev, text) >= 0.7) return text.length >= prev.length * 0.8 ? text : prev;
+    return null;
+  }
 
   /**
-   * Folds the captions currently on screen into the running transcript. Captions grow in place, older speakers' captions
-   * stay visible for a while, and Meet trims the start of a long caption, so a snapshot line only becomes a new transcript
-   * line when it is not a growth, repeat or trimmed continuation of one of that speaker's recent lines.
+   * Folds the captions currently on screen into the running transcript. A caption block that keeps its DOM node
+   * (`key`) is the same line however its words change; without a key, or when the node is reused for new speech,
+   * a snapshot line only becomes a new transcript line when it is not a continuation of the speaker's recent lines.
    */
   function mergeCaptions(lines, snapshot, now = Date.now()) {
-    for (const { speaker, text } of snapshot) {
+    for (const { speaker, text, key } of snapshot) {
       if (!text) continue;
-      let hit = null, newest = true;
-      for (let i = lines.length - 1, seen = 0; i >= 0 && seen < 6; i--) {
-        const l = lines[i];
-        if (l.speaker !== speaker) continue;
-        seen++;
-        if (now - (l.u ?? l.t) > RECENT_MS) { newest = false; continue; }
-        if (text === l.text || text.startsWith(l.text) || l.text.startsWith(text)) { hit = { l, text: text.length >= l.text.length ? text : l.text }; break; }
-        const joined = overlapMerge(l.text, text);
-        if (joined) { hit = { l, text: joined }; break; }
-        if (newest && sharedPrefix(l.text, text) > 0.6) { hit = { l, text: text.length >= l.text.length ? text : l.text }; break; }
-        newest = false;
+      let line = null, merged = null;
+      if (key !== undefined) {
+        const k = lines.find((l) => l.key === key && l.speaker === speaker);
+        if (k) {
+          merged = continuation(k.text, text);
+          if (merged !== null || k.text.length < 20) { line = k; merged ??= text; }
+          else delete k.key; // the node now carries new speech
+        }
       }
-      if (hit) { hit.l.text = hit.text; hit.l.u = now; }
-      else lines.push({ speaker, text, t: now, u: now });
+      if (!line) {
+        for (let i = lines.length - 1, seen = 0; i >= 0 && seen < 6; i--) {
+          const l = lines[i];
+          if (l.speaker !== speaker) continue;
+          seen++;
+          if (now - (l.u ?? l.t) > RECENT_MS) continue;
+          const m = continuation(l.text, text);
+          if (m !== null) { line = l; merged = m; break; }
+        }
+      }
+      if (line) { line.text = merged; line.u = now; if (key !== undefined) line.key = key; }
+      else lines.push({ speaker, text, t: now, u: now, ...(key !== undefined ? { key } : {}) });
     }
     return lines;
   }

@@ -19,6 +19,9 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
 2. `chrome://extensions` > Developer mode > Load unpacked > this folder. Reload it after updates.
 3. Click the extension icon to open the panel, paste the token in Settings (once).
 
+## Names
+Meet labels your own speech "You". The panel replaces it with your real name (from the participant list when it is open, otherwise the owner of your API token, or the name you type under Settings > You), so owners and the final notes use real names.
+
 ## What it can't do
 - Attendee emails: Meet's page exposes display names only, so owners are names, not accounts.
 - Notify anyone or create Jira/Slack tasks: items land in Meeting notes only.

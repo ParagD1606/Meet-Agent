@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { log } from "../log";
 import { requireAuth, type AppEnv } from "../auth/session";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { db } from "../db";
+import { users } from "../db/schema";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
 import { analyzeLiveMeeting, askLiveMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
@@ -104,7 +107,12 @@ extensionRoutes.get("/meetings/:id", async (c) => {
   const m = await getOwnExtensionMeeting(userId, c.req.param("id"));
   return m ? c.json(m) : c.json({ error: "not_found" }, 404);
 });
-extensionRoutes.get("/ping", async (c) => (await authenticateToken(c.req.header("authorization"))) ? c.json({ ok: true }) : c.json({ error: "unauthorized" }, 401));
+extensionRoutes.get("/ping", async (c) => {
+  const userId = await authenticateToken(c.req.header("authorization"));
+  if (!userId) return c.json({ error: "unauthorized" }, 401);
+  const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+  return c.json({ ok: true, name: u?.name ?? null });
+});
 
 const liveLines = z.array(z.object({ speaker: z.string().trim().max(120).default(""), text: z.string().trim().min(1).max(4_000) })).min(1).max(20_000);
 const liveCtx = z.object({

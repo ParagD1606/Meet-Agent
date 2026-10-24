@@ -17,8 +17,10 @@
 
   function payload() {
     tick();
-    const participants = [...new Set([...(adapter.roster?.() ?? []), ...lines.map((l) => l.speaker)].filter(Boolean))];
-    return { externalId, platform: adapter.platform, title: adapter.title(), participants, lines: lines.map((l) => ({ ...l })), startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
+    const me = adapter.selfName?.() ?? null;
+    const named = lines.map((l) => ({ ...l, speaker: me && /^you$/i.test(l.speaker) ? me : l.speaker }));
+    const participants = [...new Set([...(adapter.roster?.() ?? []), ...named.map((l) => l.speaker)].filter((n) => n && !/^you$/i.test(n)))];
+    return { externalId, platform: adapter.platform, title: adapter.title(), participants, lines: named, startedAt: startedAt.toISOString(), endedAt: new Date().toISOString() };
   }
 
   function upload(manual = false) {
@@ -39,7 +41,7 @@
       const p = payload();
       reply({
         key: `${p.platform}:${p.externalId}`, externalId: p.externalId, participants: p.participants, platform: p.platform, title: p.title, code: adapter.meetingId(), startedAt: p.startedAt, lines: p.lines,
-        roster: [...new Set(adapter.roster?.() ?? [])], captionsOn: adapter.captionsOn ? adapter.captionsOn() : p.lines.length > 0, canEnableCaptions: !!adapter.enableCaptions,
+        roster: [...new Set(adapter.roster?.() ?? [])], self: adapter.selfName?.() ?? null, captionsOn: adapter.captionsOn ? adapter.captionsOn() : p.lines.length > 0, canEnableCaptions: !!adapter.enableCaptions,
       });
     }
     if (msg?.type === "enableCaptions") reply({ ok: !!adapter.enableCaptions?.() });

@@ -61,4 +61,24 @@ describe("extension lib", () => {
     L.mergeCaptions(lines, [{ speaker: "Ana", text: "Sounds good." }], 60_000);
     expect(lines).toHaveLength(2);
   });
+  test("mergeCaptions: the real Meet transcript, where earlier words are rewritten, stays one line", () => {
+    const steps = [
+      "Hello! Okay, so.",
+      "Hello! Okay, so we will be. Skating. Outreach. So? Hello, so we will be scheduling our Outreach board.",
+      "Hello! Okay, so we will be. Skating. Outreach. Hello, so we will be scaling our Outreach board. All right, so the task division will be. The advertisements. Is be handled by parag.",
+      "Hello! Okay, so we will be. Skating. Outreach. Hello, so we will be scaling our Outreach board. All right, so the task division will be. The advertisements. Is be handled by parag. Talking part is done by ritesh. And technical part is done by Manas.",
+    ];
+    for (const withKey of [false, true]) {
+      const lines = []; let t = 1000;
+      for (const text of steps) L.mergeCaptions(lines, [{ speaker: "You", text, ...(withKey ? { key: 1 } : {}) }], (t += 400));
+      expect(lines).toHaveLength(1);
+      expect(lines[0].text).toBe(steps[3]);
+    }
+  });
+  test("mergeCaptions: a reused DOM node carrying new speech starts a new line", () => {
+    const lines = []; let t = 1000;
+    L.mergeCaptions(lines, [{ speaker: "Ana", text: "We should review the budget before Friday.", key: 7 }], (t += 400));
+    L.mergeCaptions(lines, [{ speaker: "Ana", text: "Completely different sentence about lunch plans today.", key: 7 }], (t += 400));
+    expect(lines.map((l) => l.text)).toEqual(["We should review the budget before Friday.", "Completely different sentence about lunch plans today."]);
+  });
 });

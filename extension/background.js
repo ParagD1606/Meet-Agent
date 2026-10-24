@@ -30,7 +30,9 @@ async function upload(payload) {
     // Only items the user approved in the side panel travel with the transcript.
     const notes = (await chrome.storage.local.get(`meeting:${key}`))[`meeting:${key}`];
     const approved = (notes?.items ?? []).filter((i) => i.status === "approved");
-    const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker, text })) };
+    const { meName } = await chrome.storage.local.get("meName");
+    const who = (n) => (meName && /^you$/i.test(n) ? meName : n);
+    const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker: who(speaker), text })), participants: (payload.participants ?? []).map(who).filter((n) => n && !/^you$/i.test(n)) };
     const decisions = approved.filter((i) => i.kind === "decision").map((i) => i.title);
     const tasks = approved.filter((i) => i.kind === "task").map((i) => ({ title: i.title, assignee: i.assignee || undefined, due: i.due || undefined, done: !!i.done }));
     if (decisions.length) body.decisions = decisions;
@@ -68,7 +70,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     settings().then(async ({ server, token }) => {
       try {
         const r = await fetch(`${server}/ext/ping`, { headers: { authorization: `Bearer ${token}` } });
-        reply({ ok: r.ok, status: r.status });
+        const j = r.ok ? await r.json().catch(() => null) : null;
+        reply({ ok: r.ok, status: r.status, name: j?.name ?? null });
       } catch (e) { reply({ ok: false, error: String(e.message ?? e) }); }
     });
     return true;

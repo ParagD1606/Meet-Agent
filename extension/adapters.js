@@ -4,6 +4,10 @@
 (() => {
   const text = (el) => (el?.textContent ?? "").replace(/\s+/g, " ").trim();
 
+  // A caption block that keeps its DOM node is the same line however the recognizer rewrites its words.
+  const keys = new WeakMap(); let nextKey = 1;
+  const blockKey = (el) => { if (!keys.has(el)) keys.set(el, nextKey++); return keys.get(el); };
+
   const adapters = {
     meet: {
       match: (h) => h === "meet.google.com",
@@ -14,14 +18,25 @@
         return !t || /^[a-z]{3}-[a-z]{4}-[a-z]{3}$/i.test(t) ? `Google Meet · ${t || this.meetingId()} · ${day}` : t;
       },
       meetingId: () => location.pathname.split("/").filter(Boolean)[0] || location.pathname,
-      // Names only: Meet does not put attendee emails in the page.
-      roster() {
+      // Names only: Meet does not put attendee emails in the page. Your own entry reads "Name (You)".
+      participantNames() {
         const list = document.querySelector('[role="list"][aria-label*="articipant" i]');
-        return [...(list?.querySelectorAll('[role="listitem"]') ?? [])]
-          .map((li) => (li.getAttribute("aria-label") || text(li.querySelector("span"))).replace(/\s*\(.*?\)\s*$/, "").trim()).filter(Boolean);
+        return [...(list?.querySelectorAll('[role="listitem"]') ?? [])].map((li) => (li.getAttribute("aria-label") || text(li.querySelector("span"))).trim()).filter(Boolean);
       },
-      captionsButton: () => document.querySelector('button[aria-label*="captions" i]'),
-      captionsOn() { return !!(document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector('div[jsname="dsyhDe"]')); },
+      roster() { return this.participantNames().map((n) => n.replace(/\s*\(.*?\)\s*$/, "").trim()).filter((n) => n && !/^you$/i.test(n)); },
+      // Captions label your own speech "You"; this is the name behind it, when the participant list is open.
+      selfName() {
+        const me = this.participantNames().find((n) => /\(you\)\s*$/i.test(n));
+        return me ? me.replace(/\s*\(.*?\)\s*$/, "").trim() || null : null;
+      },
+      // The CC button says "Turn on captions" or "Turn off captions"; that is more reliable than whether a caption is on screen right now.
+      captionsButton: () => [...document.querySelectorAll('button[aria-label*="captions" i]')].find((b) => /turn (on|off) captions/i.test(b.getAttribute("aria-label") || "")) ?? null,
+      captionsOn() {
+        const label = this.captionsButton()?.getAttribute("aria-label") || "";
+        if (/turn off/i.test(label)) return true;
+        if (/turn on/i.test(label)) return false;
+        return !!(document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector('div[jsname="dsyhDe"]'));
+      },
       enableCaptions() {
         const b = this.captionsButton();
         if (!b || !/turn on/i.test(b.getAttribute("aria-label") || "")) return false;
@@ -38,7 +53,7 @@
           if (kids.length < 2 || kids.slice(-2).some((k) => k.querySelector("div"))) continue;
           const speaker = text(kids[kids.length - 2]);
           const words = text(kids[kids.length - 1]);
-          if (words && speaker && speaker !== words) out.push({ speaker, text: words });
+          if (words && speaker && speaker !== words) out.push({ speaker, text: words, key: blockKey(block) });
         }
         return out;
       },

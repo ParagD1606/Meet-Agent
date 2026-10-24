@@ -52,9 +52,11 @@ const MAX_SOURCE_CHARS = 400_000;
 
 const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes. Work from the WHOLE text, start to end.
 Use only the supplied text. Never use outside knowledge, the company's projects, or what a meeting like this "usually" covers. If something is not written in the text, it does not exist.
+The text is usually automatic speech recognition: words can be wrong ("skating" for "scaling"), punctuation is unreliable, sentences are cut at random points, and names may be lowercase or misspelled. Read for meaning across the broken sentences, and write names with normal capitalisation.
 - "summary": concise Markdown with headings for Discussion and Open questions when applicable.
-- "decisions": every decision actually made. Each is {"text": short sentence, "quote": words copied exactly from the text that show the decision}.
+- "decisions": only where a choice was made or agreed ("we decided", "let's go with", "the plan is"). A speaker describing hopes, goals or intentions is not a decision. Each is {"text": short sentence, "quote": words copied exactly from the text that show the decision}.
 - "tasks": every commitment or assignment, however small ("X will do Y", "I'll ...", "Y is on Z", "Z to handle ..."). Each is {"title", "description", "assigneeName", "assigneeId", "dueDate", "quote"} where quote is words copied exactly from the text. Do not skip small ones, and do not add any without a quote.
+- Whenever a person is named as responsible for something ("the advertisements are handled by Parag", "technical part is done by Manas"), that is a task owned by that person, even if they are not on the call. A sentence saying who does something is never an open question.
 - assigneeName is the person who was named as doing it, matching the participant list when given; otherwise null. Never guess an owner or a due date. If a speaker's Slack user id is shown, keep it as assigneeId.
 Return JSON only: {"summary":"...","decisions":[{"text":"...","quote":"..."}],"tasks":[{"title":"...","description":"","assigneeName":null,"assigneeId":null,"dueDate":null,"quote":"..."}]}.`;
 
@@ -409,7 +411,7 @@ export async function handleMeetingTaskAction(payload: { user?: { id?: string };
 async function analyze(sourceFileId: string, text: string, participants: string[] = []): Promise<void> {
   try {
     const header = participants.length ? `Participants: ${participants.join(", ")}\n\n` : "";
-    const raw = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-MAX_SOURCE_CHARS), role: "summarize", maxOutputTokens: 2_400 }, analysisSchema);
+    const raw = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-MAX_SOURCE_CHARS), role: "main", maxOutputTokens: 2_400 }, analysisSchema);
     // Keep only what the text itself supports; an unsupported item is dropped, never "fixed".
     const src = makeSource(text);
     const firstOfEach = <T,>(items: T[], title: (t: T) => string) => items.filter((it, i) => !items.slice(0, i).some((o) => similar(title(o), title(it))));
@@ -573,14 +575,16 @@ const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. 
 Be brief and concrete, name people when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
 
 const LIVE_ANALYZE_SYSTEM = `You read the WHOLE transcript of a meeting and flag items for a human to approve. Transcript lines are numbered like [12]. Use only what is written there; never outside knowledge or what such a meeting "usually" covers.
-Return decisions that were actually made, tasks someone took on or was asked to take, and open questions nobody has answered yet.
+The transcript is usually automatic speech recognition: words can be wrong, punctuation is unreliable, sentences are cut at random points, names may be lowercase or misspelled. Read for meaning across the broken sentences and write names with normal capitalisation.
+Return decisions that were actually made (a choice made or agreed; a speaker describing hopes or intentions is not one), tasks someone took on or was assigned, and open questions nobody has answered yet.
+A sentence saying who does something ("the advertisements are handled by Parag") is a task owned by that person, even if they are not on the call; it is never an open question.
 For each item:
 - "kind": "task" | "decision" | "question".
 - "label": "confirmed" (a clear commitment or final decision), "tentative" (maybe/likely/"I'll try"), or "suggestion" (proposed, nobody agreed). Questions use "suggestion".
 - "reason": one short sentence saying why you classified it that way.
 - "quote": words copied exactly from the transcript that support it. No quote, no item.
 - "evidence": the line numbers that support it.
-- "assignee": exactly one name from the provided roster only when the transcript makes the owner clear; otherwise null. Never guess an owner.
+- "assignee": the one person the transcript names as responsible, spelled as in the roster when they are in it; otherwise null. Never guess an owner.
 - "due": an ISO date (YYYY-MM-DD) when a date was said and can be resolved from the meeting's start time (for example "next Friday"); otherwise the words that were said; otherwise null. Never invent a date.
 Do not repeat anything listed under "Already tracked". Return JSON only: {"items":[{"kind":"task","label":"confirmed","title":"...","reason":"...","quote":"...","evidence":[3],"assignee":null,"due":null}]}.`;
 
@@ -631,11 +635,11 @@ export async function askLiveMeeting(lines: LiveLine[], question: string, histor
 export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, known: string[] = []) {
   const tracked = known.length ? `\nAlready tracked:\n${known.slice(0, 100).map((k) => `- ${k}`).join("\n")}\n` : "";
   const prompt = `${contextBlock(ctx)}\n${tracked}\nTranscript so far:\n${numbered(lines)}`;
-  const out = await completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "summarize", maxOutputTokens: 1_800 }, liveAnalysisSchema);
+  const out = await completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "main", maxOutputTokens: 1_800 }, liveAnalysisSchema);
   // Keep only items whose quote is really in the transcript, evidence that points at a real line, and owners from the roster.
   const src = makeSource(lines.map((l) => `${l.speaker}: ${l.text}`).join("\n"));
-  const roster = new Map((ctx.roster ?? []).map((n) => [n.toLowerCase(), n]));
-  return { items: out.items.filter((i) => quoteSupported(src, i.quote)).map(({ quote, ...i }) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: i.assignee ? roster.get(i.assignee.toLowerCase()) ?? null : null })) };
+  const roster = ctx.roster ?? [];
+  return { items: out.items.filter((i) => quoteSupported(src, i.quote)).map(({ quote, ...i }) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: verifiedOwner(src, roster, i.assignee) })) };
 }
 
 const LIVE_NOTES_SYSTEM = `You keep running notes for a live meeting. You get the previous notes and the transcript lines added since (numbered like [12]).
