@@ -153,7 +153,7 @@ export interface MeetingItem {
 export interface MeetingCounts { confirmed: number; tentative: number; suggestions: number; questions: number; unassigned: number; noDue: number; duplicates: number; conflicts: number }
 export interface MeetingRow { id: string; title: string; platform?: string; startedAt?: string | null; status: MeetingStatus; failedReason?: string | null; counts?: Partial<MeetingCounts> }
 export interface MeetingFull extends MeetingRow {
-  summary: string | null; items: MeetingItem[]; transcript: { n: number; speaker: string; text: string }[] | null
+  summary: string | null; items: MeetingItem[]; lines: { n: number; speaker: string; text: string }[] | null; transcript?: string | null
   counts: MeetingCounts; canApprove: boolean; mode: "auto" | "approve"; autoConfidence?: number; createdAt?: string
 }
 export interface NewMeeting { title: string; text?: string; lines?: { speaker?: string; text: string }[]; format?: string; startedAt?: string; channelId?: string }
