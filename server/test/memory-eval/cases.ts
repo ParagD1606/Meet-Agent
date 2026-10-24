@@ -50,6 +50,8 @@ export type Case = {
   rewrite?: { query: string; asOf?: string };
   /** The top hit must contain this (case-insensitive). */
   first?: string;
+  /** Abstention trap: distractor facts may come back, but the retrieval-confidence signal must be "none". */
+  expectSignal?: "none";
 };
 
 const S = "shared";
@@ -68,6 +70,8 @@ const asOf = (id: number, date: string, question: string, old: [string, string],
   seed: [s(old[0], old[1]), { ...s(neu[0], neu[1]), replaces: expect }],
 });
 const none = (id: number, question: string): Case => ({ id: `abstain-${id}`, category: "abstention", scope: "pub", seed: [], question, forbid: ["*"] });
+/** Trap: the seed is about something else (shares words with the question), the question names something memory never heard of. Hits may return; the signal must be none. */
+const trap = (id: number, seed: string, question: string): Case => ({ id: `abstain-${id}`, category: "abstention", scope: "pub", seed: [s(seed)], question, expectSignal: "none" });
 const leak = (id: number, tag: string, text: string, scope: ScopeKey, question: string, secret: string): Case =>
   ({ id: `leak-${id}`, category: "scope-leak", scope, seed: [{ tag, text }], question, forbid: [secret] });
 
@@ -160,6 +164,11 @@ export const CASES: Case[] = [
   none(8, "What colour is the CTO's sailboat?"),
   none(9, "Summarise the zoology department grant proposal on axolotls."),
   none(10, "What did the board decide about the lunar base lease?"),
+  // the Berlin tautology from the real e2e run (Berlin itself is a known city in this shared corpus, so Singapore stands in): the only office facts are about other cities
+  trap(11, "The Lisbon office lease renews every March and the office is on the fourth floor", "Which city is our Singapore office in?"),
+  trap(12, "Wenceslas Marek owns the Sandpiper billing migration", "Who owns the Albatross billing migration?"),
+  trap(13, "The Nimbus pilot cohort has 40 customers on the starter plan", "How many customers are in the Stratus pilot cohort?"),
+  trap(14, "Standup for the Heron team is at 9:30 every weekday", "What time is the Kingfisher team standup?"),
 
   // ---- scope-leak: facts from another scope must never be recalled ----
   leak(1, "channel_C_PB", "The Barracuda acquisition target is Meridian Robotics at 9 million", "pub", "What is the Barracuda acquisition target?", "Meridian Robotics"),

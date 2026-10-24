@@ -107,11 +107,31 @@ export const recallLog = pgTable("recall_log", {
   messageTs: text("message_ts").notNull(),
   query: text("query").notNull(),
   hitIds: jsonb("hit_ids").$type<number[]>().notNull().default([]),
+  /** Answer-quality diagnostics (0020): top candidates' rank / RRF score / cosine, the rewritten query, the retrieval-confidence signal, packed tokens, turn depth. */
+  ranks: jsonb("ranks").$type<{ id: number; rank: number }[]>(),
+  scores: jsonb("scores").$type<{ id: number; score: number; sim?: number }[]>(),
+  rewrittenQuery: text("rewritten_query"),
+  abstainSignal: text("abstain_signal"),
+  packTokens: integer("pack_tokens"),
+  depth: text("depth"),
   createdAt: ts("created_at"),
 }, (t) => [
   index("recall_log_thread_idx").on(t.channelId, t.threadKey),
   index("recall_log_created_idx").on(t.createdAt),
 ]);
+
+/** What the deterministic answer guards did to a turn's reply (grounding signal, abstention, stripped links, tautology / receipt blocks, escalation). */
+export const answerChecks = pgTable("answer_checks", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  turnId: text("turn_id").notNull(),
+  at: ts("at"),
+  signal: text("signal"),
+  abstained: boolean("abstained").notNull().default(false),
+  strippedLinks: integer("stripped_links").notNull().default(0),
+  tautologyBlocked: boolean("tautology_blocked").notNull().default(false),
+  receiptMismatch: boolean("receipt_mismatch").notNull().default(false),
+  escalated: boolean("escalated").notNull().default(false),
+}, (t) => [index("answer_checks_turn_idx").on(t.turnId), index("answer_checks_at_idx").on(t.at)]);
 
 export const memoryEdges = pgTable("memory_edges", {
   fromId: bigint("from_id", { mode: "number" }).notNull(),

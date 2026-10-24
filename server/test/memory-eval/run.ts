@@ -47,7 +47,7 @@ export async function seedCorpus() {
   clearRecallCache();
 }
 
-export type CaseResult = { id: string; category: Category; pass: boolean; leaked: boolean; ms: number; hits: string[]; recall: Recall };
+export type CaseResult = { id: string; category: Category; pass: boolean; leaked: boolean; ms: number; hits: string[]; recall: Recall; /** the case wants an abstention (nothing relevant exists / may be seen) */ wantsNone: boolean; signal: string };
 
 const has = (texts: string[], sub: string) => texts.some((t) => t.toLowerCase().includes(sub.toLowerCase()));
 
@@ -61,7 +61,10 @@ export async function runCase(c: Case): Promise<CaseResult> {
   const leaked = forbid.some((f) => (f === "*" ? hits.length > 0 : has(hits, f)));
   const found = (c.expect ?? []).every((e) => has(top, e));
   const firstOk = !c.first || has(hits.slice(0, 1), c.first);
-  return { id: c.id, category: c.category, pass: found && firstOk && !leaked, leaked, ms, hits, recall };
+  const signal = recall.signal?.level ?? "none";
+  // abstention cases, and scope-leak cases whose only matching fact lives in a scope the asker cannot read (entleak-* keep public facts and stay answerable)
+  const wantsNone = c.category === "abstention" || (c.id.startsWith("leak-") && !c.expect?.length);
+  return { id: c.id, category: c.category, pass: c.expectSignal ? signal === c.expectSignal : found && firstOk && !leaked, leaked, ms, hits, recall, wantsNone, signal };
 }
 
 export async function runAll(): Promise<CaseResult[]> {
@@ -81,12 +84,22 @@ export function summarize(results: CaseResult[]) {
     counts[cat] = rs.length;
     recall[cat] = round(rs.filter((r) => r.pass).length / (rs.length || 1));
   }
+  // retrieval-confidence signal: "none" should fire exactly on the cases that want an abstention
+  const flagged = results.filter((r) => r.signal === "none");
+  const abstain = {
+    precision: round(flagged.filter((r) => r.wantsNone).length / (flagged.length || 1)),
+    recall: round(flagged.filter((r) => r.wantsNone).length / (results.filter((r) => r.wantsNone).length || 1)),
+    falseAbstain: results.filter((r) => !r.wantsNone && r.signal === "none").map((r) => r.id),
+    missed: results.filter((r) => r.wantsNone && r.signal !== "none").map((r) => r.id),
+    levels: Object.fromEntries(["strong", "weak", "none"].map((l) => [l, results.filter((r) => r.signal === l).length])),
+  };
   const ms = results.map((r) => r.ms).sort((a, b) => a - b);
   return {
     k: K,
     cases: results.length,
     counts,
     recall,
+    abstain,
     scopeLeakFailures: results.filter((r) => r.category === "scope-leak" && r.leaked).length,
     latencyMs: { mean: round(ms.reduce((a, b) => a + b, 0) / (ms.length || 1)), p95: round(ms[Math.floor(ms.length * 0.95)] ?? 0) },
     failed: results.filter((r) => !r.pass).map((r) => r.id),

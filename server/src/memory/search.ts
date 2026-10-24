@@ -23,6 +23,13 @@ export type MemoryHit = {
   lastAccessedAt: Date | null;
   createdBy: string | null;
   permalink: string | null;
+  /** Cosine to the query when the hit came from the vector list (undefined for keyword/entity-only hits). Feeds the retrieval-confidence signal. */
+  sim?: number;
+  /** true when the hit matched the query by keyword (AND tsquery) or by name/id trigram. */
+  lexical?: boolean;
+  /** Set by recall for rendering: canonical names of the entities the fact mentions, and the channel name its scope maps to. */
+  entities?: string[];
+  channel?: string;
 };
 
 export const DEFAULT_LIMIT = 40;
@@ -122,15 +129,17 @@ export async function searchMemory(a: { tags: string[]; query: string; limit?: n
   }
 
   const fused = new Map<number, { row: Row; s: number }>();
+  const lexical = new Set<number>();
   const add = (row: Row, rank: number) => {
     const cur = fused.get(row.id);
     const s = 1 / (RRF_K + rank + 1);
     if (cur) cur.s += s;
     else fused.set(row.id, { row, s });
   };
+  const sims = new Map(vectorRows.map((r) => [r.id, Number(r.sim)]));
   vectorRows.forEach((r, i) => { const sim = Number(r.sim); if (sim >= STRONG_SIMILARITY || (sim >= SIMILARITY_THRESHOLD && r.lex)) add(r, i); });
-  ftsRows.forEach((r, i) => add(r, i));
-  trgmRows.forEach((r, i) => add(r, i));
+  ftsRows.forEach((r, i) => { lexical.add(r.id); add(r, i); });
+  trgmRows.forEach((r, i) => { lexical.add(r.id); add(r, i); });
   for (const list of expanded) list.forEach((r, i) => add(r, i));
 
   const max = 2 / (RRF_K + 1);
@@ -139,6 +148,6 @@ export async function searchMemory(a: { tags: string[]; query: string; limit?: n
     .slice(0, limit)
     .map(({ row, s }) => {
       const { sim: _sim, lex: _lex, ...rest } = row as typeof row & { sim?: number; lex?: boolean };
-      return { ...rest, score: Math.min(1, s / max) };
+      return { ...rest, score: Math.min(1, s / max), sim: sims.get(row.id), lexical: lexical.has(row.id) };
     });
 }

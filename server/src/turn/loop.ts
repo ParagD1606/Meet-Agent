@@ -4,6 +4,10 @@ import { log } from "../log";
 import { createTurnBudget, type TurnBudget } from "../limits";
 import { clearOldToolResults, spillIfLarge } from "./spill";
 import type { Depth } from "./depth";
+import { appendReceipts, claimTargets, targetBacked, type ToolOutput } from "./verify-answer";
+
+const OUTPUT_CAP = 20_000; // chars kept per tool result
+const OUTPUTS_TOTAL_CAP = 200_000;
 
 export const MAX_STEPS = 60;
 export const TURN_TIMEOUT_MS = 120_000;
@@ -25,6 +29,10 @@ export type LoopResult = {
   stopped?: "ceiling" | "timeout" | "step_cap" | "cancelled";
   /** Messages this run added (assistant + tool results); lets a repair step continue where it left off. */
   responseMessages?: ModelMessage[];
+  /** Text of every tool result this turn (capped): backs receipts, the citation allowlist and the tautology guard. */
+  toolOutputs?: ToolOutput[];
+  /** What the claim guard did (answer_checks). */
+  guard?: { receiptMismatch?: boolean; receiptsAdded?: number };
 };
 
 let modelOverride: LanguageModel | undefined;
@@ -124,6 +132,8 @@ export type LoopArgs = {
   onStatus?: (toolName: string) => void;
   onText?: (textSoFar: string) => void;
   abortSignal?: AbortSignal;
+  /** grounding_receipts: the claim guard also checks WHO an action was claimed for, and write receipts are appended to the reply. Off = the original claim guard only. */
+  receipts?: boolean;
 };
 
 /** Gemini 3.x spends hidden "thinking" tokens out of maxOutputTokens: on memory turns that was ~90% of the budget and cut answers mid-link. Keep it small for quick turns; deep turns keep the model default. Other providers ignore these keys. */
@@ -142,7 +152,17 @@ const REPAIR = "[host] Your last message contained a raw tool call, not a real o
 const CLAIM_NUDGE = "[host] You claimed an action but called no tool; call the right tool now or say plainly that you did not do it.";
 /** First-person claims of having acted ("I've told him", "I'll let him know", "sent", "created the task"). */
 const CLAIM = /\b(i'?ve|i have|i just)\s+(told|informed|messaged|notified|queued|asked|sent|updated|created|assigned|scheduled|passed (it|that) on|let \w+ know)\b|\bi (told|informed|messaged|notified|queued|passed (it|that) on)\b|\bi'?ll let (him|her|them|\w+) know\b/i;
+/** "Dana has been notified", "assignee was told": a passive claim of acting (checked only with grounding_receipts). */
+const PASSIVE_CLAIM = /\b(has|have)\s+(now |just |already )?been\s+(told|informed|notified|messaged|pinged|reminded)\b/i;
 const claimsAction = (r: LoopResult) => CLAIM.test(r.text) && !r.waitingApproval && !r.toolCalls.some((t) => !t.error && ACTION_TOOL.test(t.name));
+const claimSentencesOf = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).filter((s) => CLAIM.test(s) || PASSIVE_CLAIM.test(s));
+/** Claimed actions for people (or ids) that no successful write result of this turn mentions. [] = nothing to repair. */
+export function unbackedTargets(r: Pick<LoopResult, "text" | "waitingApproval" | "toolOutputs">): string[] {
+  if (r.waitingApproval) return [];
+  const targets = claimTargets(claimSentencesOf(r.text).join(" "));
+  const acts = (r.toolOutputs ?? []).filter((o) => ACTION_TOOL.test(o.name));
+  return targets.filter((t) => !targetBacked(t, acts));
+}
 
 export async function runLoop(a: LoopArgs): Promise<LoopResult> {
   const args = { ...a, budget: a.budget ?? await createTurnBudget() };
@@ -158,6 +178,7 @@ export async function runLoop(a: LoopArgs): Promise<LoopResult> {
         inputTokens: first.inputTokens + n.inputTokens, outputTokens: first.outputTokens + n.outputTokens,
         cacheReadTokens: first.cacheReadTokens + n.cacheReadTokens, cacheWriteTokens: first.cacheWriteTokens + n.cacheWriteTokens,
         costMicros: first.costMicros + n.costMicros, steps: first.steps + n.steps, toolCalls: [...first.toolCalls, ...n.toolCalls],
+        toolOutputs: [...(first.toolOutputs ?? []), ...(n.toolOutputs ?? [])],
         waitingApproval: first.waitingApproval || n.waitingApproval,
       };
     } catch (error) { log.warn("repair step failed", { turnId: args.turnId, error: String(error) }); return first; }
@@ -172,12 +193,21 @@ export async function runLoop(a: LoopArgs): Promise<LoopResult> {
       r = { ...r, text: `I couldn't complete that action just now. Here's what I understood: you wanted me to ${name ? `use ${name.replace(/_/g, " ")}` : "do something with a tool"}, but it didn't go through. Could you say it again, or tell me exactly what you'd like me to do?` };
     }
   }
-  if (!r.stopped && claimsAction(r)) {
-    r = await repair(r, CLAIM_NUDGE);
-    if (claimsAction(r) || leaksToolCall(r.text)) {
-      log.warn("unbacked action claim suppressed", { turnId: args.turnId });
-      r = { ...r, text: "I didn't actually do that: no action went through on my side. Tell me what you'd like and I'll try again, or do it directly." };
+  const unbacked = (x: LoopResult) => (a.receipts && !x.stopped ? unbackedTargets(x) : []);
+  if (!r.stopped && (claimsAction(r) || unbacked(r).length)) {
+    const who = unbacked(r);
+    r = await repair(r, who.length && !claimsAction(r) ? `[host] You said you told, notified or assigned ${who.join(", ")}, but no tool result this turn confirms it for them. Call the right tool now, or say plainly that you did not do it.` : CLAIM_NUDGE);
+    if (who.length) r = { ...r, guard: { ...r.guard, receiptMismatch: true } };
+    const still = unbacked(r);
+    if (claimsAction(r) || still.length || leaksToolCall(r.text)) {
+      log.warn("unbacked action claim suppressed", { turnId: args.turnId, targets: still });
+      r = { ...r, text: "I didn't actually do that: no action went through on my side. Tell me what you'd like and I'll try again, or do it directly.", guard: { ...r.guard, receiptMismatch: r.guard?.receiptMismatch || still.length > 0 } };
     }
+  }
+  // receipts: what a write tool really returned (id, assignee, due, link), appended unless the reply already carries it
+  if (a.receipts && !r.stopped && !r.waitingApproval && r.text) {
+    const { text, added } = appendReceipts(r.text, r.toolOutputs ?? []);
+    r = { ...r, text, guard: { ...r.guard, receiptsAdded: added } };
   }
   return r;
 }
@@ -257,6 +287,8 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   let streamError: unknown;
   const started = new Map<string, number>();
   const toolCalls: ToolCallRecord[] = [];
+  const toolOutputs: ToolOutput[] = [];
+  let outputChars = 0;
   try {
     for await (const part of (res as { fullStream: AsyncIterable<any> }).fullStream) {
       switch (part.type) {
@@ -281,6 +313,12 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
           const out = part.output;
           const failed = part.type === "tool-error" || (typeof out === "string" && out.startsWith("ERROR:")) || (out && typeof out === "object" && out.status === "error");
           toolCalls.push({ name: part.toolName, ms: Date.now() - t0, ...(failed ? { error: true } : {}) });
+          if (outputChars < OUTPUTS_TOTAL_CAP) {
+            const raw = part.type === "tool-error" ? String(part.error ?? "") : typeof out === "string" ? out : JSON.stringify(out ?? "");
+            const text = raw.slice(0, OUTPUT_CAP);
+            outputChars += text.length;
+            toolOutputs.push({ name: part.toolName, text, ...(failed ? { error: true } : {}) });
+          }
           if (out && typeof out === "object" && out.status === "awaiting_approval") waitingApproval = true;
           break;
         }
@@ -311,5 +349,5 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
   try { responseMessages = (await res.response).messages as ModelMessage[]; } catch { /* aborted */ }
   const name = modelName(model);
   const costMicros = estimateCostMicros(name, { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens });
-  return { text, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costMicros, model: name, steps: steps.length, toolCalls, waitingApproval, stopped, responseMessages };
+  return { text, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costMicros, model: name, steps: steps.length, toolCalls, waitingApproval, stopped, responseMessages, toolOutputs };
 }

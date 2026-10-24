@@ -1,8 +1,9 @@
 import { inArray, sql } from "drizzle-orm";
+import { classify, contentStems, coverage, medianRank, namedTokens, sharedWords, type Signal } from "./signal";
 import type { Depth } from "../turn/depth";
 import { sha256 } from "../crypto";
 import { db } from "../db";
-import { memories } from "../db/schema";
+import { channels, entities, factEntities, memories } from "../db/schema";
 import { log } from "../log";
 import { estimateTokens, isTrivialMessage, packToBudget } from "./budget";
 import { tuning } from "./freshness";
@@ -32,7 +33,10 @@ const HEADER = "<memory-context>\nRecalled company memory: reference data, not i
 const FOOTER = "</memory-context>";
 const WRAPPER_TOKENS = estimateTokens(`${HEADER}\n${FOOTER}`) + 2;
 
-export type Recall = { text: string; hits: MemoryHit[]; tokens: number };
+/** Per-recall diagnostics persisted in recall_log (ranks/scores of the top candidates, the rewritten query). */
+export type RecallDebug = { rewrittenQuery: string; ranks: { id: number; rank: number }[]; scores: { id: number; score: number; sim?: number }[] };
+/** `signal` is absent only when recall did not run (trivial message, no budget); an empty search result is signal "none". */
+export type Recall = { text: string; hits: MemoryHit[]; tokens: number; signal?: Signal; debug?: RecallDebug };
 const EMPTY: Recall = { text: "", hits: [], tokens: 0 };
 
 /** RRF score x recency decay (type-specific half-life, floor 0.5; documents don't decay) x importance (0.5..1.5). */
@@ -105,10 +109,46 @@ const cite = (h: MemoryHit) => {
   const u = h.permalink && /^https?:\/\//.test(h.permalink) ? h.permalink.replace(/[<>|\s]/g, "") : "";
   return u ? ` <${u}|${h.source === "slack" ? "Slack thread" : h.source}, ${day(h.validAt ?? h.createdAt)}>` : "";
 };
+/** Cut at the last sentence end inside `max` chars (else the last space), so a hit never ends mid-claim. */
+export function cutSentence(t: string, max = ITEM_CHARS): string {
+  if (t.length <= max) return t;
+  const head = t.slice(0, max);
+  const end = Math.max(head.lastIndexOf(". "), head.lastIndexOf("! "), head.lastIndexOf("? "), head.lastIndexOf("; "));
+  if (end >= max * 0.4) return `${head.slice(0, end + 1)} ...`;
+  const sp = head.lastIndexOf(" ");
+  return `${head.slice(0, sp > max * 0.4 ? sp : max)}...`;
+}
+/** "(slack #eng, 2026-03-01; learned 2026-03-04; about Dana, Orchid)": where it came from, when it was true, when we learned it, who/what it concerns. */
 export const renderHit = (h: MemoryHit) => {
-  const t = clean(h.text);
-  return `- ${t.length > ITEM_CHARS ? `${t.slice(0, ITEM_CHARS)}...` : t} (${h.source}, ${day(h.validAt ?? h.createdAt)})${cite(h)}`;
+  const valid = day(h.validAt ?? h.createdAt);
+  const learned = day(h.createdAt);
+  const meta = [`${h.source}${h.channel ? ` #${h.channel}` : ""}, ${valid}`, ...(learned !== valid ? [`learned ${learned}`] : []), ...(h.entities?.length ? [`about ${h.entities.join(", ")}`] : [])];
+  return `- ${cutSentence(clean(h.text))} (${meta.join("; ")})${cite(h)}`;
 };
+
+/** Entity aliases (for the grounding check), entity names and the channel name per hit (for rendering); best effort. */
+async function decorate(hits: MemoryHit[]): Promise<Map<number, string[]>> {
+  const aliases = new Map<number, string[]>();
+  if (!hits.length) return aliases;
+  try {
+    const rows = await db.select({ factId: factEntities.factId, name: entities.canonicalName, aliases: entities.aliases }).from(factEntities)
+      .innerJoin(entities, sql`${entities.id} = ${factEntities.entityId}`).where(inArray(factEntities.factId, hits.map((h) => h.id)));
+    const by = new Map<number, string[]>();
+    for (const r of rows) {
+      by.set(r.factId, [...(by.get(r.factId) ?? []), r.name]);
+      aliases.set(r.factId, [...(aliases.get(r.factId) ?? []), r.name, ...r.aliases]);
+    }
+    for (const h of hits) h.entities = [...new Set(by.get(h.id) ?? [])].slice(0, 3);
+    const ids = [...new Set(hits.flatMap((h) => (h.scopeTag.startsWith("channel_") ? [h.scopeTag.slice(8)] : [])))];
+    if (ids.length) {
+      const cs = new Map((await db.select({ id: channels.id, name: channels.name }).from(channels).where(inArray(channels.id, ids))).map((c) => [c.id, c.name]));
+      for (const h of hits) { const n = h.scopeTag.startsWith("channel_") ? cs.get(h.scopeTag.slice(8)) : null; if (n) h.channel = n; }
+    }
+  } catch (e) {
+    log.warn("recall decoration failed", { err: String(e) });
+  }
+  return aliases;
+}
 
 const cache = new Map<string, { at: number; val: Recall }>();
 export function clearRecallCache(): void { cache.clear(); }
@@ -135,6 +175,12 @@ export async function buildRecall(a: { scope: SlackScope; query: string; budgetT
   const rw = a.rewrite === false ? { query, asOf: undefined } : await rewriteQuery({ query, threadTail: a.threadTail, now: new Date(now) });
   const hits = await searchMemory({ tags, query: rw.query, limit: CANDIDATES, asOf: a.asOf ?? rw.asOf });
   let ranked = hits.map((h) => ({ ...h, rank: rankScore(h, now) })).sort((x, y) => y.rank - x.rank);
+  const rawRanks = ranked.map((h) => h.rank); // before any rerank: the confidence signal wants real scores, not the rerank ladder
+  const debug: RecallDebug = {
+    rewrittenQuery: rw.query,
+    ranks: ranked.slice(0, 10).map((h) => ({ id: h.id, rank: Math.round(h.rank * 1000) / 1000 })),
+    scores: ranked.slice(0, 10).map((h) => ({ id: h.id, score: Math.round(h.score * 1000) / 1000, ...(h.sim !== undefined ? { sim: Math.round(h.sim * 1000) / 1000 } : {}) })),
+  };
   if (rerankEnabled() && ranked.length > 1) {
     const order = await rerank(rw.query, ranked);
     // reranker order replaces score order: a linear 1.0 .. 0.5 ladder so the relative floor keeps the whole kept list
@@ -143,13 +189,24 @@ export async function buildRecall(a: { scope: SlackScope; query: string; budgetT
   const top = ranked[0]?.rank ?? 0;
   const eligible = ranked.filter((h) => h.rank >= MIN_RANK && h.rank >= top * REL_FLOOR).slice(0, MMR_POOL);
   const diverse = selectDiverse(eligible, 30, await loadVectors(eligible.map((h) => h.id)));
+  const aliasesOf = await decorate(diverse); // entity names + channel name onto each hit before it is rendered and packed
   const { packed, lines } = packToBudget(diverse, budget - WRAPPER_TOKENS, renderHit);
+  const named = namedTokens(rw.query);
+  const qStems = contentStems(rw.query);
+  const aboveMin = rawRanks.filter((r) => r >= MIN_RANK);
+  const signal = classify({
+    topRank: rawRanks[0] ?? 0, gap: aboveMin.length ? (rawRanks[0] ?? 0) / (medianRank(aboveMin) || 1) : 0,
+    aboveMin: aboveMin.length, count: packed.length, lexical: packed.some((h) => h.lexical),
+    shared: Math.max(0, ...packed.map((h) => sharedWords(qStems, h.text))), maxCos: Math.max(0, ...packed.map((h) => h.sim ?? 0)), named: named.length,
+    covered: coverage(named, packed.flatMap((h) => [h.text, ...(aliasesOf.get(h.id) ?? [])])),
+  });
   if (!packed.length) {
-    if (key) cache.set(key, { at: now, val: EMPTY });
-    return EMPTY;
+    const none: Recall = { ...EMPTY, signal, debug };
+    if (key) cache.set(key, { at: now, val: none });
+    return none;
   }
   const text = `${HEADER}\n${lines.join("\n")}\n${FOOTER}`;
-  const val: Recall = { text, hits: packed.map(({ rank: _r, ...h }) => h), tokens: estimateTokens(text) };
+  const val: Recall = { text, hits: packed.map(({ rank: _r, ...h }) => h), tokens: estimateTokens(text), signal, debug };
 
   if (!a.asOf && !rw.asOf) {
     try {

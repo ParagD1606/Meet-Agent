@@ -15,6 +15,7 @@ import { openDm, postMessage } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
 import { withAliases } from "./ask-teammate";
 import { proposeConfirmWrite } from "./confirm-write";
+import { withReceipt } from "./verify-answer";
 import type { ToolContext } from "./tools";
 
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "no due date");
@@ -73,7 +74,10 @@ export function taskTools(ctx: ToolContext): ToolSet {
           const r = await notifyTaskOwner(row, { assignerId: ctx.userId });
           told = r === "thread" ? "mentioned in this thread" : r === "dm" ? "sent a DM" : "could not be notified";
         }
-        return `${created ? "Created" : "Updated existing"} task ${row.id}: "${row.text}" for <@${p.id}>, due ${day(row.dueAt)}${row.priority === "urgent" ? ", URGENT" : ""}; assignee ${told}. It is in the Tasks tab and memory.`;
+        return withReceipt(
+          `${created ? "Created" : "Updated existing"} task ${row.id}: "${row.text}" for <@${p.id}>, due ${day(row.dueAt)}${row.priority === "urgent" ? ", URGENT" : ""}; assignee ${told}. It is in the Tasks tab and memory.`,
+          row.id, `${created ? "Created" : "Updated"} task ${row.id} "${row.text}" for ${p.name ?? p.id} (${p.id}), due ${day(row.dueAt)}${row.priority === "urgent" ? ", urgent" : ""}, assignee ${told}${permalink ? `, ${permalink}` : ""}`,
+        );
       },
     }),
     update_task: tool({
@@ -116,7 +120,10 @@ export function taskTools(ctx: ToolContext): ToolSet {
         const r = await changeTask(target.id, { status, ownerId: newOwner, due: dueAt, priority }, { id: ctx.userId, admin: await isAdmin(ctx.userId) });
         if (!r.ok) return r.error === "forbidden" ? `Not allowed: ${r.message ?? "only the task's owner, its assigner or an admin can change it"}. Tell the asker plainly.` : `ERROR: ${r.message ?? r.error}`;
         const a = r.row;
-        return `Task ${a.id} "${a.text}" is now ${a.status}${a.priority === "urgent" ? " (urgent)" : ""}, owner ${a.ownerName ?? a.ownerId ?? "nobody"}, due ${day(a.dueAt)}.${status === "done" && a.assignerId && a.assignerId !== ctx.userId ? " The assigner was told." : ""} Tasks tab and memory updated.`;
+        return withReceipt(
+          `Task ${a.id} "${a.text}" is now ${a.status}${a.priority === "urgent" ? " (urgent)" : ""}, owner ${a.ownerName ?? a.ownerId ?? "nobody"}, due ${day(a.dueAt)}.${status === "done" && a.assignerId && a.assignerId !== ctx.userId ? " The assigner was told." : ""} Tasks tab and memory updated.`,
+          a.id, `Task ${a.id} "${a.text}" is now ${a.status}${a.priority === "urgent" ? " (urgent)" : ""}, owner ${a.ownerName ?? a.ownerId ?? "nobody"}, due ${day(a.dueAt)}`,
+        );
       },
     }),
     notify_teammate: tool({
@@ -150,12 +157,12 @@ export function taskTools(ctx: ToolContext): ToolSet {
         try {
           if (inChannel) {
             await postMessage({ channel: ctx.channelId, thread_ts: ctx.threadTs ?? ctx.messageTs, text: sanitizeForSlack(`<@${p.id}> ${text}`) });
-            return `Posted your message to <@${p.id}> in this thread.`;
+            return withReceipt(`Posted your message to <@${p.id}> in this thread.`, `${p.name ?? p.id}/${p.id}`, `Message to ${p.name ?? p.id} (${p.id}) posted in this thread`);
           }
           const dm = await openDm(p.id);
           if (!dm) return "ERROR: could not open a DM with that person.";
           await postMessage({ channel: dm, text: sanitizeForSlack(`From ${from} via Pixel: ${text}`) });
-          return `Sent <@${p.id}> a DM: "From ${from} via Pixel: ${text}".`;
+          return withReceipt(`Sent <@${p.id}> a DM: "From ${from} via Pixel: ${text}".`, `${p.name ?? p.id}/${p.id}`, `Message to ${p.name ?? p.id} (${p.id}) sent by DM`);
         } catch (e) { return `ERROR: could not deliver the message (${String(e).slice(0, 100)}).`; }
       },
     }),

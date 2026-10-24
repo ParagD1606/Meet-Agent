@@ -5,7 +5,7 @@
     "multi-session": 1,
     "temporal": 1,
     "knowledge-update": 1,
-    "abstention": 0.9,
+    "abstention": 0.929,
     "scope-leak": 1,
     "follow-up": 1,
     "lookup": 1,

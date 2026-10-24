@@ -30,6 +30,14 @@ describe("memory eval", () => {
     for (const cat of CATEGORIES) expect(summary.counts[cat]).toBeGreaterThanOrEqual(5);
   });
 
+  test("retrieval-confidence signal: 'none' precision >= 0.9 on the abstention cases, no answerable case is abstained", () => {
+    if (process.env.PRINT_SIGNAL) for (const r of results) console.log(`${r.id.padEnd(14)} ${r.signal.padEnd(6)} ${r.wantsNone ? "ABSTAIN" : "answer "} ${r.recall.signal?.reason} ${JSON.stringify(r.recall.signal?.features)}`);
+    if (process.env.PRINT_SIGNAL) console.log(JSON.stringify(summary.abstain), JSON.stringify(summary.recall), summary.failed);
+    expect(summary.abstain.precision).toBeGreaterThanOrEqual(0.9);
+    expect(summary.abstain.falseAbstain).toEqual([]);
+    expect(summary.abstain.recall).toBeGreaterThanOrEqual(0.9);
+  });
+
   test("scope-leak failures == 0", () => {
     expect(results.filter((r) => r.category === "scope-leak" && r.leaked).map((r) => r.id)).toEqual([]);
   });

@@ -18,6 +18,7 @@ A Slack teammate that remembers what your team says, answers from it, and acts i
 | [consolidation](consolidation.md) | nightly memory clean-up, the review queue and undo |
 | [tokens-and-limits](tokens-and-limits.md) | control cost and understand rate limits |
 | [operations](operations.md) | jobs and schedules, retention, logs, `/readyz`, deploy and rollback |
+| [grounding](grounding.md) | how Pixel decides to answer or abstain, the confidence signal, guards, flags, `answer_checks` |
 | [troubleshooting](troubleshooting.md) | symptom, cause, fix |
 | [replay-suite](replay-suite.md) | regression tests built from real Slack bugs |
 | [jira-plan](jira-plan.md) | the planned (not built) live Jira integration |

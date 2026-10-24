@@ -119,15 +119,21 @@ describe("helpers", () => {
 });
 
 describe("recall_log", () => {
-  test("a turn that recalls memory logs query + hit ids; no hits, no row", async () => {
+  test("a turn that recalls memory logs query + hit ids + diagnostics; no hits logs an abstain_signal 'none' row", async () => {
     const id = await seedMemory("shared", "The launch plan is to ship on Friday");
     await buildContext(input("U1"), ctxOf("U1"));
     const rows = await db.select().from(recallLog);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ channelId: "C1", threadKey: "100.0", messageTs: "200.0", query: "what is the launch plan?", hitIds: [id] });
+    expect(rows[0]!.abstainSignal).toBeTruthy();
+    expect(rows[0]!.rewrittenQuery).toBeTruthy();
+    expect(rows[0]!.packTokens).toBeGreaterThan(0);
+    expect(rows[0]!.ranks!.length).toBeGreaterThan(0);
     await resetDb();
     await buildContext(input("U1", "zzz qqq unrelated"), ctxOf("U1"));
-    expect(await db.select().from(recallLog)).toHaveLength(0);
+    const none = await db.select().from(recallLog);
+    expect(none).toHaveLength(1);
+    expect(none[0]).toMatchObject({ hitIds: [], abstainSignal: "none" });
   });
 
   test("a failing insert never throws", async () => {

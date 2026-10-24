@@ -11,6 +11,8 @@ import { breakdown, estimateTokens, type Breakdown } from "../memory/budget";
 import { getCoreBlocks } from "../memory/core-blocks";
 import { buildRecall, clearRecallCache, recallBudget, type Recall } from "../memory/recall";
 import { isExternalSource } from "../sync/types";
+import type { Signal } from "../memory/signal";
+import type { MemoryHit } from "../memory/search";
 import { getWorkspacePrompt, skillsPromptSection } from "../skills/skills";
 import { botUserId } from "../slack/client";
 import type { TurnInput } from "./index";
@@ -201,9 +203,12 @@ function userBlock(p: UserPart | undefined): string {
 }
 
 /** Best-effort: records which memory ids a turn recalled. Never throws; a failed insert is only logged. */
-export async function logRecall(i: TurnInput, threadKey: string, hitIds: number[]): Promise<void> {
+export async function logRecall(i: TurnInput, threadKey: string, hitIds: number[], r?: Recall, depth?: string): Promise<void> {
   try {
-    await db.insert(recallLog).values({ channelId: i.channelId, threadKey, messageTs: i.ts, query: i.text.slice(0, 500), hitIds });
+    await db.insert(recallLog).values({
+      channelId: i.channelId, threadKey, messageTs: i.ts, query: i.text.slice(0, 500), hitIds,
+      ...(r ? { ranks: r.debug?.ranks, scores: r.debug?.scores, rewrittenQuery: r.debug?.rewrittenQuery, abstainSignal: r.signal?.level, packTokens: r.tokens, depth } : {}),
+    });
   } catch (e) {
     log.warn("recall log failed", { error: String(e) });
   }
@@ -229,6 +234,10 @@ export type BuiltContext = {
   compactHistory: HistoryItem[];
   tokens: number;
   breakdown: Breakdown;
+  /** Retrieval confidence of this turn's recall (undefined when recall did not run). */
+  signal?: Signal;
+  /** The recalled hits (permalink allowlist, tautology support). */
+  recallHits: MemoryHit[];
 };
 
 export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall?: boolean; historyTokens?: number }): Promise<BuiltContext> {
@@ -255,7 +264,7 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
         const r2 = await buildRecall({ scope: ctx.scope, query: topic, threadKey: `${threadKey}|topic`, budgetTokens: recallBudget(ctx.depth), rewrite: false });
         if (r2.hits.length > r.hits.length) r = r2;
       }
-      if (r.hits.length) await logRecall(i, threadKey, r.hits.map((h) => h.id));
+      if (r.hits.length || r.signal) await logRecall(i, threadKey, r.hits.map((h) => h.id), r, ctx.depth); // a "none" recall is logged too: that is the abstention evidence
       return r;
     }).catch((e) => {
       log.warn("memory unavailable for turn", { error: String(e) });
@@ -286,5 +295,5 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
     coreBlocks: frozenPrefixBlocks.join("\n\n"), history: historyText, recall: recall.text + recentChannelText, user: i.text,
   });
   const recallExternal = "hits" in recall && (recall as Recall).hits.some((h) => isExternalSource(h.source));
-  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, recentChannelText, recallExternal, recentForeign: !!recentChannelText && !!recentLines.foreign, foreignThreadText, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd };
+  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, recentChannelText, recallExternal, recentForeign: !!recentChannelText && !!recentLines.foreign, foreignThreadText, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd, signal: "signal" in recall ? (recall as Recall).signal : undefined, recallHits: "hits" in recall ? (recall as Recall).hits : [] };
 }

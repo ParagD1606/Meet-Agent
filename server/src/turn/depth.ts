@@ -74,6 +74,23 @@ export function heuristicDepth(i: DepthInput): Depth | null {
   return null;
 }
 
+const FACT_START = /^(what|who|whom|whose|when|where|why|how|which|is|are|was|were|does|do|did|has|have|had)\b/i;
+const FACT_ASK = /^(tell me|explain|do you know|any idea|i need to know|remind me (what|who|when|where))\b/i;
+const REQUEST_START = /^(can|could|would|will) you\b|^please\b/i;
+const IMPERATIVE = /\b(assign|reassign|notify|remind me to|schedule|create|send|forward|post|ping|dm|let \S+ know|tell \S+ (to|that)|ask \S+ (to|if|about)|make sure|follow[- ]?up with)\b/i;
+/**
+ * A factual question about company knowledge ("who owns billing?", "which city is our Berlin office in?"): the only turns where
+ * "memory has nothing" must produce an honest "I don't have that" instead of a guess. Not greetings, small talk, task actions,
+ * requests, corrections, saves, or messages that carry a URL (those are answered from the link / a tool).
+ */
+export function isFactualQuestion(text: string): boolean {
+  const t = strip(text);
+  if (!t || t.length > 500 || URL_RE.test(t)) return false;
+  if (SMALL_TALK.test(t) || REQUEST_START.test(t) || SAVE_MEMORY_RE.test(t) || CORRECTION_RE.test(t) || CONTINUE.test(t)) return false;
+  if (IMPERATIVE.test(t)) return false;
+  return FACT_START.test(t) || FACT_ASK.test(t) || (t.includes("?") && t.length <= 300);
+}
+
 export type DepthClassifier = (text: string, signal: AbortSignal) => Promise<string>;
 const defaultClassifier: DepthClassifier = async (text, signal) =>
   (await generateText({

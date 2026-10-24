@@ -4,6 +4,7 @@ import { createFollowUp, FollowUpError, proposeFollowUp } from "../manager/follo
 import { searchPeople } from "../slack/people";
 import { withAliases } from "./ask-teammate";
 import type { ToolContext } from "./tools";
+import { withReceipt } from "./verify-answer";
 
 /**
  * "Remind me Friday to check with Dana" / "follow up with @Bob on the invoice in 3 days". No approval card: a reminder only DMs
@@ -35,7 +36,8 @@ export function scheduleFollowUpTool(ctx: ToolContext) {
           await proposeFollowUp(f);
           return `Posted a consent card asking the asker whether to follow up with <@${f.targetId}> on ${f.dueAt.toISOString()}. Nothing is sent until they click yes; tell them briefly you are waiting for their OK.`;
         }
-        return `Scheduled ${f.id}: DM to the asker at ${f.dueAt.toISOString()}${f.repeatDays ? `, repeating every ${f.repeatDays} day(s)` : ""}. They can list or cancel it with /brain-followups.`;
+        return withReceipt(`Scheduled ${f.id}: DM to the asker at ${f.dueAt.toISOString()}${f.repeatDays ? `, repeating every ${f.repeatDays} day(s)` : ""}. They can list or cancel it with /brain-followups.`,
+          f.id, `Follow-up ${f.id} scheduled for ${f.dueAt.toISOString()}${f.repeatDays ? `, every ${f.repeatDays} day(s)` : ""}`);
       } catch (e) {
         if (e instanceof FollowUpError) return `Could not schedule: ${e.message}`;
         throw e;

@@ -10,6 +10,7 @@ import { searchThreads } from "../memory/episodes";
 import { readTags, writeTag, type SlackScope } from "../memory/scope";
 import { searchMemory } from "../memory/search";
 import { findTasks, formatTasks } from "../manager/find";
+import { withReceipt } from "./verify-answer";
 
 type MemoryToolContext = {
   turnId: string;
@@ -120,9 +121,9 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
           confidence, importance, agentContext: ctx.untrustedContext ? "untrusted" : ctx.agentContext ?? "primary", // untrusted: shared writes are held for admin review
         });
         if (ctx.untrustedContext && !result.deduped && !result.heldForReview) return "Saved to your private memory, but outside text was part of this turn, so it may be wrong: tell the asker what you saved and ask them to confirm it.";
-        if (result.deduped) return "That fact is already in memory.";
-        if (result.heldForReview) return `Saved as pending and sent to admins for review.${ctx.untrustedContext ? " (Outside text was part of this turn.)" : ""}`;
-        return `Saved to memory${result.superseded.length ? ` and superseded ${result.superseded.length} outdated fact(s)` : ""}.`;
+        if (result.deduped) return withReceipt("That fact is already in memory.", `memory #${result.id}`, `Already in memory (#${result.id})`);
+        if (result.heldForReview) return withReceipt(`Saved as pending and sent to admins for review.${ctx.untrustedContext ? " (Outside text was part of this turn.)" : ""}`, `memory #${result.id}`, `Saved as pending admin review (#${result.id})`);
+        return withReceipt(`Saved to memory${result.superseded.length ? ` and superseded ${result.superseded.length} outdated fact(s)` : ""}.`, `memory #${result.id}`, `Saved to memory (#${result.id})${result.superseded.length ? `, superseded ${result.superseded.length} older fact(s)` : ""}`);
       },
     }),
   };

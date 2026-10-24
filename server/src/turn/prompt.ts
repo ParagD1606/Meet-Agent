@@ -69,6 +69,8 @@ export type DynamicInput = {
   readOnly: boolean;
   depth: string;
   connectionNotes: string[];
+  /** Optional <grounding> block (turn/grounding.ts): the abstain / thin-evidence instruction for a factual question. */
+  grounding?: string;
   /** Admin workspace prompt + skills index live in the frozen prefix (B); this is only for tests/fallback. */
 };
 
@@ -88,7 +90,7 @@ export function buildDynamicContext(i: DynamicInput): string {
   if (i.readOnly) lines.push("Read-only run: nothing can be changed anywhere.");
   if (i.depth === "direct") lines.push("Small talk or acknowledgement: answer in a line, no lookups.");
   if (i.connectionNotes.length) lines.push(`apps: ${i.connectionNotes.join("; ")}`);
-  return `<context>\n${lines.join("\n")}\n</context>`;
+  return `<context>\n${lines.join("\n")}\n</context>${i.grounding ? `\n${i.grounding}` : ""}`;
 }
 
 const blockText = (b: unknown): string => (typeof b === "string" ? b : b && typeof b === "object" && "text" in b ? String((b as { text: unknown }).text) : "");
