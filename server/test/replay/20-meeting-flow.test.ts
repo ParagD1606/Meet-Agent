@@ -136,10 +136,18 @@ describe("auto mode (the default): no click needed", () => {
     expect(dec[0]!.permalink).toContain(`/meetings?meeting=${m!.id}`);
     expect((await db.select().from(episodes).where(eq(episodes.threadTs, "huddle_FH1"))).map((e) => e.scopeTag)).toEqual(["shared"]);
 
-    // --- DMs (detached): exactly one per person who has a task, plus the organizer's "who owns" card; nothing for Derp, nothing in the channel
-    await eventually(async () => dms(PARAG).length === 1 && dms(EVE).length === 1 && dms(ME).length === 1);
+    // --- DMs (detached): exactly one per person who has a task, plus the organizer's "who owns" card; nothing for Derp. The channel gets ONE summary post.
+    await eventually(async () => dms(PARAG).length === 1 && dms(EVE).length === 1 && dms(ME).length === 1 && slack.to(PUB).length === 1);
     expect(dms(DERP)).toHaveLength(0);
-    expect(slack.to(PUB)).toHaveLength(0);
+    const cs = slack.to(PUB)[0]!;
+    const cst = blocksText(cs);
+    expect(cs.blocks![0].text.text).toStartWith("Huddle summary");
+    expect(cst).toContain("Decision: Use the annual plan for the pilot");
+    expect(cst).toContain(`<@${PARAG}>`);
+    expect(cst).toContain("Send the revised deck to Acme");
+    expect(cst).not.toContain("Redo the logo"); // held items are not announced
+    expect(cst).not.toContain("sk-abcdef");
+    expect(cst).toContain(`/meetings?meeting=${m!.id}`);
     const [pd] = dms(PARAG);
     const pt = blocksText(pd!);
     expect(pd!.blocks![0]).toMatchObject({ type: "header" });
@@ -200,7 +208,7 @@ describe("auto mode (the default): no click needed", () => {
 
   scriptedTest("re-sync and re-analysis never duplicate tasks or DMs; a changed version adds only the new task", async () => {
     await ingestHuddleFile("FH1");
-    await eventually(async () => dms(PARAG).length === 1 && dms(EVE).length === 1 && dms(ME).length === 1);
+    await eventually(async () => dms(PARAG).length === 1 && dms(EVE).length === 1 && dms(ME).length === 1 && slack.to(PUB).length === 1);
     const eve = await noteFor(EVE, "Prepare the launch checklist");
     await click(EVE, "meeting_task_decline", eve.note.id); // owners' decisions stick
     const before = (await meetingRows()).map((r) => r.id).sort();
