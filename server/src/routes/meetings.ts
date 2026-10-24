@@ -9,7 +9,7 @@ import { db } from "../db";
 import { apiTokens, users } from "../db/schema";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
-import { analyzeLiveMeeting, askLiveMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
+import { analyzeLiveMeeting, askLiveMeeting, recallForMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
 import { httpError, readBody } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
@@ -144,7 +144,7 @@ async function live<S extends z.ZodType>(c: import("hono").Context, schema: S) {
   if (!rate.ok) return { res: c.json({ error: "rate_limited", message: rate.message }, 429, { "retry-after": String(rate.retryAfterSec) }) } as const;
   const parsed = schema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return { res: c.json({ error: "invalid_body", issues: parsed.error.issues.slice(0, 5) }, 400) } as const;
-  return { data: parsed.data as z.infer<S> } as const;
+  return { data: parsed.data as z.infer<S>, userId } as const;
 }
 
 extensionRoutes.post("/ask", async (c) => {
@@ -153,7 +153,10 @@ extensionRoutes.post("/ask", async (c) => {
     history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4_000) })).max(20).default([]),
   }));
   if ("res" in r) return r.res;
-  try { return c.json({ answer: await askLiveMeeting(r.data.lines, r.data.question, r.data.history, r.data.context) }); }
+  try {
+    const mem = await recallForMeeting(r.userId, `${r.data.question}\n${r.data.context.title ?? ""}`.trim(), { rewrite: true });
+    return c.json({ answer: await askLiveMeeting(r.data.lines, r.data.question, r.data.history, r.data.context, mem.text), sources: mem.sources });
+  }
   catch (err) { log.warn("live ask failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });
 
@@ -161,7 +164,10 @@ extensionRoutes.post("/analyze", async (c) => {
   const r = await live(c, z.object({ lines: liveLines, context: liveCtx.default({}), known: z.array(z.string().max(300)).max(200).default([]) }));
   if ("res" in r) return r.res;
   const roster = [...new Set([...(r.data.context.roster ?? []), ...r.data.lines.map((l) => l.speaker).filter(Boolean)])].slice(0, 100);
-  try { return c.json(await analyzeLiveMeeting(r.data.lines, { ...r.data.context, roster }, r.data.known)); }
+  try {
+    const mem = await recallForMeeting(r.userId, `${r.data.context.title ?? ""}\n${roster.join(", ")}\n${r.data.lines.slice(0, 3).map((l) => l.text).join(" ").slice(0, 300)}`, { budgetTokens: 1_500 });
+    return c.json(await analyzeLiveMeeting(r.data.lines, { ...r.data.context, roster }, r.data.known, mem.text));
+  }
   catch (err) { log.warn("live analyze failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });
 

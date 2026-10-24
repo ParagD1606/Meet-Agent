@@ -137,14 +137,16 @@ $("recap").onclick = async () => {
 };
 
 // ---------- ask ----------
-const SUGGESTIONS = ["Summarize so far", "What did we decide?", "Who is free to take this?", "What's still unresolved?"];
+const SUGGESTIONS = ["Summarize so far", "What did we decide?", "What did we decide about this before?", "Who is free to take this?"];
 $("chips").innerHTML = SUGGESTIONS.map((q) => `<button type="button" class="sm">${esc(q)}</button>`).join("");
 $("chips").onclick = (e) => { const q = e.target.closest("button")?.textContent; if (q) sendQuestion(q); };
 $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim(); if (q) { $("q").value = ""; sendQuestion(q); } };
 
+// What the answer drew on from the team's memory (Slack and Brain), so it can be checked.
+const sourcesHtml = (src) => !src?.length ? "" : `<details class="src"><summary>From team memory · ${src.length}</summary><ul>${src.map((x) => `<li>${esc(x.text)} <span class="muted">${esc(x.source)}, ${esc(x.date)}</span>${x.url && /^https?:\/\//.test(x.url) ? ` <a href="${esc(x.url)}" target="_blank" rel="noreferrer">open</a>` : ""}</li>`).join("")}</ul></details>`;
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}${sourcesHtml(m.sources)}</div>`).join("") : `<div class="empty"><b>Ask about the call or the past</b>I also search the team's Slack and Brain memory, so you can ask “What did we decide about this before?”</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -159,7 +161,7 @@ const workloadNote = () => Object.entries(state.load).map(([n, c]) => `${n}: ${c
 
 async function callAsk(question, history = []) {
   const r = await ask({ type: "api", path: "/ext/ask", body: { lines: lines(), question, history, context: { ...context(), notes: [notes(), workloadNote() && `Workload: ${workloadNote()}`].filter(Boolean).join("\n") } } });
-  return r?.ok ? { ok: true, text: r.data.answer } : { ok: false, text: failText(r) };
+  return r?.ok ? { ok: true, text: r.data.answer, sources: r.data.sources ?? [] } : { ok: false, text: failText(r) };
 }
 async function sendQuestion(q) {
   const block = needReady();
@@ -168,7 +170,7 @@ async function sendQuestion(q) {
   state.chat.push({ role: "assistant", text: "Thinking…" }); renderChat();
   const history = state.chat.slice(0, -2).map((m) => ({ role: m.role, text: m.text }));
   const r = await callAsk(q, history);
-  state.chat.pop(); state.chat.push({ role: "assistant", text: r.text, err: !r.ok }); renderChat();
+  state.chat.pop(); state.chat.push({ role: "assistant", text: r.text, err: !r.ok, sources: r.sources ?? [] }); renderChat();
 }
 
 // ---------- detected items ----------

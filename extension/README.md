@@ -19,6 +19,13 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
 2. `chrome://extensions` > Developer mode > Load unpacked > this folder. Reload it after updates.
 3. Click the extension icon to open the panel, paste the token in Settings (once).
 
+## Team memory
+Ask also searches the team's memory (Slack conversations and what is in the Brain site) and shows which items it used, with a link back to the Slack thread when there is one. It reads memory as **you**: shared knowledge, your own DMs, and private channels you belong to, never anyone else's.
+
+When decisions and tasks are written at the end, memory is given to the model only as background, to understand names, projects and references; every task and decision must still be quoted from the meeting itself, so memory can never create one. A relevant earlier item is mentioned in the summary as "Related earlier context".
+
+Finished extension meetings are remembered too, **privately for the person who held them**, so you can later ask "what did we decide last time?".
+
 ## Names
 Meet labels your own speech "You". The panel replaces it with your real name (from the participant list when it is open, otherwise the owner of your API token, or the name you type under Settings > You), so owners and the final notes use real names.
 
