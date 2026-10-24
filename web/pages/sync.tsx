@@ -11,12 +11,12 @@ import { FormField, Input, Select, Textarea } from "@/ui/fields"
 import { Async, PageHeader, Panel, Section } from "@/ui/page"
 import { Table } from "@/ui/table"
 
-const NAMES: Record<SyncProvider, string> = { gdrive: "Google Drive", onedrive: "OneDrive", notion: "Notion", github: "GitHub", linear: "Linear", jira: "Jira", gmail: "Gmail", gcal: "Google Calendar" }
-const OAUTH: SyncProvider[] = ["gdrive", "onedrive", "notion"]
-const TOKEN: TokenProvider[] = ["github", "linear", "jira"]
+const NAMES: Record<SyncProvider, string> = { gdrive: "Google Drive", onedrive: "OneDrive", notion: "Notion", github: "GitHub App", linear: "Linear", jira: "Jira", gmail: "Gmail", gcal: "Google Calendar" }
+const OAUTH: SyncProvider[] = ["gdrive", "onedrive", "notion", "github"]
+const TOKEN: TokenProvider[] = ["linear", "jira"]
 const isPersonal = (s: SyncSource) => !!s.selection?.scopeTag?.startsWith("user_")
 const IDS: Record<SyncProvider, { label: string; hint: string; ph: string }> = {
-  github: { label: "Repositories", hint: "One owner/name per line, or * for every repo the token can read.", ph: "acme/api\nacme/web" },
+  github: { label: "Repositories", hint: "One owner/name per line, or * for every repo the GitHub App can read.", ph: "acme/api\nacme/web" },
   linear: { label: "Team keys", hint: "One per line, or * for all teams.", ph: "ENG\nOPS" },
   jira: { label: "Project keys", hint: "One per line, or * for all projects.", ph: "PLAT\nSUP" },
   gdrive: { label: "Folder IDs", hint: "One per line, or * for everything the account can see.", ph: "*" },
@@ -59,7 +59,7 @@ function jiraHostHint(raw: string): { error?: string; hint?: string } {
 }
 
 function TokenForm() {
-  const [provider, setProvider] = useState<TokenProvider>("github")
+  const [provider, setProvider] = useState<TokenProvider>("linear")
   const [token, setToken] = useState("")
   const [email, setEmail] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
@@ -86,7 +86,7 @@ function TokenForm() {
       <Panel className="p-4">
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Provider">{(p) => <Select {...p} value={provider} onChange={(e) => { setProvider(e.target.value as TokenProvider); setIds(""); add.reset() }}>{TOKEN.map((k) => <option key={k} value={k}>{NAMES[k]}</option>)}</Select>}</FormField>
-          <FormField label={provider === "github" ? "Personal access token" : provider === "linear" ? "API key" : "API token"} hint={provider === "github" ? "A fine-grained token with read access to the repos you want." : provider === "linear" ? "A personal API key from Linear settings." : "Create one at id.atlassian.com under Security, API tokens."} error={errs.token ?? fieldErr(add.error, "token")}>
+          <FormField label={provider === "linear" ? "API key" : "API token"} hint={provider === "linear" ? "A personal API key from Linear settings." : "Create one at id.atlassian.com under Security, API tokens."} error={errs.token ?? fieldErr(add.error, "token")}>
             {(p) => <Input {...p} type="password" autoComplete="off" spellCheck={false} className="font-mono" value={token} onChange={(e) => setToken(e.target.value)} />}
           </FormField>
           {jira && <FormField label="Atlassian email" error={errs.email ?? fieldErr(add.error, "email")}>{(p) => <Input {...p} type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />}</FormField>}
@@ -112,13 +112,13 @@ export default function SyncPage() {
   return (
     <>
       <PageHeader title="Sync" desc="Pull documents from external sources into shared memory every hour. Unchanged files are skipped, so repeat syncs are cheap." />
-      <Section title="Connect a source">
+      <Section title="Connect a source" desc="GitHub uses the workspace GitHub App: an admin installs it once, then its selected repositories are shared with everyone. No member API keys are needed.">
         <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); add.mutate(provider) }}>
           <Select aria-label="Source" className="w-48" value={provider} onChange={(e) => setProvider(e.target.value as SyncProvider)}>{OAUTH.map((k) => <option key={k} value={k}>{NAMES[k]}</option>)}</Select>
           <Button type="submit" variant="primary" loading={add.isPending}>Connect</Button>
         </form>
       </Section>
-      <Section title="Connect with a token" desc="GitHub, Linear and Jira use a token you paste instead of signing in. It is stored encrypted and only used to read.">
+      <Section title="Connect with a token" desc="Linear and Jira use a token you paste instead of signing in. It is stored encrypted and only used to read.">
         <TokenForm />
       </Section>
       <Section title="Connect my own account" desc="Your Gmail and Calendar are private to you: what is learned is never shared with the workspace.">

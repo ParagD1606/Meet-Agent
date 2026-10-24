@@ -19,6 +19,21 @@ Vertex runs on the ADC JSON alone: the deploy script drops `MODEL_API_KEY`, `MOD
 
 The image runs in production mode: `PUBLIC_URL` must be `https://`, and boot fails with a list of missing settings otherwise.
 
+### GitHub App (shared GitHub sync)
+
+GitHub Sync uses one workspace GitHub App installation, rather than personal access tokens. Create a GitHub App, generate a private key, and keep that key only in the server `.env`:
+
+```sh
+GITHUB_APP_ID=123456
+GITHUB_APP_SLUG=company-brain
+# base64 is recommended for an env file; PEM text with literal \n escapes also works
+GITHUB_APP_PRIVATE_KEY="$(base64 < company-brain.private-key.pem | tr -d '\n')"
+```
+
+In the GitHub App settings, set **Setup URL** to `https://slack.derpx06.live/sync/oauth/github/callback` (replace the host if your `PUBLIC_URL` differs). Give the app read-only **Contents**, **Issues**, and **Pull requests** permissions, then install it for the organization or repositories you want. Do not enable “Request user authorization during installation”; that uses a different callback flow.
+
+After the next deploy, an admin selects **GitHub App** under **Configure → Sync → Connect a source** and installs the app. The app receives a short-lived installation token server-side; no GitHub token is entered in the browser. Choose repositories (or `*`) in **Selection**. Imported GitHub information is shared workspace memory, so every member can use it.
+
 ### Automatic deploys (GitHub Actions)
 
 `.github/workflows/ci-cd.yml` runs type-checks, the web build and the full test suite (against a pgvector Postgres) on pull requests and manual runs. A push to `main` deploys immediately, without waiting for the tests, through `scripts/ci-deploy.sh` (to gate deploys on the tests again, see the comment at the top of the workflow): it uploads only the code, rebuilds the containers on the VM, waits for `/healthz`, runs the live Vertex probe, and rolls back to the previous image if any step fails. `.env` and `application_default_credentials.json` are never uploaded; they stay on the VM from the first `./scripts/deploy-gce.sh`, so GitHub needs only SSH access.
