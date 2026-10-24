@@ -200,7 +200,7 @@ describe("oauth + degradation", () => {
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: "provider_not_configured" });
     const status = await (await call("GET", "/api/setup/status")).json() as { sync: Record<string, boolean> };
-    expect(status.sync).toEqual({ gdrive: false, onedrive: true, notion: true });
+    expect(status.sync).toMatchObject({ gdrive: false, onedrive: true, notion: true, gmail: false, gcal: false, github: true, linear: true, jira: true });
     await db.insert(syncSources).values({ id: "x", provider: "gdrive", authEnc: encrypt("{}") });
     await expect(runSync("x")).rejects.toThrow("not configured");
     expect((await call("POST", "/api/sync/sources/x/run", { cookie: admin })).status).toBe(400);

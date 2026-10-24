@@ -80,10 +80,10 @@ export function chunkText(text: string, size = CHUNK_CHARS, overlap = CHUNK_OVER
 
 /**
  * Extracts, chunks, embeds and stores a document as kind='chunk' rows under `tag`.
- * With a sourceRef, previous chunks of the same (source, sourceRef) are replaced atomically. Returns #chunks.
+ * `tag` is the ACL scope (shared | channel_X | user_X; sync passes user_X for personal sources). With a sourceRef, previous chunks of the same (source, sourceRef) are replaced atomically. Returns #chunks.
  */
 export async function ingestDocument(a: {
-  tag: string; name: string; mimeType: string; data: Buffer | string; source: string; sourceRef?: string;
+  tag: string; name: string; mimeType: string; data: Buffer | string; source: string; sourceRef?: string; permalink?: string | null;
 }): Promise<number> {
   const text = await extractDocumentText(a.name, a.mimeType, a.data);
   const pieces = text ? chunkText(text).map((c) => `From ${a.name}:\n${c}`) : [];
@@ -110,7 +110,7 @@ export async function ingestDocument(a: {
     }
     if (!pieces.length) return 0;
     await tx.insert(memories).values(pieces.map((t, i) => ({
-      scopeTag: a.tag, text: t, embedding: vectors[i]!, source: a.source, sourceRef: a.sourceRef ?? null, kind: "chunk" as const,
+      scopeTag: a.tag, text: t, embedding: vectors[i]!, source: a.source, sourceRef: a.sourceRef ?? null, permalink: a.permalink ?? null, kind: "chunk" as const,
     })));
     return pieces.length;
   });

@@ -5,6 +5,9 @@ import { db } from "../db";
 import { channelMembers, channels, meetings } from "../db/schema";
 import { log } from "../log";
 import { completeJson } from "../memory/llm";
+import { htmlToText } from "../memory/ingest";
+import { recordEpisode } from "../memory/episodes";
+import { captureTurn } from "../memory/writeback";
 import { slackClient } from "../slack/client";
 
 export type MeetingTask = {
@@ -105,20 +108,82 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
   };
 }
 
-/** Ingests a Huddle transcript exposed by Slack's files API. Other files are ignored. */
+/**
+ * Feeds a finished meeting into memory via the public captureTurn (facts) + recordEpisode in the channel's write scope: public -> shared,
+ * private -> channel_X. An unknown channel is treated as private (never widens). Best effort: memory failure never fails the meeting.
+ */
+export async function rememberMeeting(a: { channelId: string; fileId: string; title: string; summary: string; tasks: { title: string; assigneeName?: string | null; dueDate?: string | null }[] }): Promise<void> {
+  try {
+    const [ch] = await db.select({ isPrivate: channels.isPrivate, isIm: channels.isIm }).from(channels).where(eq(channels.id, a.channelId));
+    const scope = { channelId: a.channelId, isPrivate: ch ? ch.isPrivate : true, isIm: ch?.isIm ?? false, userId: null };
+    const tasks = a.tasks.map((t) => `- ${t.title}${t.assigneeName ? ` (owner: ${t.assigneeName})` : ""}${t.dueDate ? ` (due ${t.dueDate})` : ""}`).join("\n");
+    // tasks are commitments made in the meeting; their live status is not stored here
+    const transcript = `Slack Huddle "${a.title}"\n\n${a.summary}${tasks ? `\n\nAction items agreed:\n${tasks}` : ""}`;
+    await captureTurn({ scope, transcript, sourceRef: `meeting:${a.fileId}`, createdBy: "bot" });
+    await recordEpisode({ scope, channelId: a.channelId, threadTs: `huddle_${a.fileId}`, transcript });
+  } catch (err) {
+    log.warn("meeting memory write failed", { fileId: a.fileId, error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+const SLACK_HOST = /(^|\.)(slack\.com|slack-files\.com|slack-edge\.com)$/i;
+
+/** files.info that reports a missing OAuth scope clearly (which scope is needed) instead of a generic failure. */
+async function fileInfo(client: Awaited<ReturnType<typeof slackClient>>, file: string): Promise<HuddleFile | undefined> {
+  try {
+    return (await client.files.info({ file })).file as HuddleFile | undefined;
+  } catch (err) {
+    const data = (err as { data?: { error?: string; needed?: string; provided?: string } }).data;
+    if (data?.error === "missing_scope") {
+      log.error("slack files.info missing scope: add the needed scope to the app and reinstall", { fileId: file, needed: data.needed ?? "files:read", provided: data.provided });
+      throw new Error(`Slack app is missing the "${data.needed ?? "files:read"}" scope (needed to read Huddle notes); add it and reinstall`);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Huddle notes/transcripts are Slack canvases (quip files) with no inline lines: their content is only reachable through
+ * url_private(_download) with the bot token. Only Slack hosts are contacted; redirects are followed manually so the token
+ * never leaves Slack. Returns plain text (speakers/timestamps stay as the canvas lays them out), or null.
+ */
+async function downloadedText(client: Awaited<ReturnType<typeof slackClient>>, file: HuddleFile): Promise<{ text: string } | null> {
+  let url: string | undefined = typeof file.url_private_download === "string" ? file.url_private_download : typeof file.url_private === "string" ? file.url_private : undefined;
+  const token = (client as unknown as { token?: string }).token;
+  if (!url || !token) return null;
+  for (let hop = 0; hop < 5; hop++) {
+    const u: URL = new URL(url);
+    if (u.protocol !== "https:" || !SLACK_HOST.test(u.hostname)) throw new Error(`refusing to fetch canvas from non-Slack host ${u.hostname}`);
+    const res: Response = await fetch(u, { headers: { authorization: `Bearer ${token}` }, redirect: "manual", signal: AbortSignal.timeout(30_000) });
+    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) { url = new URL(res.headers.get("location")!, u).toString(); continue; }
+    if (!res.ok) throw new Error(`canvas download ${res.status}`);
+    const body = await res.text();
+    const text = (/html|xml/i.test(res.headers.get("content-type") ?? "") || /^\s*</.test(body) ? htmlToText(body) : body).replace(/\n{3,}/g, "\n\n").trim();
+    return text ? { text } : null;
+  }
+  throw new Error("too many redirects fetching canvas");
+}
+
+/** Ingests a Huddle transcript exposed by Slack's files API (inline lines, or the canvas download). Other files are ignored. */
 export async function ingestHuddleFile(fileId: string, hintedChannelId?: string): Promise<boolean> {
   const client = await slackClient();
-  let file = (await client.files.info({ file: fileId })).file as HuddleFile | undefined;
+  let file = await fileInfo(client, fileId);
   if (!file) return false;
-  let parsed = transcriptText(file);
+  const notes = file;
+  let parsed: ReturnType<typeof transcriptText> = transcriptText(file);
   // A Huddle notes canvas may point to a distinct transcript file.
   if (!parsed && typeof file.huddle_transcript_file_id === "string") {
-    file = (await client.files.info({ file: file.huddle_transcript_file_id })).file as HuddleFile | undefined;
+    file = await fileInfo(client, file.huddle_transcript_file_id);
     if (!file) return false;
     parsed = transcriptText(file);
   }
-  if (!parsed) return false;
-  const channelId = parsed.channelId ?? hintedChannelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined);
+  if (!parsed) {
+    const dl = await downloadedText(client, file) ?? (file !== notes ? await downloadedText(client, notes) : null);
+    if (!dl) return false;
+    const date = (n: unknown) => typeof n === "number" ? new Date(n * 1000) : undefined;
+    parsed = { text: dl.text, participantIds: asStrings(notes.huddle_participant_ids), startedAt: date(notes.huddle_date_start), endedAt: date(notes.huddle_date_end) };
+  }
+  const channelId = parsed.channelId ?? hintedChannelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined) ?? (Array.isArray(notes.channels) ? notes.channels[0] : undefined);
   if (!channelId) return false;
   const sourceFileId = String(file.id ?? fileId);
   const title = typeof file.title === "string" && file.title.trim() ? file.title.trim() : "Slack Huddle";
@@ -131,6 +196,7 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
   try {
     const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: parsed.text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
     await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    await rememberMeeting({ channelId, fileId: sourceFileId, title, summary: analysis.summary, tasks: analysis.tasks });
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
