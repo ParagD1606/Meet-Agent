@@ -226,8 +226,11 @@ describe("extension upload", () => {
       const m = await json(await call("GET", `/api/meetings/${(await json(res)).id}`, { cookie: admin }));
       expect(m.status).toBe("ready");
       expect(m.decisions).toEqual(["Launch on Friday"]);
-      expect(m.tasks.map((t: any) => [t.title, t.assigneeName])).toEqual([["Run the advertisement campaign", "Parag"], ["Send the deck", null]]);
-      expect(m.tasks[0].description).toContain("advertisement will be done by Parag");
+      const tasks = m.tasks.filter((t: any) => t.itemType === "task");
+      // nothing is silently dropped: an item the notes do not support is kept, flagged unverified (and never a task), the invented owner is not kept
+      expect(tasks.map((t: any) => [t.title, t.assigneeName, t.unverified])).toEqual([["Run the advertisement campaign", "Parag", false], ["Send the deck", null, false], ["Integrate the frontend AI", "Bob", true]]);
+      expect(tasks[0].quote).toContain("advertisement will be done by Parag");
+      expect(m.tasks.find((t: any) => t.title === "Build the frontend AI integration")).toMatchObject({ itemType: "decision", unverified: true, approval: "proposed" });
       // A model's guess at an owner must never message a real person on its own.
       expect((await db.select().from(meetingTaskNotifications)).length).toBe(0);
     } finally { setMemoryLlm(null); }
@@ -280,7 +283,8 @@ describe("extension upload", () => {
     expect(res.status).toBe(201);
     const { id } = await json(res);
     const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
-    expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
+    expect(m.tasks.find((t: any) => t.title === "Send the deck")).toMatchObject({ assigneeName: "Bob", approval: "approved" }); // what the user approved in the panel arrives approved
+    expect(m.tasks.find((t: any) => t.title === "Send the deck").dueDate).toMatch(/^\d{4}-\d{2}-\d{2}$/); // "Thu" is resolved against the meeting date
     expect(m.decisions).toContain("Launch on Friday");
   });
 });
@@ -291,7 +295,7 @@ describe("meeting task DMs", () => {
     await db.insert(channels).values({ id: "C1", name: "general", isPrivate: false });
     await db.insert(meetings).values({
       id: "mt_dm", sourceFileId: "F_dm", channelId: "C1", title: "Planning", transcript: "Max owns this.", status: "ready",
-      tasks: [{ id: "mtask_1", title: "Draft plan", description: "Write it up", assigneeName: "Max Member", assigneeId: "U2", dueDate: null }], participantIds: [],
+      tasks: [{ id: "mtask_1", title: "Draft plan", description: "Write it up", assigneeName: "Max Member", assigneeId: "U2", dueDate: null }], participantIds: [], organizerId: "M1",
     });
     let posted = 0;
     setSlackClientForTest({ conversations: { open: async () => ({ channel: { id: "D2" } }) }, chat: { postMessage: async () => { posted += 1; return { ts: "1.2" }; } } });

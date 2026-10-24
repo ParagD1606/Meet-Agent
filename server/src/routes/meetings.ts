@@ -9,7 +9,10 @@ import { db } from "../db";
 import { apiTokens, users } from "../db/schema";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
-import { analyzeLiveMeeting, askLiveMeeting, recallForMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateLiveNotes, updateMeetingTaskAssignee } from "../meetings";
+import { analyzeLiveMeeting, askLiveMeeting, createUploadedMeeting, recallForMeeting, getMeeting, getOwnExtensionMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, reanalyzeMeeting, sendMeetingRecaps, syncRecentHuddles, updateLiveNotes, UploadError } from "../meetings";
+import { approveItems, dismissDuplicate, getApprovalMode, getAutoThreshold, mergeItems, patchMeetingItem, setApprovalMode, setAutoThreshold, type ReviewResult } from "../meetings/tasks";
+import { meetingAudit } from "../db/schema";
+import { MAX_BODY_BYTES } from "../meetings/parse";
 import { suggestAssignees } from "../meetings/suggest";
 import { httpError, readBody } from "./util";
 
@@ -51,19 +54,112 @@ async function meetingFor(c: import("hono").Context<AppEnv>) {
   return meeting;
 }
 
-/** Anyone who can view a meeting may send its task DMs; already delivered tasks are skipped. */
-meetingRoutes.post("/meetings/:id/task-dms", requireAuth(), async (c) => {
-  await meetingFor(c);
-  const body = await readBody(c, taskIdsSchema.optional()); // the body is optional: no taskIds means every unsent task
-  return c.json(await sendMeetingTaskDms(c.req.param("id"), body?.taskIds));
+const reviewer = (c: import("hono").Context<AppEnv>) => { const u = c.get("user"); return { userId: u.id, role: u.role }; };
+/** Maps a review outcome to HTTP: the page shows `message` of a 409 as is. */
+const review = async (c: import("hono").Context<AppEnv>, r: ReviewResult) => {
+  if (r.ok) return c.json(await getMeeting(c.req.param("id")!, actorOf(c.get("user"))));
+  const status = r.error === "not_found" ? 404 : r.error === "forbidden" ? 403 : r.error === "bad_request" ? 400 : 409;
+  return c.json({ error: r.error, message: r.message ?? r.error }, status);
+};
+const waitFor = async (c: import("hono").Context<AppEnv>, done: Promise<void>) => { if (c.req.header("x-wait") === "1") await done; }; // tests and tools can ask to wait for the analysis
+
+/** Upload a transcript (any member): text in txt / vtt / srt / json (or parsed lines). Private to the uploader unless a channel they belong to is given. */
+const uploadSchema = z.object({
+  title: z.string().trim().min(1).max(240), text: z.string().max(MAX_BODY_BYTES).optional(),
+  lines: z.array(z.object({ speaker: z.string().max(120).default(""), text: z.string().min(1).max(4_000) })).max(20_000).optional(),
+  format: z.enum(["txt", "vtt", "srt", "json", "auto"]).optional(), platform: z.string().toLowerCase().regex(/^[a-z0-9_-]{1,32}$/).optional(),
+  startedAt: z.coerce.date().optional(), channelId: z.string().max(40).optional(),
+}).refine((b) => (b.text?.trim().length ?? 0) > 0 || (b.lines?.length ?? 0) > 0, { message: "text or lines is required", path: ["text"] });
+meetingRoutes.post("/meetings", requireAuth(), async (c) => {
+  if (Number(c.req.header("content-length") ?? 0) > MAX_BODY_BYTES + 4_096) return c.json({ error: "too_large", message: "The transcript is larger than 2 MB." }, 413);
+  const parsed = uploadSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return c.json({ error: "invalid_body", issues: parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
+  try {
+    const { id, done } = await createUploadedMeeting(actorOf(c.get("user")), { ...parsed.data, platform: parsed.data.platform ?? "web" });
+    await waitFor(c, done);
+    return c.json({ id }, 201);
+  } catch (err) {
+    if (err instanceof UploadError) return c.json({ error: err.code === "empty" ? "invalid_body" : err.code, message: err.message, ...(err.code === "empty" ? { issues: ["text: the transcript has no text"] } : {}) }, err.code === "forbidden" ? 403 : err.code === "too_large" ? 413 : 400);
+    throw err;
+  }
 });
 
+/** Run the analysis again (owner, organizer or admin); retry is the same for a failed summary. Items, approvals and tasks carry over. */
+for (const [path, onlyFailed] of [["reanalyze", false], ["retry", true]] as const) {
+  meetingRoutes.post(`/meetings/:id/${path}`, requireAuth(), async (c) => {
+    await meetingFor(c);
+    try {
+      const r = await reanalyzeMeeting(c.req.param("id"), actorOf(c.get("user")), { onlyFailed });
+      if (!r) throw httpError(404, "not_found");
+      await waitFor(c, r.done);
+      return c.json({ id: c.req.param("id"), status: "processing" }, 202);
+    } catch (err) {
+      if (err instanceof UploadError) return c.json({ error: err.code, message: err.message }, 403);
+      throw err;
+    }
+  });
+}
+
+const itemPatch = z.object({
+  title: z.string().trim().min(1).max(240).optional(), description: z.string().max(2000).optional(), dueDate: z.string().trim().max(60).nullable().optional(),
+  assigneeId: z.string().trim().min(1).max(80).nullable().optional(), priority: z.enum(["normal", "urgent"]).optional(),
+  kind: z.enum(["commitment", "suggestion", "question"]).optional(), approval: z.enum(["proposed", "approved", "rejected"]).optional(), confirm: z.boolean().optional(),
+});
+meetingRoutes.patch("/meetings/:id/items/:itemId", requireAuth(), async (c) => {
+  await meetingFor(c);
+  return review(c, await patchMeetingItem(c.req.param("id"), c.req.param("itemId"), await readBody(c, itemPatch), reviewer(c)));
+});
+
+/** Bulk approve: explicit itemIds (or all: "confirmed"). Only unambiguous, verified, confirmed commitments are approved; the rest come back as skipped with a reason. */
+meetingRoutes.post("/meetings/:id/approve", requireAuth(), async (c) => {
+  await meetingFor(c);
+  const body = await readBody(c, z.object({ itemIds: z.array(z.string().min(1).max(80)).max(200).optional(), all: z.literal("confirmed").optional() }).refine((b) => b.itemIds || b.all, { message: "itemIds or all is required" }));
+  try { return c.json(await approveItems(c.req.param("id"), body, reviewer(c))); }
+  catch (err) { if (err instanceof Error && err.message === "forbidden") return c.json({ error: "forbidden", message: "Only the organizer or an admin can approve." }, 403); throw err; }
+});
+meetingRoutes.post("/meetings/:id/items/:itemId/merge", requireAuth(), async (c) => {
+  await meetingFor(c);
+  const body = await readBody(c, z.object({ intoId: z.string().min(1).max(80) }));
+  return review(c, await mergeItems(c.req.param("id"), c.req.param("itemId"), body.intoId, reviewer(c)));
+});
+for (const [path, what] of [["dismiss-duplicate", "duplicate"], ["dismiss-conflict", "conflict"]] as const) {
+  meetingRoutes.post(`/meetings/:id/items/:itemId/${path}`, requireAuth(), async (c) => {
+    await meetingFor(c);
+    return review(c, await dismissDuplicate(c.req.param("id"), c.req.param("itemId"), reviewer(c), what));
+  });
+}
+
+/** Recap DMs for approved items (one per person; never sent twice). `force` re-sends delivered ones (owner / admin). Also reachable as /task-dms. */
+const recapHandler = async (c: import("hono").Context<AppEnv>) => {
+  await meetingFor(c);
+  const body = await readBody(c, z.object({ itemIds: z.array(z.string().trim().min(1).max(80)).max(200).optional(), taskIds: z.array(z.string().trim().min(1).max(80)).max(200).optional(), force: z.boolean().optional() }).optional());
+  return c.json(await sendMeetingRecaps(c.req.param("id")!, { taskIds: body?.itemIds ?? body?.taskIds, force: body?.force, manual: true }));
+};
+meetingRoutes.post("/meetings/:id/recap", requireAuth(), recapHandler);
+meetingRoutes.post("/meetings/:id/task-dms", requireAuth(), recapHandler);
+
+/** The old assignee-only edit. */
 meetingRoutes.patch("/meetings/:id/tasks/:taskId", requireAuth(), async (c) => {
   await meetingFor(c);
   const body = await readBody(c, assigneeSchema);
-  try { await updateMeetingTaskAssignee(c.req.param("id"), c.req.param("taskId"), body.assigneeId); }
-  catch (err) { throw httpError(404, "not_found", { message: err instanceof Error ? err.message : String(err) }); }
-  return c.json(await getMeeting(c.req.param("id"), actorOf(c.get("user"))));
+  return review(c, await patchMeetingItem(c.req.param("id"), c.req.param("taskId"), { assigneeId: body.assigneeId }, reviewer(c)));
+});
+
+/** Who approved / rejected / edited what (admins and the meeting's reviewers). */
+meetingRoutes.get("/meetings/:id/audit", requireAuth(), async (c) => {
+  const m = await meetingFor(c);
+  const u = c.get("user");
+  if (!(u.role === "admin" || u.role === "owner" || (m as { organizerId?: string | null }).organizerId === u.id || (m as { ownerId?: string | null }).ownerId === u.id)) throw httpError(403, "forbidden");
+  return c.json({ audit: await db.select().from(meetingAudit).where(eq(meetingAudit.meetingId, c.req.param("id"))).orderBy(meetingAudit.id) });
+});
+
+/** Workspace switch: mode auto (default) | approve, and the confidence below which an item waits for a human. */
+meetingRoutes.get("/settings/meetings", requireAuth("admin"), async (c) => c.json({ mode: await getApprovalMode(), autoConfidence: await getAutoThreshold() }));
+meetingRoutes.put("/settings/meetings", requireAuth("admin"), async (c) => {
+  const body = await readBody(c, z.object({ mode: z.enum(["auto", "approve"]).optional(), autoConfidence: z.number().min(0.3).max(0.95).optional() }));
+  if (body.mode) await setApprovalMode(body.mode);
+  if (body.autoConfidence !== undefined) await setAutoThreshold(body.autoConfidence);
+  return c.json({ mode: await getApprovalMode(), autoConfidence: await getAutoThreshold() });
 });
 
 /** Small, meeting-authorized typeahead instead of exposing the admin-only workspace user list. */

@@ -3,6 +3,7 @@
 // Cookie "role" = owner|member signs you in; GET /auth/slack signs in as owner; /mock/role/member switches role.
 // MOCK_UNCONFIGURED=1 shows the setup wizard. MOCK_GRAPH=5000 sets the graph size (default 5200).
 import { join } from "node:path"
+import { meetingRoutes } from "./dev-mock-meetings"
 
 const dist = join(import.meta.dir, "dist")
 const now = () => new Date().toISOString()
@@ -224,11 +225,7 @@ Bun.serve({
       }
       if ((x = m("/api/automations/(\\w+)/run"))) { const a = db.automations.find((a) => a.id === x![1])!; a.lastRunAt = now(); a.lastStatus = "ok"; return json({ ok: true }) }
       if ((x = m("/api/automations/(\\w+)"))) { if (req.method === "DELETE") db.automations = db.automations.filter((a) => a.id !== x![1]); else Object.assign(db.automations.find((a) => a.id === x![1])!, body); return json({ ok: true }) }
-      if ((x = m("/api/meetings/(\\w+)/task-dms"))) return json({ sent: 1, skipped: 1, failed: 0 })
-      if ((x = m("/api/meetings/(\\w+)/assignees"))) return json(users.filter((u) => !sp.get("q") || u.name.toLowerCase().includes(sp.get("q")!.toLowerCase())))
-      if ((x = m("/api/meetings/(\\w+)/tasks/(\\w+)"))) { const meeting = db.meetings.find((m) => m.id === x![1]); const user = users.find((u) => u.id === body.assigneeId); if (meeting) meeting.tasks = meeting.tasks.map((t: any) => t.id === x![2] ? { ...t, assigneeId: user?.id ?? null, assigneeName: user?.name ?? null, notification: { status: user ? "pending" : "needs_assignee" } } : t); return meeting ? json(meeting) : json({ error: "not_found" }, 404) }
-      if (p === "/api/meetings") return json(db.meetings.map(({ transcript: _transcript, ...meeting }) => meeting))
-      if ((x = m("/api/meetings/(\\w+)"))) { const meeting = db.meetings.find((meeting) => meeting.id === x![1]); return meeting ? json(meeting) : json({ error: "not_found" }, 404) }
+      { const r = meetingRoutes(req.method, p, sp, body, admin); if (r) return r }
       if (p === "/api/marketplace") { const q = (sp.get("q") ?? "").toLowerCase(); const items = market.filter((i) => !q || `${i.name} ${i.categories.join(" ")}`.toLowerCase().includes(q)).map((i) => ({ ...i, connected: db.conns.some((c) => c.provider === i.key && c.status === "connected") })); return json({ items, total: items.length }) }
       if ((x = m("/api/marketplace/([\\w-]+)/install"))) {
         if (body.scope === "org" && !admin) return json({ error: "forbidden" }, 403)

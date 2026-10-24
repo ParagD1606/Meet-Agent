@@ -65,9 +65,11 @@ describe("extraction", () => {
     });
     await runExtraction(NOW);
     const rows = await db.select().from(commitments);
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(1); // an item with nobody to assign stays proposed on the Meeting notes page: it is not a task
     expect(rows.every((r) => r.scopeTag === "channel_GP" && r.sourceType === "meeting")).toBe(true);
     expect(rows.find((r) => r.text === "Draft the plan")!.ownerId).toBe("UBOB");
+    const [m] = await db.select().from(meetings);
+    expect((m!.tasks as any[]).find((t) => t.title === "Unowned thing")).toMatchObject({ approval: "proposed" });
   });
 
   test("text without a promise cue never reaches the model; a failing model leaves the cursor so the run retries", async () => {

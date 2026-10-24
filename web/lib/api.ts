@@ -133,6 +133,31 @@ export interface MeetingTask {
   jiraKey?: string | null; jiraUrl?: string | null
   notification?: { status: "needs_assignee" | "pending" | "sent" | "acknowledged" | "declined" | "failed"; error?: string | null }
 }
+
+// ---- meeting-to-execution (review-before-execute) contract
+export type MeetingItemKind = "commitment" | "suggestion" | "question"
+export type MeetingItemLabel = "confirmed" | "tentative" | "suggestion" | "question"
+export type MeetingApproval = "proposed" | "approved" | "rejected"
+export interface MeetingDupe { source: "task" | "meeting"; id: string; meetingId?: string; title: string; ownerName: string | null; dueDate: string | null }
+export interface MeetingConflict { type: "owner" | "due" | "decision"; with: { id: string; title: string; ownerName: string | null; dueDate: string | null } }
+export interface MeetingItem {
+  id: string; itemType: "task" | "decision" | "question"; title: string; description: string
+  assigneeId: string | null; assigneeName: string | null; dueDate: string | null; priority: "normal" | "urgent"
+  kind: MeetingItemKind; label: MeetingItemLabel; confidence: number; reason: string; quote: string; evidence: number[]
+  unverified: boolean; followUp: boolean; approval: MeetingApproval; approvedBy: string | null; approvedAt: string | null
+  ambiguity: { ownerMissing: boolean; ownerAmbiguous: boolean; ownerCandidates: { id: string; name: string; score: number }[]; dueMissing: boolean; duplicateOf: MeetingDupe[]; conflicts: MeetingConflict[] }
+  commitmentId: string | null
+  notification: { status: string; error: string | null; sentAt: string | null } | null
+  externalRefs: { provider: "trello" | "github" | "jira"; id: string; url: string }[]
+}
+export interface MeetingCounts { confirmed: number; tentative: number; suggestions: number; questions: number; unassigned: number; noDue: number; duplicates: number; conflicts: number }
+export interface MeetingRow { id: string; title: string; platform?: string; startedAt?: string | null; status: MeetingStatus; failedReason?: string | null; counts?: Partial<MeetingCounts> }
+export interface MeetingFull extends MeetingRow {
+  summary: string | null; items: MeetingItem[]; transcript: { n: number; speaker: string; text: string }[] | null
+  counts: MeetingCounts; canApprove: boolean; mode: "auto" | "approve"; autoConfidence?: number; createdAt?: string
+}
+export interface NewMeeting { title: string; text?: string; lines?: { speaker?: string; text: string }[]; format?: string; startedAt?: string; channelId?: string }
+export interface MeetingItemPatch { title?: string; description?: string; dueDate?: string | null; assigneeId?: string | null; priority?: "normal" | "urgent"; kind?: MeetingItemKind; approval?: MeetingApproval }
 export interface Meeting {
   id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
   transcript?: string; summary?: string | null; decisions?: string[]; tasks: MeetingTask[]; participantIds: string[]; status: MeetingStatus
@@ -292,6 +317,18 @@ export const api = {
   runAutomation: (id: string) => send("POST", `/api/automations/${id}/run`),
   meetings: () => get<unknown>("/api/meetings").then((d) => list<Meeting>(d, "meetings")),
   meeting: (id: string) => get<Meeting>(`/api/meetings/${id}`),
+  meetingRows: () => get<unknown>("/api/meetings").then((d) => list<MeetingRow>(d, "meetings")),
+  meetingDetail: (id: string) => get<MeetingFull>(`/api/meetings/${id}`),
+  createMeeting: (m: NewMeeting) => send<{ id: string }>("POST", "/api/meetings", m),
+  reanalyzeMeeting: (id: string) => send("POST", `/api/meetings/${id}/reanalyze`),
+  retryMeeting: (id: string) => send("POST", `/api/meetings/${id}/retry`),
+  patchMeetingItem: (id: string, itemId: string, p: MeetingItemPatch) => send<unknown>("PATCH", `/api/meetings/${id}/items/${itemId}`, p),
+  approveMeetingItems: (id: string, b: { itemIds?: string[]; all?: "confirmed" }) => send<unknown>("POST", `/api/meetings/${id}/approve`, b),
+  mergeMeetingItem: (id: string, itemId: string, intoId: string) => send("POST", `/api/meetings/${id}/items/${itemId}/merge`, { intoId }),
+  dismissMeetingDuplicate: (id: string, itemId: string) => send("POST", `/api/meetings/${id}/items/${itemId}/dismiss-duplicate`),
+  meetingRecap: (id: string, itemIds?: string[]) => send<{ sent?: number; skipped?: number; failed?: number }>("POST", `/api/meetings/${id}/recap`, itemIds ? { itemIds } : {}),
+  meetingSettings: () => get<{ mode: "auto" | "approve"; autoConfidence?: number }>("/api/settings/meetings"),
+  setMeetingSettings: (b: { mode?: "auto" | "approve"; autoConfidence?: number }) => send<{ mode: "auto" | "approve"; autoConfidence?: number }>("PUT", "/api/settings/meetings", b),
   syncMeetings: () => send<{ found: number; imported: number; failed: number }>("POST", "/api/meetings/sync"),
   sendMeetingTaskDms: (id: string, taskIds?: string[]) => send<{ sent: number; skipped: number; failed: number }>("POST", `/api/meetings/${id}/task-dms`, taskIds ? { taskIds } : {}),
   updateMeetingTaskAssignee: (meetingId: string, taskId: string, assigneeId: string | null) => send<Meeting>("PATCH", `/api/meetings/${meetingId}/tasks/${taskId}`, { assigneeId }),

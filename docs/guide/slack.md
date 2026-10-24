@@ -25,8 +25,10 @@ Import flow (`server/src/meetings/index.ts`, `server/src/slack/events.ts`):
 1. **Events**: `file_created`, `file_shared`, `file_change`, and channel messages that attach a huddle canvas, trigger `ingestHuddleFile`.
 2. Content is read from inline transcript lines, else `canvases.getContent`, else the linked transcript file, else a download with the bot token (Slack hosts only).
 3. The bot must be a member of the channel; otherwise `huddle skipped: bot is not in the channel` is logged.
-4. The text is summarised into meeting notes, decisions and tasks (Meeting notes page, memory episode, tasks).
+4. The text is analysed into meeting notes, decisions, tasks and open questions (Meeting notes page, memory episode and decision facts, tasks), then each person with a task gets ONE recap DM: see [manager](manager.md#meeting-recap-dms) and [tasks](tasks.md#meeting-tasks-what-happens-when-a-meeting-ends). The huddle starter is the organizer and assigner; the huddle participant list gives the model the people and their Slack ids.
 5. **Manual Sync**: admins press Sync on Meeting notes (`POST /api/meetings/sync`, `?force=1` re-imports). It walks `files.list`, up to 20 imports per call; single flight. It also runs in Learn now > sync.
 6. **Backfill**: Sync picks up past huddles the events missed (up to 50 pages of files).
 
 Needs `canvases:read` and `files:read`; a `missing_scope` error names the scope to add, then reinstall.
+
+Recap DM buttons use the existing interactivity endpoint (action ids `meeting_task_ack`, `meeting_task_done`, `meeting_task_decline`, `meeting_item_approve`, `meeting_item_reject`, `meeting_item_owner`, link buttons `meeting_link`). No new scopes: `chat:write` and `im:write` are enough. Extension and web uploads never send DMs by themselves.
