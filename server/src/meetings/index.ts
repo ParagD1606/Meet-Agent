@@ -254,33 +254,68 @@ export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> 
   return { found: candidates.length, imported, failed };
 }
 
-const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript so far.
-Be brief and concrete, name speakers when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
+const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript and the meeting context provided.
+Be brief and concrete, name people when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
 
-const LIVE_ANALYZE_SYSTEM = `You track a live meeting. From the transcript so far, list the decisions that were actually made and the tasks someone explicitly took on or was asked to take.
-For each task set "assignee" to one of the provided speaker names only when the transcript makes the owner clear, otherwise null. Never invent an owner or due date; "due" is only what was said, as text.
-Return JSON only: {"decisions":["..."],"tasks":[{"title":"...","assignee":null,"due":null}]}.`;
+const LIVE_ANALYZE_SYSTEM = `You track a live meeting and flag items for a human to approve. Transcript lines are numbered like [12].
+Return decisions that were actually made, tasks someone took on or was asked to take, and open questions nobody has answered yet.
+For each item:
+- "kind": "task" | "decision" | "question".
+- "label": "confirmed" (a clear commitment or final decision), "tentative" (maybe/likely/"I'll try"), or "suggestion" (proposed, nobody agreed). Questions use "suggestion".
+- "reason": one short sentence saying why you classified it that way.
+- "evidence": the line numbers that support it.
+- "assignee": exactly one name from the provided roster only when the transcript makes the owner clear; otherwise null. Never guess an owner.
+- "due": an ISO date (YYYY-MM-DD) when a date was said and can be resolved from the meeting's start time (for example "next Friday"); otherwise the words that were said; otherwise null. Never invent a date.
+Do not repeat anything listed under "Already tracked". Return JSON only: {"items":[{"kind":"task","label":"confirmed","title":"...","reason":"...","evidence":[3],"assignee":null,"due":null}]}.`;
 
 const liveAnalysisSchema = z.object({
-  decisions: z.array(z.string().trim().min(1).max(500)).max(30),
-  tasks: z.array(z.object({
-    title: z.string().trim().min(1).max(240),
+  items: z.array(z.object({
+    kind: z.enum(["task", "decision", "question"]),
+    label: z.enum(["confirmed", "tentative", "suggestion"]).default("tentative"),
+    title: z.string().trim().min(1).max(300),
+    reason: z.string().trim().max(300).default(""),
+    evidence: z.array(z.number().int().min(1)).max(6).default([]),
     assignee: z.string().trim().min(1).max(120).nullable().default(null),
     due: z.string().trim().min(1).max(60).nullable().default(null),
   })).max(40),
 });
 
-const tail = (text: string) => text.slice(-50_000);
+export type LiveLine = { speaker: string; text: string };
+export type LiveContext = { title?: string; startedAt?: string; roster?: string[] };
+
+/** Numbered transcript, keeping the most recent ~50k characters and the original numbering. */
+function numbered(lines: LiveLine[]): string {
+  const out: string[] = [];
+  let size = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i]!;
+    const row = `[${i + 1}] ${l.speaker ? `${l.speaker}: ` : ""}${l.text}`;
+    if (size + row.length > 50_000) break;
+    out.push(row); size += row.length + 1;
+  }
+  return out.reverse().join("\n");
+}
+
+function contextBlock(ctx: LiveContext): string {
+  const start = ctx.startedAt ? new Date(ctx.startedAt) : null;
+  const when = start && !Number.isNaN(start.getTime())
+    ? `${start.toISOString()} (${start.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })} UTC)` : "unknown";
+  return [`Meeting: ${ctx.title ?? "untitled"}`, `Started: ${when}`, `Roster: ${(ctx.roster ?? []).join(", ") || "unknown"}`].join("\n");
+}
 
 /** Answers a question about an in-progress call. Nothing is stored. */
-export async function askLiveMeeting(transcript: string, question: string, history: { role: "user" | "assistant"; text: string }[] = []): Promise<string> {
+export async function askLiveMeeting(lines: LiveLine[], question: string, history: { role: "user" | "assistant"; text: string }[] = [], ctx: LiveContext & { notes?: string } = {}): Promise<string> {
   const convo = history.slice(-6).map((h) => `${h.role === "user" ? "Q" : "A"}: ${h.text}`).join("\n");
-  const prompt = `Transcript so far:\n${tail(transcript)}\n\n${convo ? `Earlier in this chat:\n${convo}\n\n` : ""}Question: ${question}`;
+  const prompt = `${contextBlock(ctx)}\n${ctx.notes ? `Tracked so far:\n${ctx.notes.slice(0, 4_000)}\n` : ""}\nTranscript so far:\n${numbered(lines)}\n\n${convo ? `Earlier in this chat:\n${convo}\n\n` : ""}Question: ${question}`;
   return (await completeText({ system: LIVE_ASK_SYSTEM, prompt, role: "main", maxOutputTokens: 700 })).trim();
 }
 
-/** Extracts decisions and tasks from an in-progress call. Nothing is stored. */
-export async function analyzeLiveMeeting(transcript: string, speakers: string[]) {
-  const prompt = `Speakers: ${speakers.join(", ") || "unknown"}\n\nTranscript so far:\n${tail(transcript)}`;
-  return completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "summarize", maxOutputTokens: 1_200 }, liveAnalysisSchema);
+/** Extracts classified, evidenced decisions/tasks/questions from an in-progress call. Nothing is stored. */
+export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, known: string[] = []) {
+  const tracked = known.length ? `\nAlready tracked:\n${known.slice(0, 100).map((k) => `- ${k}`).join("\n")}\n` : "";
+  const prompt = `${contextBlock(ctx)}\n${tracked}\nTranscript so far:\n${numbered(lines)}`;
+  const out = await completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "summarize", maxOutputTokens: 1_800 }, liveAnalysisSchema);
+  // Keep only evidence that points at a real line, and only owners from the roster.
+  const roster = new Map((ctx.roster ?? []).map((n) => [n.toLowerCase(), n]));
+  return { items: out.items.map((i) => ({ ...i, evidence: i.evidence.filter((n) => n <= lines.length), assignee: i.assignee ? roster.get(i.assignee.toLowerCase()) ?? null : null })) };
 }

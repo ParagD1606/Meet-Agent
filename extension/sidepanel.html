@@ -3,28 +3,34 @@
 <title>Brain Meeting Notes</title><link rel="stylesheet" href="sidepanel.css"></head>
 <body>
 <header>
-  <div class="brand"><span id="dot" class="dot"></span><div><div id="title" class="title">Brain</div><div id="sub" class="sub">Waiting for a call…</div></div></div>
+  <div class="brand"><span id="dot" class="dot"></span><div class="grow"><div id="title" class="title">Brain</div><div id="sub" class="sub">Waiting for a call…</div></div></div>
+  <div id="capBanner" class="banner" hidden><span>Captions look off, so nothing can be captured.</span><button id="capOn" class="primary sm">Turn on</button></div>
   <nav id="tabs" role="tablist">
-    <button data-tab="live" class="on">Live</button><button data-tab="ask">Ask</button><button data-tab="tasks">Tasks</button><button data-tab="settings">Settings</button>
+    <button data-tab="live" class="on">Live</button><button data-tab="items">Items <span id="pendingCount" class="count" hidden></span></button><button data-tab="ask">Ask</button><button data-tab="settings">Settings</button>
   </nav>
 </header>
 <main>
-  <section id="live" class="tab on"><div id="transcript" class="transcript"></div><div id="liveEmpty" class="empty"></div></section>
+  <section id="live" class="tab on">
+    <div class="bar"><button id="recap" class="sm">Catch me up</button><button id="importBtn" class="sm">Import transcript</button><button id="backLive" class="sm" hidden>Back to live</button></div>
+    <div id="recapBox" class="card" hidden></div>
+    <div id="transcript" class="transcript"></div><div id="liveEmpty" class="empty"></div>
+  </section>
+
+  <section id="items" class="tab">
+    <div class="bar">
+      <button id="detect" class="primary sm">Detect now</button>
+      <button id="approveAll" class="sm">Approve confirmed</button>
+      <span id="detectMsg" class="muted grow"></span>
+    </div>
+    <div id="itemList"></div>
+    <div class="bar send"><button id="sendNotes" class="primary">Send to Meeting notes…</button><span id="sendMsg" class="muted"></span></div>
+    <form id="addForm" class="add"><select id="addKind"><option value="task">Task</option><option value="decision">Decision</option></select><input id="addText" placeholder="Add your own…" autocomplete="off"><button>Add</button></form>
+  </section>
 
   <section id="ask" class="tab">
     <div id="chips" class="chips"></div>
     <div id="chat" class="chat"></div>
     <form id="askForm"><input id="q" placeholder="Ask about this meeting…" autocomplete="off"><button class="primary">Ask</button></form>
-  </section>
-
-  <section id="tasks" class="tab">
-    <div class="bar"><button id="analyze" class="primary">Find decisions &amp; tasks</button><span id="analyzeMsg" class="muted"></span></div>
-    <h3>Decisions</h3><ul id="decisions" class="list"></ul>
-    <form id="decForm" class="add"><input id="decText" placeholder="Add a decision…" autocomplete="off"><button>Add</button></form>
-    <h3>Who does what</h3><ul id="taskList" class="list"></ul>
-    <form id="taskForm" class="add"><input id="taskText" placeholder="Add a task…" autocomplete="off"><button>Add</button></form>
-    <div class="bar send"><button id="sendNotes" class="primary">Send to Meeting notes</button><span id="sendMsg" class="muted"></span></div>
-    <datalist id="people"></datalist>
   </section>
 
   <section id="settings" class="tab">
@@ -33,8 +39,12 @@
     <div class="row"><input id="token" type="password" placeholder="cbt_…" autocomplete="off"><button id="reveal" type="button">Show</button></div>
     <div id="conn" class="conn"></div>
     <p class="muted">Saved automatically on this device. Create a token in the Brain web app under Configure &rarr; API tokens.</p>
-    <label class="check"><input type="checkbox" id="autoSend" checked> Send the transcript to Meeting notes when the call ends</label>
+    <label class="check"><input type="checkbox" id="autoDetect" checked> Detect items automatically while the call runs <span class="muted">(uses the model every minute or so)</span></label>
+    <label class="check"><input type="checkbox" id="autoSend" checked> Send approved items to Meeting notes when the call ends</label>
   </section>
 </main>
-<script src="sidepanel.js"></script>
+
+<div id="modal" class="modal" hidden><div class="sheet"><div id="modalBody"></div><div class="row end"><button id="modalNo">Cancel</button><button id="modalYes" class="primary">Confirm</button></div></div></div>
+<datalist id="people"></datalist>
+<script src="lib.js"></script><script src="sidepanel.js"></script>
 </body></html>

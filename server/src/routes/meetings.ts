@@ -51,7 +51,10 @@ extensionRoutes.post("/meetings", async (c) => {
 extensionRoutes.get("/ping", async (c) => (await authenticateToken(c.req.header("authorization"))) ? c.json({ ok: true }) : c.json({ error: "unauthorized" }, 401));
 
 const liveLines = z.array(z.object({ speaker: z.string().trim().max(120).default(""), text: z.string().trim().min(1).max(4_000) })).min(1).max(20_000);
-const toText = (lines: z.infer<typeof liveLines>) => lines.map((l) => (l.speaker ? `${l.speaker}: ${l.text}` : l.text)).join("\n");
+const liveCtx = z.object({
+  title: z.string().max(240).optional(), startedAt: z.string().max(40).optional(),
+  roster: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
+});
 
 /** Shared by the side panel's live endpoints: bearer auth, rate limit, body validation. */
 async function live<S extends z.ZodType>(c: import("hono").Context, schema: S) {
@@ -66,18 +69,18 @@ async function live<S extends z.ZodType>(c: import("hono").Context, schema: S) {
 
 extensionRoutes.post("/ask", async (c) => {
   const r = await live(c, z.object({
-    lines: liveLines, question: z.string().trim().min(1).max(1_000),
+    lines: liveLines, question: z.string().trim().min(1).max(1_000), context: liveCtx.extend({ notes: z.string().max(4_000).optional() }).default({}),
     history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4_000) })).max(20).default([]),
   }));
   if ("res" in r) return r.res;
-  try { return c.json({ answer: await askLiveMeeting(toText(r.data.lines), r.data.question, r.data.history) }); }
+  try { return c.json({ answer: await askLiveMeeting(r.data.lines, r.data.question, r.data.history, r.data.context) }); }
   catch (err) { log.warn("live ask failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });
 
 extensionRoutes.post("/analyze", async (c) => {
-  const r = await live(c, z.object({ lines: liveLines }));
+  const r = await live(c, z.object({ lines: liveLines, context: liveCtx.default({}), known: z.array(z.string().max(300)).max(200).default([]) }));
   if ("res" in r) return r.res;
-  const speakers = [...new Set(r.data.lines.map((l) => l.speaker).filter(Boolean))].slice(0, 50);
-  try { return c.json(await analyzeLiveMeeting(toText(r.data.lines), speakers)); }
+  const roster = [...new Set([...(r.data.context.roster ?? []), ...r.data.lines.map((l) => l.speaker).filter(Boolean)])].slice(0, 100);
+  try { return c.json(await analyzeLiveMeeting(r.data.lines, { ...r.data.context, roster }, r.data.known)); }
   catch (err) { log.warn("live analyze failed", { error: String(err) }); return c.json({ error: "model_failed" }, 502); }
 });

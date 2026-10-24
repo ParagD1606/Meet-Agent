@@ -24,11 +24,14 @@ async function setPending(p) { await chrome.storage.local.set({ [BACKUP]: p }); 
 async function upload(payload) {
   const key = `${payload.platform}:${payload.externalId}`;
   try {
-    // Decisions and tasks the user recorded in the side panel travel with the transcript.
+    // Only items the user approved in the side panel travel with the transcript.
     const notes = (await chrome.storage.local.get(`meeting:${key}`))[`meeting:${key}`];
-    const body = { ...payload };
-    if (notes?.decisions?.length) body.decisions = notes.decisions.map((d) => d.text);
-    if (notes?.tasks?.length) body.tasks = notes.tasks.map((t) => ({ title: t.title, assignee: t.assignee || undefined, due: t.due || undefined, done: !!t.done }));
+    const approved = (notes?.items ?? []).filter((i) => i.status === "approved");
+    const body = { ...payload, lines: payload.lines.map(({ speaker, text }) => ({ speaker, text })) };
+    const decisions = approved.filter((i) => i.kind === "decision").map((i) => i.title);
+    const tasks = approved.filter((i) => i.kind === "task").map((i) => ({ title: i.title, assignee: i.assignee || undefined, due: i.due || undefined, done: !!i.done }));
+    if (decisions.length) body.decisions = decisions;
+    if (tasks.length) body.tasks = tasks;
     await post(body);
     const p = await pending(); delete p[key]; await setPending(p);
     await chrome.storage.local.set({ lastUpload: { at: Date.now(), title: payload.title, ok: true } });

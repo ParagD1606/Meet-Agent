@@ -19,7 +19,7 @@
       if (prev && (text.startsWith(prev.text) || prev.text.startsWith(text) || sharedPrefix(prev.text, text) > 0.6)) {
         if (text.length >= prev.text.length) prev.text = text;
       } else {
-        lines.push({ speaker, text });
+        lines.push({ speaker, text, t: Date.now() });
         last.set(speaker, lines.length - 1);
       }
     }
@@ -56,8 +56,12 @@
     if (msg?.type === "status") reply({ platform: adapter.platform, lines: payload().lines.length, title: adapter.title() });
     if (msg?.type === "snapshot") {
       const p = payload();
-      reply({ key: `${p.platform}:${p.externalId}`, platform: p.platform, title: p.title, startedAt: p.startedAt, lines: p.lines });
+      reply({
+        key: `${p.platform}:${p.externalId}`, platform: p.platform, title: p.title, code: adapter.meetingId(), startedAt: p.startedAt, lines: p.lines,
+        roster: [...new Set(adapter.roster?.() ?? [])], captionsOn: adapter.captionsOn ? adapter.captionsOn() : p.lines.length > 0, canEnableCaptions: !!adapter.enableCaptions,
+      });
     }
+    if (msg?.type === "enableCaptions") reply({ ok: !!adapter.enableCaptions?.() });
     if (msg?.type === "send") { sent = 0; upload(true); reply({ ok: true }); }
   });
 })();

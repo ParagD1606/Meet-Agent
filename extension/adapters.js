@@ -9,6 +9,19 @@
       match: (h) => h === "meet.google.com",
       title: () => document.title.replace(/^Meet\s*[-–]\s*/, "").trim() || "Google Meet",
       meetingId: () => location.pathname.split("/").filter(Boolean)[0] || location.pathname,
+      // Names only: Meet does not put attendee emails in the page.
+      roster() {
+        const list = document.querySelector('[role="list"][aria-label*="articipant" i]');
+        return [...(list?.querySelectorAll('[role="listitem"]') ?? [])]
+          .map((li) => (li.getAttribute("aria-label") || text(li.querySelector("span"))).replace(/\s*\(.*?\)\s*$/, "").trim()).filter(Boolean);
+      },
+      captionsButton: () => document.querySelector('button[aria-label*="captions" i]'),
+      captionsOn() { return !!(document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector('div[jsname="dsyhDe"]')); },
+      enableCaptions() {
+        const b = this.captionsButton();
+        if (!b || !/turn on/i.test(b.getAttribute("aria-label") || "")) return false;
+        b.click(); return true;
+      },
       read() {
         // Caption region is labelled for screen readers; each block is [avatar][speaker name][text].
         const region = document.querySelector('[role="region"][aria-label*="aption" i]') || document.querySelector('div[jsname="dsyhDe"]');
