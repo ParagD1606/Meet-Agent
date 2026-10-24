@@ -38,9 +38,10 @@ test("cron validation and minimum interval", async () => {
   expect(cronMinGapSeconds("0 * * * *")).toBe(3600);
   expect(cronMinGapSeconds("not a cron")).toBeNull();
   expect(cronMinGapSeconds("* * * * * *")).toBeNull(); // 6 fields
-  expect(cronMinGapSeconds("*/5 * * * *")).toBe(300);
+  expect(cronMinGapSeconds("*/3 * * * *")).toBe(180);
   expect(cronMinGapSeconds("0,5 9 * * 1")).toBe(300); // sparse pattern with a tight pair later on
-  expect(await code(createAutomation(digest({ cron: "*/5 * * * *" }), mia))).toBe("invalid");
+  expect(await code(createAutomation(digest({ cron: "*/2 * * * *" }), mia))).toBe("invalid");
+  expect(await code(createAutomation(digest({ cron: "*/3 * * * *" }), mia))).toBeNull();
   expect(await code(createAutomation(digest({ cron: "0,30 * * * *" }), mia))).toBe("invalid");
   expect(await code(createAutomation(digest({ cron: "garbage" }), mia))).toBe("invalid");
   expect(await code(createAutomation(digest({ cron: "0 * * * *" }), mia))).toBeNull();

@@ -43,7 +43,7 @@ function NewDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
         </FormField>
         <FormField label="Repeats">{() => <Segmented label="Repeats" value={d.repeat} onChange={(repeat) => setD({ ...d, repeat })} items={[{ id: "cron", label: "On a schedule" }, { id: "once", label: "Once" }]} />}</FormField>
         {d.repeat === "cron" ? (
-          <FormField label="Schedule" hint="Cron: minute hour day month weekday. The minimum interval is one hour." error={fieldErr(create.error, "cron") ?? (cronBad ? "Not a valid cron expression" : null)}>
+          <FormField label="Schedule" hint="Cron: minute hour day month weekday. The minimum interval is 3 minutes." error={fieldErr(create.error, "cron") ?? (cronBad ? "Not a valid cron expression" : null)}>
             {(p) => <>
               <Input {...p} className="font-mono" value={d.cron} onChange={(e) => setD({ ...d, cron: e.target.value })} />
               <div className="flex flex-wrap gap-1.5">{PRESETS.map(([c, l]) => <button type="button" key={c} onClick={() => setD({ ...d, cron: c })} className="rounded-md border border-line px-2 py-0.5 text-xs text-muted hover:bg-hover hover:text-fg">{l}</button>)}</div>
