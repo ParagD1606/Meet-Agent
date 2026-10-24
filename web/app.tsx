@@ -87,7 +87,7 @@ function Authed() {
   // The public front door: /welcome always, and / for visitors who are not signed in (unless Slack sent back an error to show).
   const signInError = new URLSearchParams(location.search).has("error")
   const onLanding = loc === "/welcome" || (me === null && loc === "/" && !signInError)
-  useTitle(onLanding ? "The teammate that remembers" : !me ? (loc === "/setup" ? "Set up" : "Sign in") : undefined)
+  useTitle(onLanding ? "Company Brain: your company's memory" : !me ? (loc === "/setup" ? "Set up" : "Sign in") : undefined)
 
   if (loc === "/welcome") return <Suspense fallback={<Spinner />}><Landing signedIn={!!me} /></Suspense>
   if (loading || (me === null && setup.isPending)) return <Spinner />
