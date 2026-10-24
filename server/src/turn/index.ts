@@ -130,7 +130,7 @@ async function execute(input: TurnInput): Promise<void> {
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
     stage = "context";
     const bc = await buildContext(input, { ...ctx, skipRecall: !plan.recall });
-    if (bc.recallExternal) ctx.untrustedContext = true;
+    if (bc.recallExternal || bc.recentChannelText) ctx.untrustedContext = true;
     const [self, asker, chan] = await Promise.all([
       botUserId().catch(() => null),
       input.userId ? db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, input.userId)).then((r) => r[0] ?? { id: input.userId!, name: null }) : Promise.resolve(null),
@@ -140,7 +140,7 @@ async function execute(input: TurnInput): Promise<void> {
       now: new Date(), botUserId: self, asker, channelName: chan?.name, trigger: input.trigger, isIm: input.isIm, isPrivate: input.isPrivate,
       readOnly, depth, connectionNotes: assembled?.notes ?? [],
     });
-    const recall = plan.recall ? bc.recallText : "";
+    const recall = plan.recall ? [bc.recallText, bc.recentChannelText].filter(Boolean).join("\n") : "";
     const files = (input.files ?? []).map((f) => `\n\n[attachment: ${f.name} (${f.mimeType})]\n${f.text.slice(0, 20_000)}`).join("");
     const speaker = input.userId && interactive ? `<@${input.userId}>: ` : "";
     const userContent = `${dynamic}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
