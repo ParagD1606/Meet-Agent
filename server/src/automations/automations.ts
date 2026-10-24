@@ -6,7 +6,7 @@ import { automations, channelMembers, channels, users } from "../db/schema";
 import { log } from "../log";
 
 export const OWNER_CAP = 20;
-export const MIN_INTERVAL_SECONDS = 3600;
+export const MIN_INTERVAL_SECONDS = 180;
 export const MIN_DELAY_MS = 30_000;
 export const PROMPT_MAX = 4000;
 /** A digest whose prompt starts with this runs a research pipeline instead (the "watchlist"). */
