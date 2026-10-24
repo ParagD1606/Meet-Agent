@@ -66,7 +66,7 @@ export const memories = pgTable("memories", {
   scopeTag: text("scope_tag").notNull(), // shared | channel_{id} | user_{id}
   text: text("text").notNull(),
   embedding: vector("embedding").notNull(),
-  tsv: tsvector("tsv").generatedAlwaysAs(sql`to_tsvector('english', text)`),
+  tsv: tsvector("tsv").generatedAlwaysAs(sql`to_tsvector('english', coalesce(context_prefix, '') || ' ' || text)`),
   source: text("source").notNull().default("slack"), // slack | upload | gdrive | onedrive | notion | research
   sourceRef: text("source_ref"),
   kind: text("kind", { enum: ["fact", "chunk"] }).notNull().default("fact"),
@@ -74,6 +74,10 @@ export const memories = pgTable("memories", {
   supersededBy: bigint("superseded_by", { mode: "number" }),
   validAt: ts("valid_at"), // when the fact became true (event time)
   invalidAt: timestamp("invalid_at", { withTimezone: true }), // set on supersede; history is kept
+  validUntil: timestamp("valid_until", { withTimezone: true }), // forget-after horizon for transient facts; null = no expiry
+  factType: text("fact_type", { enum: ["fact", "preference", "decision", "procedure", "opinion"] }).notNull().default("fact"),
+  contextPrefix: text("context_prefix"), // LLM one-liner (who/channel/date/topic) prepended before embedding + tsvector; null = not generated yet, "" = none
+  sourceScope: text("source_scope"), // scope tag the fact was first written in (survives promotion)
   learnedAt: ts("learned_at"), // when we ingested it
   createdBy: text("created_by"), // slack user id, or "bot"/"consolidation"/"sync"
   permalink: text("permalink"), // slack permalink / doc url
@@ -86,6 +90,7 @@ export const memories = pgTable("memories", {
 }, (t) => [
   index("memories_scope_idx").on(t.scopeTag, t.status),
   index("memories_tsv_idx").using("gin", t.tsv),
+  index("memories_text_trgm_idx").using("gin", t.text.op("gin_trgm_ops")),
   index("memories_emb_idx").using("hnsw", t.embedding.op("vector_cosine_ops")),
 ]);
 

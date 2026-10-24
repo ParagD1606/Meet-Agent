@@ -5,7 +5,7 @@ import { recallLog, threadState, users } from "../db/schema";
 import { log } from "../log";
 import { breakdown, estimateTokens, type Breakdown } from "../memory/budget";
 import { getCoreBlocks } from "../memory/core-blocks";
-import { buildRecall } from "../memory/recall";
+import { buildRecall, recallBudget } from "../memory/recall";
 import { getWorkspacePrompt, skillsPromptSection } from "../skills/skills";
 import { botUserId } from "../slack/client";
 import type { TurnInput } from "./index";
@@ -156,10 +156,14 @@ export type BuiltContext = {
 export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall?: boolean; historyTokens?: number }): Promise<BuiltContext> {
   const selfId = await botUserId().catch(() => null);
   const threadKey = i.threadTs ?? i.ts;
+  const historyP = threadHistory(i, selfId);
   const [rawHistory, prefix, recall] = await Promise.all([
-    threadHistory(i, selfId),
+    historyP,
     frozenBlocks(i, ctx),
-    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : buildRecall({ scope: ctx.scope, query: i.text.slice(0, 500), threadKey }).then(async (r) => {
+    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : historyP.then((h) => buildRecall({
+      scope: ctx.scope, query: i.text.slice(0, 500), threadKey, budgetTokens: recallBudget(ctx.depth),
+      threadTail: h.slice(-6).map((m) => `${m.role}: ${m.text}`),
+    })).then(async (r) => {
       if (r.hits.length) await logRecall(i, threadKey, r.hits.map((h) => h.id));
       return r;
     }).catch((e) => {

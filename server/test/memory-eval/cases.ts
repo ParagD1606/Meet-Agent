@@ -2,7 +2,7 @@
 // distractors) through addFact with the fake bag-of-words embedder, so it runs offline. Each case has distinctive vocabulary.
 import type { SlackScope } from "../../src/memory/scope";
 
-export const CATEGORIES = ["single-hop", "multi-session", "temporal", "knowledge-update", "abstention", "scope-leak"] as const;
+export const CATEGORIES = ["single-hop", "multi-session", "temporal", "knowledge-update", "abstention", "scope-leak", "follow-up", "lookup"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** Who is asking. dm1/dm2 are DMs with U1/U2; U1 belongs to private channel C_PA, U2 to C_PB. */
@@ -42,6 +42,12 @@ export type Case = {
   /** None of these may appear in any hit; "*" means no hit at all (abstention). */
   forbid?: string[];
   asOf?: string;
+  /** Thread tail (oldest first) handed to the query rewrite, for follow-ups like "and who signed it?". */
+  thread?: string[];
+  /** Eval-only: what the stubbed rewrite model returns for this question (the real one is an LLM call). */
+  rewrite?: { query: string; asOf?: string };
+  /** The top hit must contain this (case-insensitive). */
+  first?: string;
 };
 
 const S = "shared";
@@ -62,6 +68,17 @@ const asOf = (id: number, date: string, question: string, old: [string, string],
 const none = (id: number, question: string): Case => ({ id: `abstain-${id}`, category: "abstention", scope: "pub", seed: [], question, forbid: ["*"] });
 const leak = (id: number, tag: string, text: string, scope: ScopeKey, question: string, secret: string): Case =>
   ({ id: `leak-${id}`, category: "scope-leak", scope, seed: [{ tag, text }], question, forbid: [secret] });
+
+/** Follow-up: a short message that only makes sense with the thread; the scripted rewrite resolves it, the top hit must be the right entity's fact. */
+const follow = (id: number, a: string, b: string, thread: string[], question: string, rewritten: string, first: string): Case =>
+  ({ id: `follow-${id}`, category: "follow-up", scope: "pub", seed: [s(a), s(b)], thread, question, rewrite: { query: rewritten }, first });
+/** Name/id lookup: the query is (nearly) just an id or a misspelt name; the neighbouring fact differs by one character. */
+const lookup = (id: number, a: string, b: string, question: string, first: string): Case =>
+  ({ id: `lookup-${id}`, category: "lookup", scope: "pub", seed: [s(a), s(b)], question, first });
+/** Time constraint inside the message ("back in February"): the rewrite turns it into asOf. */
+const when = (id: number, date: string, question: string, old: [string, string], neu: [string, string], expect: string, stale: string): Case => ({
+  ...asOf(id, date, question, old, neu, expect, stale), asOf: undefined, rewrite: { query: question, asOf: date },
+});
 
 export const CASES: Case[] = [
   // ---- single-hop: one fact answers the question ----
@@ -142,4 +159,23 @@ export const CASES: Case[] = [
   // positive control: a DM legitimately reads its user's private channels
   { id: "leak-9", category: "scope-leak", scope: "dm1", seed: [{ tag: "channel_C_PA", text: "The Wyvern budget memo is stored in the private finance folder" }],
     question: "Where is the Wyvern budget memo stored?", expect: ["private finance folder"] },
+
+  // ---- temporal, time constraint parsed from the message by the query rewrite (no explicit asOf) ----
+  when(11, "2026-02-20", "What was the Orpheus support lead back in February?", ["The Orpheus support lead is Valentina Cruz", "2026-01-03"], ["The Orpheus support lead is Henrik Dahl", "2026-06-02"], "Valentina Cruz", "Henrik Dahl"),
+  when(12, "2026-03-31", "Which warehouse did the Tethys team ship from last quarter?", ["Tethys team ships from the Rotterdam warehouse", "2026-01-15"], ["Tethys team ships from the Gdansk warehouse", "2026-07-01"], "Rotterdam", "Gdansk"),
+  when(13, "2026-04-30", "How big was the Calypso pilot cohort before May?", ["The Calypso pilot cohort has 40 customers", "2026-02-10"], ["The Calypso pilot cohort has 120 customers", "2026-08-12"], "40 customers", "120 customers"),
+
+  // ---- follow-up: thread context needed to know what "it" / "that one" / "and the second?" mean ----
+  follow(1, "The Kepler contract was signed by Rosalind Ng in March", "The Boreas contract was signed by Ivo Marsh in July", ["user: When does the Kepler contract renew?", "assistant: The Kepler contract renews in December."], "and who signed it?", "Who signed the Kepler contract?", "Rosalind Ng"),
+  follow(2, "The Aurora migration is blocked on the DNS cutover", "The Zenith migration is blocked on the vendor audit", ["user: Is the Aurora migration on track?", "assistant: It is delayed."], "why is it delayed?", "Why is the Aurora migration delayed? What is it blocked on?", "DNS cutover"),
+  follow(3, "Fenwick Labs pays invoices in euros on net 30 terms", "Gallagher Group pays invoices in dollars on net 60 terms", ["user: Do we invoice Gallagher Group monthly?", "assistant: Yes, monthly."], "what currency and terms do they use?", "What currency and payment terms does Gallagher Group use?", "net 60"),
+  follow(4, "The Sirius dashboard refresh runs hourly on the ops cluster", "The Rigel dashboard refresh runs nightly on the analytics cluster", ["user: Tell me about the Rigel dashboard", "assistant: It is the main KPI dashboard."], "and how often does that refresh?", "How often does the Rigel dashboard refresh?", "nightly"),
+  follow(5, "Marisol Vega manages the Tidewater account in the east region", "Dmitri Orlov manages the Brackwater account in the west region", ["user: Who looks after the Brackwater account?", "assistant: Let me check."], "and which region is that?", "Which region is the Brackwater account in, who manages it?", "west region"),
+
+  // ---- lookup: ids and misspelt names ----
+  lookup(1, "Ticket SUP-7712 was escalated to Orla Quinn for the billing outage", "Ticket SUP-7721 was escalated to Piotr Zajac for the login outage", "SUP-7712", "Orla Quinn"),
+  lookup(2, "Bartholomew Quigley owns the Zenith ledger reconciliation", "Bartholomew Quill owns the Meridian invoice archive", "What does Bartholomew Quigly own?", "Zenith ledger"),
+  lookup(3, "Deploy ENG-9081 rolled back the payments service at 14:05", "Deploy ENG-9018 promoted the search service at 09:40", "what happened in ENG-9081", "payments service"),
+  lookup(4, "Saoirse Gallacher is the escalation contact for Harlow Freight", "Saoirse Gallagher is the escalation contact for Pinecrest Foods", "Who is Saoirse Gallacher the contact for?", "Harlow Freight"),
+  lookup(5, "Invoice INV-20877 for Tessellate Corp is overdue by 12 days", "Invoice INV-20778 for Obsidian Corp was paid in full", "INV-20877", "Tessellate Corp"),
 ];

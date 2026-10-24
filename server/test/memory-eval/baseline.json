@@ -2,10 +2,12 @@
   "k": 5,
   "recall": {
     "single-hop": 1,
-    "multi-session": 0.9,
+    "multi-session": 1,
     "temporal": 1,
     "knowledge-update": 1,
-    "abstention": 0.3,
-    "scope-leak": 1
+    "abstention": 0.9,
+    "scope-leak": 1,
+    "follow-up": 1,
+    "lookup": 1
   }
 }

@@ -245,7 +245,7 @@ describe("addFact thresholds, asOf, rankScore", () => {
     const now = Date.parse("2026-06-01T00:00:00Z");
     const h = (o: Partial<MemoryHit>): MemoryHit => ({
       id: 1, text: "t", scopeTag: "shared", source: "s", sourceRef: null, score: 1, createdAt: new Date(now), kind: "fact", importance: 0.5,
-      confidence: 1, accessCount: 0, validAt: new Date(now), lastAccessedAt: null, createdBy: null, permalink: null, ...o,
+      confidence: 1, accessCount: 0, validAt: new Date(now), validUntil: null, factType: "fact", lastAccessedAt: null, createdBy: null, permalink: null, ...o,
     });
     expect(rankScore(h({ importance: 1 }), now)).toBeGreaterThan(rankScore(h({ importance: 0 }), now));
     expect(rankScore(h({ importance: 1 }), now)).toBeCloseTo(1.5, 5);

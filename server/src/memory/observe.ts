@@ -5,6 +5,7 @@ import { channels, users } from "../db/schema";
 import { log } from "../log";
 import { botUserId, slackClient } from "../slack/client";
 import { consolidate } from "./consolidate";
+import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
 import { writeTag } from "./scope";
 import { captureTurn, flushIdleCaptures } from "./writeback";
@@ -92,7 +93,7 @@ export async function observeChannel(channelId: string): Promise<{ messages: num
   return { messages: lines.length, facts };
 }
 
-export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect" } as const;
+export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect", backfill: "memory-backfill" } as const;
 
 /** Observe every 30 min (opted-in channels), consolidate nightly, flush idle thread captures every 10 min. */
 export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
@@ -115,6 +116,11 @@ export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
     const n = await flushIdleCaptures();
     if (n) log.info("reflection sweep stored facts", { n });
   });
+  await boss.work(MEMORY_QUEUES.backfill, async () => {
+    const n = await backfillContextPrefixes();
+    if (n) log.info("context prefixes backfilled", { n });
+  });
+  await boss.schedule(MEMORY_QUEUES.backfill, "*/20 * * * *");
   await boss.schedule(MEMORY_QUEUES.observe, "*/30 * * * *");
   await boss.schedule(MEMORY_QUEUES.consolidate, "17 3 * * *");
   await boss.schedule(MEMORY_QUEUES.reflect, "*/10 * * * *");

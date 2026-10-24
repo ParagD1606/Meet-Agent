@@ -7,9 +7,9 @@ export type Depth = "direct" | "memory" | "tools" | "deep";
 export type ToolFamily = "web" | "slack_search" | "automations" | "research";
 
 /** Per-depth knobs: step cap, output cap, which model role answers. */
-export const DEPTH_CONFIG: Record<Depth, { maxSteps: number; maxOutputTokens: number; role: "main" | "triage"; recall: boolean; tools: boolean }> = {
+export const DEPTH_CONFIG: Record<Depth, { maxSteps: number; maxOutputTokens: number; role: "main" | "triage"; recall: boolean; tools: boolean; /** read-only memory_search without the full tool set */ memorySearch?: boolean }> = {
   direct: { maxSteps: 1, maxOutputTokens: 400, role: "triage", recall: false, tools: false },
-  memory: { maxSteps: 3, maxOutputTokens: 800, role: "main", recall: true, tools: false },
+  memory: { maxSteps: 3, maxOutputTokens: 800, role: "main", recall: true, tools: false, memorySearch: true },
   tools: { maxSteps: 20, maxOutputTokens: 2000, role: "main", recall: true, tools: true },
   deep: { maxSteps: 60, maxOutputTokens: 2000, role: "main", recall: true, tools: true },
 };

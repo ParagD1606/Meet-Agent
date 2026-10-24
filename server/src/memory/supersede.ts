@@ -19,6 +19,9 @@ export const RELATED_SIMILARITY = 0.4;
 export const LOW_CONFIDENCE = 0.5;
 const NEIGHBOURS = 5;
 
+/** What gets embedded: the contextual prefix (if any) followed by the fact. */
+export const embedText = (text: string, prefix?: string | null) => (prefix ? `${prefix}\n${text}` : text);
+
 const verdict = z.object({ superseded: z.array(z.number().int()) });
 
 const SYSTEM = `You maintain a company knowledge base of short facts. Given a NEW fact and numbered EXISTING facts, list the existing facts that the new fact CONTRADICTS or REPLACES (e.g. a changed owner, deadline, decision, number or status), so they become outdated.
@@ -30,7 +33,12 @@ export type AddFactInput = {
   createdBy?: string | null; permalink?: string | null; confidence?: number; importance?: number; validAt?: Date;
   /** Who is writing. Anything but primary/consolidation writing to "shared" is held for admin review. */
   agentContext?: AgentContext;
-  /** Precomputed embedding (batched by the caller). */
+  factType?: "fact" | "preference" | "decision" | "procedure" | "opinion";
+  /** Forget-after horizon: the fact stops being recalled (but stays as history) after this instant. */
+  validUntil?: Date | null;
+  /** One-line who/channel/date/topic context, embedded and keyword-indexed with the text. */
+  contextPrefix?: string | null;
+  /** Precomputed embedding (batched by the caller); must already include the context prefix if there is one. */
   embedding?: number[];
 };
 export type AddFactResult = { id: number; superseded: number[]; deduped: boolean; heldForReview?: boolean; reviewId?: string };
@@ -57,7 +65,8 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
 
   // Rejected rows never count; pending rows only dedupe other held writes (so a primary write is not swallowed by a held one).
   const states: ("ok" | "pending")[] = held ? ["ok", "pending"] : ["ok"];
-  const qv = a.embedding ?? (await embed([text]))[0]!;
+  const prefix = a.contextPrefix?.trim() || null;
+  const qv = a.embedding ?? (await embed([embedText(text, prefix)]))[0]!;
   const vec = vectorLiteral(qv);
   const dist = sql`${memories.embedding} <=> ${vec}::vector`;
   const nearQuery = (n: number) => db
@@ -103,6 +112,7 @@ export async function addFact(a: AddFactInput): Promise<AddFactResult> {
         scopeTag: a.tag, text, embedding: qv, source: a.source, sourceRef: a.sourceRef ?? null, kind: "fact",
         createdBy: a.createdBy ?? null, permalink: a.permalink ?? null, confidence,
         importance: clamp01(a.importance ?? 0.5), validAt, reviewState: held ? "pending" : "ok",
+        factType: a.factType ?? "fact", validUntil: a.validUntil ?? null, contextPrefix: prefix, sourceScope: a.tag,
       })
       .returning({ id: memories.id });
     const id = row!.id;

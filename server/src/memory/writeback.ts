@@ -9,21 +9,71 @@ import { embed } from "./embed";
 import { recordEpisode } from "./episodes";
 import { completeJson } from "./llm";
 import { type SlackScope, writeTag } from "./scope";
-import { addFact } from "./supersede";
+import { addFact, embedText } from "./supersede";
 
 const MAX_FACTS = 8;
 const MAX_TRANSCRIPT = 24_000;
-const schema = z.object({ facts: z.array(z.string()) });
+const FACT_TYPES = ["fact", "preference", "decision", "procedure", "opinion"] as const;
+const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}/);
+/** A fact is a plain sentence (older/simpler models) or an object with temporal + type metadata. */
+const factSchema = z.union([
+  z.string(),
+  z.object({
+    text: z.string(),
+    type: z.enum(FACT_TYPES).optional().catch(undefined),
+    eventDate: iso.nullish().catch(undefined),
+    forgetAfter: iso.nullish().catch(undefined),
+    context: z.string().nullish().catch(undefined),
+  }),
+]);
+const schema = z.object({ facts: z.array(factSchema) });
 
 export const EXTRACT_SYSTEM = `You extract durable company knowledge from a Slack conversation between teammates and an AI assistant.
 Extract only facts worth remembering weeks from now: decisions made, owners/assignees, deadlines and dates, commitments, customer or project status, preferences, stable how-things-work knowledge.
-Each fact must be ONE self-contained declarative sentence understandable alone: name people and things explicitly, resolve "he/it/that/tomorrow" into names and absolute dates when the conversation allows, and never include Slack user ids or @-mention tokens.
+Each fact must be ONE self-contained declarative sentence understandable alone: name people and things explicitly and resolve "he/it/that/tomorrow" into names and absolute dates when the conversation allows.
+Rules:
+- Dates: write absolute dates (YYYY-MM-DD) inside the sentence. Resolve relative dates ("tomorrow", "next Friday", "last week") against the message timestamp given as "Today is ...". Set "eventDate" to the date the thing happened or was decided when known (omit it for deadlines and future events).
+- Transient facts (this week's on-call, a temporary freeze, "out until Monday", a one-off plan) get "forgetAfter": the YYYY-MM-DD after which the fact is no longer useful. Omit it for durable facts.
+- Update, don't duplicate: when the conversation changes or corrects something ("actually", "moved to", "now owned by"), state ONLY the new value as a complete sentence ("The Titan launch date moved to 2026-09-15"), never the old one.
+- Never include raw Slack ids (U0123ABCD, C0123ABCD) or <@...> / <#...> tokens; use the person's or channel's name, or skip the fact if you cannot name them.
+- Never store state a connected tool owns and that changes under us: PR, issue or ticket status, build/deploy results, who is assigned right now in Jira/Linear/GitHub. Tools are queried live. A decision or reason about them is fine.
+- "type" is one of fact, preference, decision, procedure, opinion.
+- "context" is a short one-line note (under 20 words) naming who said it, the channel or topic, and the date, e.g. "Priya Sharma in #billing on 2026-03-02 about Zephyr Corp invoicing".
 Skip greetings, small talk, questions, transient results, speculation, instructions to the assistant, task progress, secrets (passwords, tokens, keys) and anything trivial.
-Return at most ${MAX_FACTS} facts. Reply with JSON only: {"facts":["..."]}. Use {"facts":[]} when nothing is durable ("Nothing to save").`;
+Return at most ${MAX_FACTS} facts. Reply with JSON only: {"facts":[{"text":"...","type":"fact","eventDate":"YYYY-MM-DD","forgetAfter":"YYYY-MM-DD","context":"..."}]} (omit unknown optional keys). Use {"facts":[]} when nothing is durable ("Nothing to save").`;
+
+type Parsed = { text: string; type: (typeof FACT_TYPES)[number]; validAt?: Date; validUntil?: Date; context?: string };
+const SLACK_ID = /<[@#!][^>]*>|\b[UWC](?=[A-Z0-9]*\d)[A-Z0-9]{8,}\b/;
+const asDate = (s?: string | null) => { const d = s ? new Date(s.slice(0, 10)) : null; return d && !Number.isNaN(d.getTime()) ? d : undefined; };
+
+/** Normalises raw extractor output: dedupes, drops junk, clamps eventDate to <= now (a future date is not when it became true) and ignores a forgetAfter in the past. */
+export function parseFacts(raw: z.infer<typeof schema>["facts"], now = new Date()): Parsed[] {
+  const seen = new Set<string>();
+  const out: Parsed[] = [];
+  for (const f of raw) {
+    const o = typeof f === "string" ? { text: f } : f;
+    const text = o.text.trim();
+    if (text.length < 8 || /^nothing to save/i.test(text) || seen.has(text)) continue;
+    if (SLACK_ID.test(text)) { log.warn("dropped extracted fact with slack id", { text: text.slice(0, 60) }); continue; }
+    seen.add(text);
+    const ctx = ("context" in o && o.context?.trim().slice(0, 200)) || undefined;
+    const ev = asDate("eventDate" in o ? o.eventDate : null);
+    const until = asDate("forgetAfter" in o ? o.forgetAfter : null);
+    out.push({
+      text, type: ("type" in o && o.type) || "fact",
+      validAt: ev && ev <= now ? ev : undefined,
+      validUntil: until && until > now ? new Date(until.getTime() + 86_400_000 - 1) : undefined, // inclusive of the named day
+      context: ctx && !SLACK_ID.test(ctx) ? ctx : undefined,
+    });
+  }
+  return out;
+}
 
 export type CaptureArgs = {
   scope: SlackScope; transcript: string; sourceRef?: string; createdBy?: string | null; permalink?: string | null;
   agentContext?: AgentContext; confidence?: number; importance?: number;
+  /** Message timestamp relative dates resolve against (default: now). */
+  at?: Date;
 };
 
 /**
@@ -35,15 +85,16 @@ export async function captureTurn(a: CaptureArgs): Promise<number> {
   if (!tag) return 0;
   const transcript = a.transcript.trim();
   if (!transcript) return 0;
-  let facts: string[];
+  const at = a.at ?? new Date();
+  let facts: Parsed[];
   try {
     const out = await completeJson(
-      { system: EXTRACT_SYSTEM, prompt: `Today is ${new Date().toISOString().slice(0, 10)}.\n\nCONVERSATION:\n${transcript.slice(-MAX_TRANSCRIPT)}`, role: "extract", maxOutputTokens: 500 },
+      { system: EXTRACT_SYSTEM, prompt: `Today is ${at.toISOString().slice(0, 10)}.\n\nCONVERSATION:\n${transcript.slice(-MAX_TRANSCRIPT)}`, role: "extract", maxOutputTokens: 900 },
       schema,
     );
-    facts = [...new Set(out.facts.map((f) => f.trim()).filter((f) => f.length >= 8 && !/^nothing to save/i.test(f)))]
+    facts = parseFacts(out.facts, at)
       .filter((f) => {
-        const bad = scanMemoryText(f);
+        const bad = scanMemoryText(f.text);
         if (bad) log.warn("dropped extracted fact", { reason: bad.slice(0, 80) });
         return !bad;
       })
@@ -55,16 +106,17 @@ export async function captureTurn(a: CaptureArgs): Promise<number> {
   if (!facts.length) return 0;
   let vectors: number[][];
   try {
-    vectors = await embed(facts);
+    vectors = await embed(facts.map((f) => embedText(f.text, f.context)));
   } catch (e) {
     log.warn("captureTurn embedding failed", { err: String(e) });
     return 0;
   }
   let stored = 0;
-  for (const [i, text] of facts.entries()) {
+  for (const [i, f] of facts.entries()) {
     try {
       const r = await addFact({
-        tag, text, source: "slack", sourceRef: a.sourceRef ?? a.scope.channelId, embedding: vectors[i],
+        tag, text: f.text, source: "slack", sourceRef: a.sourceRef ?? a.scope.channelId, embedding: vectors[i],
+        factType: f.type, validAt: f.validAt, validUntil: f.validUntil, contextPrefix: f.context,
         createdBy: a.createdBy ?? a.scope.userId, permalink: a.permalink, agentContext: a.agentContext,
         confidence: a.confidence, importance: a.importance,
       });

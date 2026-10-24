@@ -14,6 +14,11 @@ export const BUDGET = 2500;
 export function installEvalFakes() {
   installFakes();
   setMemoryLlm(async (a) => {
+    if (a.system.includes("standalone search query")) {
+      const q = /LATEST MESSAGE: (.*)$/m.exec(a.prompt)?.[1] ?? "";
+      const rw = CASES.find((c) => c.question === q)?.rewrite;
+      return JSON.stringify({ query: rw?.query ?? q, asOf: rw?.asOf ?? null });
+    }
     const neu = /NEW: (.*)/.exec(a.prompt)?.[1] ?? "";
     const needle = replacing.find((r) => neu.includes(r.by))?.needle;
     const ids = needle ? [...a.prompt.matchAll(/^\[(\d+)\] (.*)$/gm)].filter((m) => m[2]!.includes(needle)).map((m) => Number(m[1])) : [];
@@ -41,14 +46,15 @@ const has = (texts: string[], sub: string) => texts.some((t) => t.toLowerCase().
 
 export async function runCase(c: Case): Promise<CaseResult> {
   const t0 = performance.now();
-  const recall = await buildRecall({ scope: SCOPES[c.scope], query: c.question, budgetTokens: BUDGET, asOf: c.asOf ? new Date(c.asOf) : undefined });
+  const recall = await buildRecall({ scope: SCOPES[c.scope], query: c.question, budgetTokens: BUDGET, threadTail: c.thread, asOf: c.asOf ? new Date(c.asOf) : undefined });
   const ms = performance.now() - t0;
   const hits = recall.hits.map((h) => h.text);
   const top = hits.slice(0, K);
   const forbid = c.forbid ?? [];
   const leaked = forbid.some((f) => (f === "*" ? hits.length > 0 : has(hits, f)));
   const found = (c.expect ?? []).every((e) => has(top, e));
-  return { id: c.id, category: c.category, pass: found && !leaked, leaked, ms, hits, recall };
+  const firstOk = !c.first || has(hits.slice(0, 1), c.first);
+  return { id: c.id, category: c.category, pass: found && firstOk && !leaked, leaked, ms, hits, recall };
 }
 
 export async function runAll(): Promise<CaseResult[]> {

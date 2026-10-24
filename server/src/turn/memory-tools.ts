@@ -47,12 +47,17 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     memory_search: tool({
-      description: "Search company memory and past decisions. Results may be outdated.",
-      inputSchema: z.object({ query: z.string().min(1).max(500), limit: z.number().int().min(1).max(20).optional() }),
-      execute: async ({ query, limit }) => {
-        const hits = await searchMemory({ tags: await readTags(ctx.scope), query, limit: limit ?? 8 });
+      description: "Search company memory and past decisions. Results may be outdated. Pass asOf (YYYY-MM-DD) to see what was true on that date instead of now.",
+      inputSchema: z.object({
+        query: z.string().min(1).max(500), limit: z.number().int().min(1).max(20).optional(),
+        asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}/, "asOf must be YYYY-MM-DD").optional(),
+      }),
+      execute: async ({ query, limit, asOf }) => {
+        const at = asOf ? new Date(`${asOf.slice(0, 10)}T23:59:59.999Z`) : undefined;
+        if (at && Number.isNaN(at.getTime())) return "asOf is not a valid date; use YYYY-MM-DD.";
+        const hits = await searchMemory({ tags: await readTags(ctx.scope), query, limit: limit ?? 8, asOf: at });
         return hits.length
-          ? hits.map((h) => `- [${h.source}; ${h.createdAt.toISOString().slice(0, 10)}; ${h.scopeTag}] ${h.text}`).join("\n")
+          ? hits.map((h) => `- [${h.source}; ${h.createdAt.toISOString().slice(0, 10)}; ${h.scopeTag}${h.factType !== "fact" ? `; ${h.factType}` : ""}${h.validUntil ? `; until ${h.validUntil.toISOString().slice(0, 10)}` : ""}] ${h.text}`).join("\n")
           : "No matching company memory found.";
       },
     }),

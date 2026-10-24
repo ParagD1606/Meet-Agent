@@ -22,6 +22,13 @@
       "when": 1792953600000,
       "tag": "0002_recall_log",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793040000000,
+      "tag": "0003_memory_temporal_typed",
+      "breakpoints": true
     }
   ]
 }
