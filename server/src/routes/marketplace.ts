@@ -19,7 +19,8 @@ export function mountMarketplaceRoutes(api: Hono<AppEnv>): void {
     const { q, limit } = readQuery(c, z.object({ q: z.string().max(100).optional(), limit: z.coerce.number().int().min(1).max(200).optional() }));
     const u = c.get("user");
     const r = searchDirectory(q ?? "", limit ?? 50);
-    const conns = (await listConnections(u.id, u.role)).filter((x) => x.status === "connected");
+    // admins list everyone's connections; "connected" must mean the workspace's or the caller's own, so one teammate's GitHub never hides yours
+    const conns = (await listConnections(u.id, u.role)).filter((x) => x.status === "connected" && (x.scope === "org" || x.ownerUserId === u.id));
     const connected = (m: MarketItem) => conns.some((x) => (m.curated ? x.provider === m.key : norm(x.url) === norm(m.url)));
     return c.json({
       items: r.apps.map((m) => ({ key: m.key, name: m.name, url: m.url, categories: m.categories, connectMode: m.connectMode, personalOnly: m.personalOnly, iconDomain: m.iconDomain, connected: connected(m) })),

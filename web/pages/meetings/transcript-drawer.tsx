@@ -6,8 +6,9 @@ type Line = { n: number; speaker: string; text: string }
 const COLORS = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)"]
 
 /** Bottom-sheet transcript with search; evidence lines are highlighted and the focus line is scrolled into view. */
-export function TranscriptDrawer({ open, onClose, lines, highlight, focus }: { open: boolean; onClose: () => void; lines: Line[] | null; highlight: Set<number>; focus: number | null }) {
+export function TranscriptDrawer({ open, onClose, lines: rawLines, highlight, focus }: { open: boolean; onClose: () => void; lines: Line[] | null; highlight: Set<number>; focus: number | null }) {
   const [q, setQ] = useState("")
+  const lines = Array.isArray(rawLines) ? rawLines : null
   const speakers = useMemo(() => [...new Set((lines ?? []).map((l) => l.speaker))], [lines])
   const shown = useMemo(() => { const s = q.trim().toLowerCase(); return (lines ?? []).filter((l) => !s || `${l.speaker} ${l.text}`.toLowerCase().includes(s)) }, [lines, q])
   return <Dialog open={open} onClose={onClose} title="Transcript" sheet width={900} height={560} description={focus ? `Showing line ${focus}. Highlighted lines are evidence for the selected item.` : "Highlighted lines are evidence for items."}>

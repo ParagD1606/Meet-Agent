@@ -207,7 +207,7 @@ function Detail({ id, admin }: { id: string; admin: boolean }) {
       <p className="text-sm font-medium text-danger">Analysis failed</p>
       <p className="mt-1 text-sm text-danger">{m.failedReason || "The transcript could not be analysed."}</p>
       <Button size="sm" className="mt-3" loading={redo.isPending} onClick={() => redo.mutate("retry")}>Retry</Button>
-      {m.transcript && <Button size="sm" variant="ghost" className="ml-2 mt-3" onClick={() => setDrawer({ focus: null, hl: new Set() })}>Read transcript</Button>}
+      {m.lines && <Button size="sm" variant="ghost" className="ml-2 mt-3" onClick={() => setDrawer({ focus: null, hl: new Set() })}>Read transcript</Button>}
     </div>}
 
     {m.status === "ready" && <>
@@ -259,7 +259,7 @@ function Detail({ id, admin }: { id: string; admin: boolean }) {
       )}
     </>}
 
-    <TranscriptDrawer open={drawer !== null} onClose={() => setDrawer(null)} lines={m.transcript} highlight={drawer?.hl ?? new Set()} focus={drawer?.focus ?? null} />
+    <TranscriptDrawer open={drawer !== null} onClose={() => setDrawer(null)} lines={m.lines ?? null} highlight={drawer?.hl ?? new Set()} focus={drawer?.focus ?? null} />
   </div>
 }
 

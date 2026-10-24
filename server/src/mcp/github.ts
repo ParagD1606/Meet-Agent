@@ -77,11 +77,12 @@ async function freshToken(connectionId: string): Promise<string> {
   }
 }
 
-async function githubFetch(accessToken: string, path: string): Promise<any> {
-  const r = await fetch(`${API}${path}`, { headers: { accept: "application/vnd.github+json", authorization: `Bearer ${accessToken}`, "x-github-api-version": "2022-11-28", "user-agent": "company-brain" } });
+async function githubFetch(accessToken: string, path: string, init: RequestInit = {}): Promise<any> {
+  const r = await fetch(`${API}${path}`, { ...init, headers: { accept: "application/vnd.github+json", authorization: `Bearer ${accessToken}`, "x-github-api-version": "2022-11-28", "user-agent": "company-brain", ...(init.body ? { "content-type": "application/json" } : {}), ...init.headers } });
+  const body = await r.json().catch(() => ({}));
   if (r.status === 401) throw new McpReauthRequired("github");
-  if (!r.ok) throw new Error(`GitHub request failed (${r.status})`);
-  return r.json();
+  if (!r.ok) throw new Error(typeof body.message === "string" ? `GitHub: ${body.message}` : `GitHub request failed (${r.status})`);
+  return body;
 }
 const segment = (v: unknown, name: string) => {
   if (typeof v !== "string" || !v.trim()) throw new Error(`${name} is required`);
@@ -90,6 +91,10 @@ const segment = (v: unknown, name: string) => {
 const positive = (v: unknown, fallback = 30) => typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 100 ? v : fallback;
 const page = (v: unknown) => typeof v === "number" && Number.isInteger(v) && v > 0 ? v : 1;
 const query = (p: Record<string, string | number | undefined>) => { const u = new URLSearchParams(); for (const [k, v] of Object.entries(p)) if (v !== undefined) u.set(k, String(v)); return u.toString() ? `?${u}` : ""; };
+const next = (items: unknown[], currentPage: number, size: number) => items.length === size ? currentPage + 1 : null;
+const repoDetail = (r: any) => ({ full_name: r.full_name, private: r.private, description: r.description, default_branch: r.default_branch, visibility: r.visibility, language: r.language, topics: r.topics, updated_at: r.updated_at, html_url: r.html_url });
+const issueSummary = (r: any) => ({ number: r.number, title: r.title, state: r.state, author: r.user?.login, updated_at: r.updated_at, html_url: r.html_url, pull_request: !!r.pull_request });
+const pullSummary = (r: any) => ({ number: r.number, title: r.title, state: r.state, author: r.user?.login, draft: r.draft, updated_at: r.updated_at, html_url: r.html_url });
 
 const TOOLS: McpToolInfo[] = [
   { name: "whoami", description: "Get the connected GitHub account.", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
@@ -98,6 +103,7 @@ const TOOLS: McpToolInfo[] = [
   { name: "get_file", description: "Read a text file from a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" }, ref: { type: "string" } }, required: ["owner", "repo", "path"] }, annotations: { readOnlyHint: true } },
   { name: "list_issues", description: "List issues in a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, state: { type: "string", enum: ["open", "closed", "all"] }, page: { type: "number" }, per_page: { type: "number" } }, required: ["owner", "repo"] }, annotations: { readOnlyHint: true } },
   { name: "get_issue", description: "Get a GitHub issue.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, issue_number: { type: "number" } }, required: ["owner", "repo", "issue_number"] }, annotations: { readOnlyHint: true } },
+  { name: "create_issue", description: "Create a GitHub issue. This cannot create code changes or pull requests.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, title: { type: "string" }, body: { type: "string" }, labels: { type: "array", items: { type: "string" } }, assignees: { type: "array", items: { type: "string" } } }, required: ["owner", "repo", "title"] } },
   { name: "list_pull_requests", description: "List pull requests in a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, state: { type: "string", enum: ["open", "closed", "all"] }, page: { type: "number" }, per_page: { type: "number" } }, required: ["owner", "repo"] }, annotations: { readOnlyHint: true } },
   { name: "get_pull_request", description: "Get a GitHub pull request.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, pull_number: { type: "number" } }, required: ["owner", "repo", "pull_number"] }, annotations: { readOnlyHint: true } },
 ];
@@ -109,15 +115,29 @@ export async function githubCall(conn: ConnectionRow, name: string, args: Record
   const owner = () => segment(args.owner, "owner"); const repo = () => segment(args.repo, "repo");
   switch (name) {
     case "whoami": return githubFetch(token, "/user");
-    case "list_repositories": return githubFetch(token, `/user/repos${query({ affiliation: "owner,collaborator,organization_member", sort: "updated", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_repository": return githubFetch(token, `/repos/${owner()}/${repo()}`);
+    case "list_repositories": { const currentPage = page(args.page); const size = positive(args.per_page, 20); const repos = await githubFetch(token, `/user/repos${query({ affiliation: "owner,collaborator,organization_member", sort: "updated", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, repositories: repos.map((r) => r.full_name).filter((r): r is string => typeof r === "string"), next_page: next(repos, currentPage, size) }; }
+    case "get_repository": return repoDetail(await githubFetch(token, `/repos/${owner()}/${repo()}`));
     case "get_file": { const path = segment(args.path, "path").replace(/%2F/g, "/"); const file = await githubFetch(token, `/repos/${owner()}/${repo()}/contents/${path}${query({ ref: typeof args.ref === "string" ? args.ref : undefined })}`); if (file.type !== "file") throw new Error("path is not a file"); return { name: file.name, path: file.path, sha: file.sha, size: file.size, content: typeof file.content === "string" ? Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8") : null }; }
-    case "list_issues": return githubFetch(token, `/repos/${owner()}/${repo()}/issues${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_issue": return githubFetch(token, `/repos/${owner()}/${repo()}/issues/${segment(args.issue_number, "issue_number")}`);
-    case "list_pull_requests": return githubFetch(token, `/repos/${owner()}/${repo()}/pulls${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: page(args.page), per_page: positive(args.per_page) })}`);
-    case "get_pull_request": return githubFetch(token, `/repos/${owner()}/${repo()}/pulls/${segment(args.pull_number, "pull_number")}`);
+    case "list_issues": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const issues = await githubFetch(token, `/repos/${owner()}/${repo()}/issues${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, issues: issues.map(issueSummary), next_page: next(issues, currentPage, size) }; }
+    case "get_issue": { const issue = await githubFetch(token, `/repos/${owner()}/${repo()}/issues/${segment(args.issue_number, "issue_number")}`); return { ...issueSummary(issue), body: issue.body }; }
+    case "create_issue": { const title = segment(args.title, "title"); const labels = Array.isArray(args.labels) ? args.labels.filter((x): x is string => typeof x === "string").slice(0, 20) : undefined; const assignees = Array.isArray(args.assignees) ? args.assignees.filter((x): x is string => typeof x === "string").slice(0, 10) : undefined; const issue = await githubFetch(token, `/repos/${owner()}/${repo()}/issues`, { method: "POST", body: JSON.stringify({ title: decodeURIComponent(title), ...(typeof args.body === "string" ? { body: args.body } : {}), ...(labels?.length ? { labels } : {}), ...(assignees?.length ? { assignees } : {}) }) }); return issueSummary(issue); }
+    case "list_pull_requests": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const pulls = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, pull_requests: pulls.map(pullSummary), next_page: next(pulls, currentPage, size) }; }
+    case "get_pull_request": { const pull = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls/${segment(args.pull_number, "pull_number")}`); return { ...pullSummary(pull), body: pull.body, base: pull.base?.ref, head: pull.head?.ref }; }
     default: throw new Error(`unknown GitHub tool: ${name}`);
   }
+}
+
+export type GitHubRepositoryPage = { page: number; repositories: string[]; next_page: number | null };
+
+/** Used by the private `/repos` Slack command. Legacy PAT/MCP rows are skipped: the command only reads the caller's GitHub App OAuth connection. */
+export async function listGithubRepositoriesForUser(userId: string, requestedPage = 1): Promise<GitHubRepositoryPage | null> {
+  const rows = await db.select().from(mcpConnections).where(eq(mcpConnections.provider, "github"));
+  for (const conn of rows) {
+    if (conn.scope !== "user" || conn.ownerUserId !== userId || conn.status !== "connected") continue;
+    if ((await readAuth(conn.id)).bearer) continue;
+    return await githubCall(conn, "list_repositories", { page: Math.max(1, Math.min(requestedPage, 1000)) }) as GitHubRepositoryPage;
+  }
+  return null;
 }
 
 export async function githubSession(conn: ConnectionRow): Promise<McpSession> {
@@ -125,7 +145,10 @@ export async function githubSession(conn: ConnectionRow): Promise<McpSession> {
     // Health checks use listTools, so verify the token against GitHub here instead of
     // reporting a dead/revoked account as healthy merely because the local schema exists.
     listTools: async () => { const token = await freshToken(conn.id); await githubFetch(token, "/user"); return githubTools(); },
-    callTool: (name, args) => githubCall(conn, name, args),
+    // The shared MCP pipeline serializes structuredContent. Wrap native REST
+    // responses in that shape so arrays (such as repository listings) are not
+    // mistaken for an empty MCP response.
+    callTool: async (name, args) => ({ structuredContent: await githubCall(conn, name, args) }),
     close: async () => {},
   };
 }

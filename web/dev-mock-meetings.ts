@@ -80,7 +80,7 @@ const counts = (m: Meeting) => {
   }
 }
 const row = (m: Meeting) => ({ id: m.id, title: m.title, platform: m.platform, startedAt: m.startedAt, status: m.status, failedReason: m.failedReason, counts: counts(m) })
-const full = (m: Meeting, admin: boolean) => ({ ...row(m), summary: m.summary, items: m.items, transcript: m.status === "processing" ? null : parse(m.text), counts: counts(m), canApprove: admin, mode: db.mode, autoConfidence: db.autoConfidence })
+const full = (m: Meeting, admin: boolean) => ({ ...row(m), summary: m.summary, items: m.items, lines: m.status === "processing" ? null : parse(m.text), counts: counts(m), canApprove: admin, mode: db.mode, autoConfidence: db.autoConfidence })
 
 /** Auto mode: anything at/above the confidence threshold with an owner and a quote is assigned without review; duplicates auto-merge, conflicts only warn. */
 const autoAssign = (m: Meeting) => {

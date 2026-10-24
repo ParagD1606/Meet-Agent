@@ -32,7 +32,7 @@ GITHUB_APP_CLIENT_ID=Iv1_your_github_app_client_id
 GITHUB_APP_CLIENT_SECRET=your_github_app_client_secret
 ```
 
-In the GitHub App settings, set **Setup URL** to `https://slack.derpx06.live/sync/oauth/github/callback` (replace the host if your `PUBLIC_URL` differs). Give the app read-only **Contents**, **Issues**, and **Pull requests** permissions, then install it for the organization or repositories you want. Do not enable “Request user authorization during installation”; that uses a different callback flow.
+In the GitHub App settings, set **Setup URL** to `https://slack.derpx06.live/sync/oauth/github/callback` (replace the host if your `PUBLIC_URL` differs). Give the app **Contents: read**, **Issues: read and write**, and **Pull requests: read** permissions, then install it for the organization or repositories you want. Do not enable “Request user authorization during installation”; that uses a different callback flow.
 
 For the personal GitHub integration, add `https://slack.derpx06.live/github/oauth/callback` as a **Redirect URI** in the same GitHub App, enable expiring user authorization tokens, and keep the Client ID and Client Secret only in the server environment. Each member then authorizes their own GitHub account from **Integrations**; their token can read only repositories that both they and the App installation can access.
 

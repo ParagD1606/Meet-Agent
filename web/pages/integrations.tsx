@@ -48,7 +48,7 @@ function InstallDialog({ target, onClose, admin }: { target: Target | null; onCl
           <FormField label="Name" optional>{(p) => <Input {...p} value={label} onChange={(e) => setLabel(e.target.value)} />}</FormField>
         </>}
         {apikey && <FormField label="API key" hint="Stored encrypted. Used only for this connection." error={fieldErr(install.error, "token")}>{(p) => <Input {...p} type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} />}</FormField>}
-        {github && <p className="rounded-md border border-line bg-sunken px-3 py-2 text-sm text-muted">Authorize your own GitHub account. Pixel can read only repositories you can access where the Company Brain GitHub App is installed.</p>}
+        {github && <p className="rounded-md border border-line bg-sunken px-3 py-2 text-sm text-muted">Authorize your own GitHub account. Pixel can inspect repositories you can access where the Company Brain GitHub App is installed, and can create GitHub Issues only when asked.</p>}
         {admin && !item?.personalOnly ? (
           <FormField label="Who can use it">{(p) => <Select {...p} value={scope} onChange={(e) => setScope(e.target.value as "org" | "user")}><option value="org">Everyone in the workspace</option><option value="user">Only me</option></Select>}</FormField>
         ) : <p className="text-sm text-muted">This connection will be personal: only you can use it.</p>}
