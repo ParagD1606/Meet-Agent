@@ -77,11 +77,12 @@ async function freshToken(connectionId: string): Promise<string> {
   }
 }
 
-async function githubFetch(accessToken: string, path: string): Promise<any> {
-  const r = await fetch(`${API}${path}`, { headers: { accept: "application/vnd.github+json", authorization: `Bearer ${accessToken}`, "x-github-api-version": "2022-11-28", "user-agent": "company-brain" } });
+async function githubFetch(accessToken: string, path: string, init: RequestInit = {}): Promise<any> {
+  const r = await fetch(`${API}${path}`, { ...init, headers: { accept: "application/vnd.github+json", authorization: `Bearer ${accessToken}`, "x-github-api-version": "2022-11-28", "user-agent": "company-brain", ...(init.body ? { "content-type": "application/json" } : {}), ...init.headers } });
+  const body = await r.json().catch(() => ({}));
   if (r.status === 401) throw new McpReauthRequired("github");
-  if (!r.ok) throw new Error(`GitHub request failed (${r.status})`);
-  return r.json();
+  if (!r.ok) throw new Error(typeof body.message === "string" ? `GitHub: ${body.message}` : `GitHub request failed (${r.status})`);
+  return body;
 }
 const segment = (v: unknown, name: string) => {
   if (typeof v !== "string" || !v.trim()) throw new Error(`${name} is required`);
@@ -102,6 +103,7 @@ const TOOLS: McpToolInfo[] = [
   { name: "get_file", description: "Read a text file from a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, path: { type: "string" }, ref: { type: "string" } }, required: ["owner", "repo", "path"] }, annotations: { readOnlyHint: true } },
   { name: "list_issues", description: "List issues in a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, state: { type: "string", enum: ["open", "closed", "all"] }, page: { type: "number" }, per_page: { type: "number" } }, required: ["owner", "repo"] }, annotations: { readOnlyHint: true } },
   { name: "get_issue", description: "Get a GitHub issue.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, issue_number: { type: "number" } }, required: ["owner", "repo", "issue_number"] }, annotations: { readOnlyHint: true } },
+  { name: "create_issue", description: "Create a GitHub issue. This cannot create code changes or pull requests.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, title: { type: "string" }, body: { type: "string" }, labels: { type: "array", items: { type: "string" } }, assignees: { type: "array", items: { type: "string" } } }, required: ["owner", "repo", "title"] } },
   { name: "list_pull_requests", description: "List pull requests in a GitHub repository.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, state: { type: "string", enum: ["open", "closed", "all"] }, page: { type: "number" }, per_page: { type: "number" } }, required: ["owner", "repo"] }, annotations: { readOnlyHint: true } },
   { name: "get_pull_request", description: "Get a GitHub pull request.", inputSchema: { type: "object", properties: { owner: { type: "string" }, repo: { type: "string" }, pull_number: { type: "number" } }, required: ["owner", "repo", "pull_number"] }, annotations: { readOnlyHint: true } },
 ];
@@ -118,6 +120,7 @@ export async function githubCall(conn: ConnectionRow, name: string, args: Record
     case "get_file": { const path = segment(args.path, "path").replace(/%2F/g, "/"); const file = await githubFetch(token, `/repos/${owner()}/${repo()}/contents/${path}${query({ ref: typeof args.ref === "string" ? args.ref : undefined })}`); if (file.type !== "file") throw new Error("path is not a file"); return { name: file.name, path: file.path, sha: file.sha, size: file.size, content: typeof file.content === "string" ? Buffer.from(file.content.replace(/\n/g, ""), "base64").toString("utf8") : null }; }
     case "list_issues": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const issues = await githubFetch(token, `/repos/${owner()}/${repo()}/issues${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, issues: issues.map(issueSummary), next_page: next(issues, currentPage, size) }; }
     case "get_issue": { const issue = await githubFetch(token, `/repos/${owner()}/${repo()}/issues/${segment(args.issue_number, "issue_number")}`); return { ...issueSummary(issue), body: issue.body }; }
+    case "create_issue": { const title = segment(args.title, "title"); const labels = Array.isArray(args.labels) ? args.labels.filter((x): x is string => typeof x === "string").slice(0, 20) : undefined; const assignees = Array.isArray(args.assignees) ? args.assignees.filter((x): x is string => typeof x === "string").slice(0, 10) : undefined; const issue = await githubFetch(token, `/repos/${owner()}/${repo()}/issues`, { method: "POST", body: JSON.stringify({ title: decodeURIComponent(title), ...(typeof args.body === "string" ? { body: args.body } : {}), ...(labels?.length ? { labels } : {}), ...(assignees?.length ? { assignees } : {}) }) }); return issueSummary(issue); }
     case "list_pull_requests": { const currentPage = page(args.page); const size = positive(args.per_page, 10); const pulls = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls${query({ state: args.state === "closed" || args.state === "all" ? args.state : "open", page: currentPage, per_page: size })}`) as any[]; return { page: currentPage, pull_requests: pulls.map(pullSummary), next_page: next(pulls, currentPage, size) }; }
     case "get_pull_request": { const pull = await githubFetch(token, `/repos/${owner()}/${repo()}/pulls/${segment(args.pull_number, "pull_number")}`); return { ...pullSummary(pull), body: pull.body, base: pull.base?.ref, head: pull.head?.ref }; }
     default: throw new Error(`unknown GitHub tool: ${name}`);
