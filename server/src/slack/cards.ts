@@ -60,7 +60,7 @@ export function nudgeCard(rung: JourneyRung): Card {
 }
 
 export function homeView(o: { botName?: string; name?: string | null; connections: number; facts?: { id: number; text: string }[]; admin?: boolean }): unknown {
-  const facts = o.facts ?? [];
+  const facts = (o.facts ?? []).slice(0, 40); // a Home tab allows 100 blocks
   const confirm = { title: { type: "plain_text", text: "Delete this memory?" }, text: { type: "plain_text", text: "I will forget it for good." }, confirm: { type: "plain_text", text: "Delete" }, deny: { type: "plain_text", text: "Keep" } };
   return {
     type: "home",
@@ -70,7 +70,7 @@ export function homeView(o: { botName?: string; name?: string | null; connection
       section(o.connections > 0 ? `*${o.connections}* connected tool${o.connections === 1 ? "" : "s"} available to me.` : "_No tools connected yet._"),
       { type: "actions", elements: [
         button("Dashboard", "brain_open_dashboard", { url: link("/") }),
-        button("Connect tools", "brain_open_dashboard", { url: link("/configure/integrations") }),
+        button("Connect tools", "brain_open_integrations", { url: link("/configure/integrations") }),
         ...(o.admin ? [button("Review queue", "brain_review_open")] : []),
       ] },
       { type: "header", text: { type: "plain_text", text: "What I remember about you" } },
@@ -99,6 +99,6 @@ export function askConfirmCard(a: { id: string; owner: string; question: string 
 /** Consent card for "follow up with @X": the requester sees the exact text and time before anyone is messaged. */
 export function followUpConfirmCard(a: { id: string; target: string; text: string; at: Date; repeatDays?: number | null }): Card {
   const when = `${a.at.toISOString().slice(0, 16).replace("T", " ")} UTC${a.repeatDays ? `, then every ${a.repeatDays} day(s)` : ""}`;
-  const text = `Want me to follow up with <@${a.target}> on ${when}? I'll DM them only this (during working hours): "${escapeSlackText(a.text)}"`;
+  const text = `Want me to follow up with <@${a.target}> on ${when}? I'll DM them only this: "${escapeSlackText(a.text)}"`;
   return { text, blocks: [section(text), { type: "actions", elements: [button("Yes, follow up", "brain_fu_yes", { value: a.id, style: "primary" }), button("No thanks", "brain_fu_no", { value: a.id })] }] };
 }

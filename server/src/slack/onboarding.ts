@@ -30,7 +30,10 @@ export async function onAppHome(userId: string): Promise<void> {
     const [c] = await db.select({ n: sql<number>`count(*)::int` }).from(mcpConnections)
       .where(and(eq(mcpConnections.status, "connected"), sql`(${mcpConnections.scope} = 'org' or ${mcpConnections.ownerUserId} = ${userId})`));
     await (await slackClient()).views.publish({ user_id: userId, view: homeView({ botName: (await getPersona()).name, name: u?.name, connections: c?.n ?? 0, facts: await homeFacts(userId), admin: u?.role === "admin" || u?.role === "owner" }) as never });
-  } catch (err) { log.warn("app home publish failed", { userId, error: (err as Error).message }); }
+  } catch (err) {
+    const d = (err as { data?: { response_metadata?: { messages?: string[] } } }).data;
+    log.warn("app home publish failed", { userId, error: (err as Error).message, detail: d?.response_metadata?.messages?.slice(0, 5) }); // Slack says which block is invalid here
+  }
 }
 
 /** Bot added to a channel: one short introduction (never in DMs). */

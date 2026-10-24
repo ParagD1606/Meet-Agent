@@ -6,6 +6,8 @@ import { handleInteraction } from "../../src/slack/interactions";
 import { askDeps, attemptDelivery, captureOwnerReply, getAsk, nextWindow, proposeAsk } from "../../src/slack/teammate";
 import { installFakes, removeFakes } from "../memory/helpers";
 
+process.env.QUIET_HOURS = "1"; // quiet hours are opt-in; these tests cover the opt-in behaviour
+
 beforeAll(installFakes);
 afterAll(removeFakes);
 

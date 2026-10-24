@@ -7,7 +7,7 @@ const say = (text: string, blocks?: unknown[]): Reply => ({ response_type: "ephe
 const HELP = [
   "`/brain-followups` list your scheduled follow-ups",
   "`/brain-followups cancel <id>` cancel one",
-  "`/brain-followups digest on [HH:MM] [mon-fri|daily|mon,wed]` daily task digest DM (default off; workspace timezone, working hours)",
+  "`/brain-followups digest on [HH:MM] [mon-fri|daily|mon,wed]` daily task digest DM (default off; workspace timezone)",
   "`/brain-followups digest off`",
   "`/brain-followups weekly on|off` Friday summary of follow-ups and open tasks",
 ].join("\n");
