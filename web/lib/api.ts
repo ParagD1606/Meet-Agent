@@ -184,7 +184,18 @@ export interface CostReport {
   byModel: { model: string; usd: number; turns: number; inputTokens: number; outputTokens: number }[]
   month?: { spentUsd: number; alertUsd: number | null }
 }
-export type CommitmentStatus = "open" | "done" | "dropped" | "overdue"
+export type TaskStatus = "open" | "in_progress" | "overdue" | "done" | "dropped"
+export interface Task {
+  id: string; title: string; status: TaskStatus; priority: "normal" | "urgent"; dueAt: string | null; overdue: boolean
+  ownerId: string | null; ownerName: string | null; ownerAvatar: string | null
+  assignerId: string | null; assignerName: string | null; assignerAvatar: string | null
+  permalink: string | null; channelId: string | null; channelName: string | null; sourceType: string; createdAt: string; completedAt: string | null
+  canEdit: boolean; canReassign: boolean
+}
+export interface Person { id: string; name: string | null; avatarUrl: string | null; title: string | null }
+export interface TaskPatch { status?: "open" | "in_progress" | "done" | "dropped"; ownerId?: string; due?: string | null; priority?: "normal" | "urgent" }
+export interface NewTask { title: string; ownerId: string; due?: string | null; priority?: "normal" | "urgent"; channelId?: string }
+export type CommitmentStatus = "open" | "done" | "dropped" | "overdue" | "in_progress"
 export interface Commitment {
   id: string; ownerId: string | null; ownerName: string | null; text: string; dueAt: string | null; sourceType: string
   permalink: string | null; channelId: string | null; status: CommitmentStatus; nudgeCount: number; completedAt: string | null; createdAt: string
@@ -216,6 +227,11 @@ export const api = {
   saveProactiveFeatures: (f: Partial<ProactiveFeatures>) => send<ProactiveFeatures>("PUT", "/api/settings/proactive-features", f),
   costReport: (days: number) => get<CostReport>(`/api/usage/cost${qs({ days })}`),
   commitments: (status: string) => get<unknown>(`/api/manager/commitments${qs({ status, limit: 200 })}`).then((d) => list<Commitment>(d, "commitments")),
+  tasks: () => get<{ tasks: Task[]; me: string }>(`/api/tasks${qs({ limit: 500 })}`),
+  people: () => get<{ people: Person[] }>("/api/people").then((d) => d.people),
+  patchTask: (id: string, p: TaskPatch) => send<{ ok: boolean }>("PATCH", `/api/tasks/${encodeURIComponent(id)}`, p),
+  createTask: (t: NewTask) => send<{ ok: boolean; created: boolean }>("POST", "/api/tasks", t),
+  syncTasks: () => send<{ ok: boolean; counts?: { facts?: number; meetings?: number } }>("POST", "/api/memory/run", { job: "sync-tasks" }),
   reviews: (status: "pending" | "approved" | "rejected" = "pending") => get<unknown>(`/api/reviews${qs({ status })}`).then((d) => list<Review>(d, "reviews")),
   decideReview: (id: number | string, approve: boolean) => send("POST", `/api/reviews/${id}/decide`, { approve }),
   workspacePrompt: () => get<{ prompt: string }>("/api/settings/workspace-prompt"),

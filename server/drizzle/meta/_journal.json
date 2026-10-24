@@ -85,6 +85,13 @@
       "when": 1793040008000,
       "tag": "0009_follow_ups",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793040009000,
+      "tag": "0012_task_priority",
+      "breakpoints": true
     }
   ]
 }

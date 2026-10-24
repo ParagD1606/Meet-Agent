@@ -128,7 +128,7 @@ async function execute(input: TurnInput): Promise<void> {
     const ctx: ToolContext = {
       turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope,
       readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth, userText: input.text,
-      actionToken: input.actionToken,
+      actionToken: input.actionToken, messageTs: input.ts,
     };
     const narrate = interactive ? sink.narrate : undefined;
     stage = "tools";

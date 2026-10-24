@@ -40,3 +40,11 @@ Opt in per channel with the proactive-features setting (`PUT /api/settings/proac
 ## API
 
 `GET /api/manager/commitments?status=open,overdue&owner=U123&limit=100` (admin). Results are filtered to the requester's own read surface (shared + their private channels + their DM tag).
+
+## Tasks (console tab, Pixel tools)
+
+Every task is a commitment row, a memory fact (`Task "X" [open, urgent]: assigned to ...`, superseded on every status change) and, in the console, a row in the **Tasks** tab (all members; `/commitments` redirects there).
+
+- Pixel tools: `assign_task` (creates the task, tells the assignee at once in-thread or by DM with Done/Drop, no quiet hours), `update_task` (done/open/dropped/in_progress, reassign, due, priority; owner, assigner or admin; the assigner is told "X completed"), `find_tasks` (answers "is X done?" from status), `notify_teammate` (relay the asker's own words; 5/day per target; consent card when outside text entered the turn).
+- API (any member, scope-filtered like the commitments listing; a DM-scoped task is also visible to the person it was explicitly assigned to): `GET /api/tasks?status=&owner=&assigner=&q=&channel=&mine=1&assignedByMe=1&overdue=1&dueAfter=&dueBefore=`, `PATCH /api/tasks/:id {status?, ownerId?, due?, priority?}`, `POST /api/tasks {title, ownerId, due?, priority?, channelId?}`, `GET /api/people`.
+- `POST /api/memory/run {job:"sync-tasks"}` (admin) and a one-time boot backfill turn existing assignment facts and meeting tasks into tasks. Idempotent: tasks dedupe by owner + normalized title + channel.

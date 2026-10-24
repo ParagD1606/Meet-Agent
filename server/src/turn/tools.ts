@@ -23,6 +23,7 @@ import { askTeammateTool, withAliases } from "./ask-teammate";
 import { grantedLeases } from "./lease";
 import { memoryTools } from "./memory-tools";
 import { scheduleFollowUpTool } from "./follow-up-tool";
+import { taskTools } from "./task-tools";
 import { readToolResultTool } from "./spill";
 import { allowedFamilies, likelyFamilies, type Depth, type ToolFamily } from "./depth";
 import { createProgressTools } from "./progress";
@@ -33,6 +34,8 @@ export type ToolContext = {
   userId: string | null;
   channelId: string;
   threadTs?: string;
+  /** Slack ts of the asker's own message (source permalink of a task assigned from it). */
+  messageTs?: string;
   scope: SlackScope;
   readOnly: boolean;
   orgConnectionsOnly: boolean;
@@ -92,6 +95,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
   if (writable) Object.assign(core, teammateAccessTools(ctx, o.text));
   if (writable && ctx.userId) core.ask_teammate = askTeammateTool(ctx);
   if (writable && ctx.userId) core.schedule_follow_up = scheduleFollowUpTool(ctx);
+  if (writable && ctx.userId) Object.assign(core, taskTools(ctx)); // assign_task, update_task, notify_teammate
   if (writable && !ctx.orgConnectionsOnly) {
     core.request_connection = tool({
       description: "Ask the user to connect an app (github, linear, notion...).",

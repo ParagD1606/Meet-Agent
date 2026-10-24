@@ -4,6 +4,7 @@ import { config, serverOptions } from "./config";
 import { lockPool, pool } from "./db";
 import { runMigrations } from "./db/migrate";
 import { startJobs, stopJobs } from "./jobs";
+import { bootBackfillTasks } from "./manager/task-sync";
 import { refreshModelSettings } from "./llm";
 import { drain, installProcessHandlers } from "./lifecycle";
 import { log } from "./log";
@@ -17,6 +18,7 @@ setInterval(() => refreshModelSettings().catch((e) => log.warn("model settings r
 await startJobs();
 await resumePending();
 await startSlack();
+void bootBackfillTasks(); // one-time: assignment facts + meeting tasks -> Tasks tab
 await ensureSetupToken(); // logs the owner-claim token while no owner exists
 
 const server = Bun.serve({ port: config.PORT, fetch: app.fetch, ...serverOptions });

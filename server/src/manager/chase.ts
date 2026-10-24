@@ -6,6 +6,7 @@ import { log } from "../log";
 import { slackClient } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
 import { refreshTaskList } from "./tasks";
+import { notifyAssignerDone } from "./task-sync";
 import { ACTIVE, canRead, getSetting, markOverdue, resolveCommitment, type Commitment } from "./commitments";
 
 const DAY = 86_400_000;
@@ -117,6 +118,7 @@ export async function handleCommitmentAction(payload: Payload, a: { action_id?: 
   if (!uid || !a.value) return true;
   const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, uid));
   const row = await resolveCommitment(a.value, status, { id: uid, admin: u?.role === "admin" || u?.role === "owner" });
+  if (row && status === "done") await notifyAssignerDone(row, uid);
   if (list) { await refreshTaskList(payload.response_url, uid); return true; }
   const channel = payload.container?.channel_id ?? payload.channel?.id;
   const ts = payload.container?.message_ts ?? payload.message?.ts;

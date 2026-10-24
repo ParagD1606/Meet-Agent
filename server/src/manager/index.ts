@@ -13,6 +13,7 @@ export * from "./followups";
 export * from "./tasks";
 export * from "./capture";
 export * from "./find";
+export * from "./task-sync";
 export * from "./standup";
 
 export const MANAGER_Q = { extract: "manager-extract", chase: "manager-chase", daily: "manager-standup-daily", weekly: "manager-standup-weekly", risks: "manager-risks", followups: "manager-followups" } as const;

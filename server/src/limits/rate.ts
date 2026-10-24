@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
-export type RateKind = "turn" | "triage" | "mcp" | "nudge" | "chase" | "ask" | "huddle" | "followup";
+export type RateKind = "turn" | "triage" | "mcp" | "nudge" | "chase" | "ask" | "huddle" | "followup" | "tell";
 type Bucket = { key: string; capacity: number; perSec: number };
 
 /** Burst capacity + sustained refill. Per-user and per-channel buckets must both have a token. */
@@ -21,6 +21,8 @@ export const BUCKETS: Record<RateKind, (a: { userId: string; channelId: string }
   ask: ({ userId }) => [{ key: `user:${userId}:ask`, capacity: 3, perSec: 3 / 86400 }],
   // follow-up / digest DMs to one person (userId = the recipient): 5 in a burst, then 20 per day
   followup: ({ userId }) => [{ key: `user:${userId}:followup`, capacity: 5, perSec: 20 / 86_400 }],
+  // messages Pixel relays TO one teammate on someone's say-so (userId = the target): 5 per day
+  tell: ({ userId }) => [{ key: `user:${userId}:tell`, capacity: 5, perSec: 5 / 86_400 }],
   // huddle files a user attaches to messages (each import costs an LLM call): 5 in a burst, then one per minute
   huddle: ({ userId }) => [{ key: `user:${userId}:huddle`, capacity: 5, perSec: 1 / 60 }],
 };
@@ -36,6 +38,7 @@ const MESSAGES: Record<RateKind, string> = {
   ask: "rate limited",
   huddle: "rate limited",
   followup: "rate limited",
+  tell: "rate limited",
 };
 
 /**

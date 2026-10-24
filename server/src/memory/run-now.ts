@@ -1,4 +1,5 @@
 import { runAllSyncs } from "../sync";
+import { syncTasksFromMemory } from "../manager/task-sync";
 import { db } from "../db";
 import { syncSources } from "../db/schema";
 import { syncRecentHuddles } from "../meetings";
@@ -9,7 +10,7 @@ import { backfillContextPrefixes } from "./context-prefix";
 import { observeAll } from "./observe";
 import { flushIdleCaptures } from "./writeback";
 
-export const RUN_JOBS = ["observe", "consolidate", "capture-flush", "sync", "backfill-prefix", "backfill-history"] as const;
+export const RUN_JOBS = ["observe", "consolidate", "capture-flush", "sync", "backfill-prefix", "backfill-history", "sync-tasks"] as const;
 export type RunJob = (typeof RUN_JOBS)[number];
 
 /** Reuses the scheduled job bodies; each returns plain counts. */
@@ -24,6 +25,7 @@ export const runners: Record<RunJob, () => Promise<Record<string, unknown>>> = {
   },
   "backfill-prefix": async () => ({ prefixed: await backfillContextPrefixes() }),
   "backfill-history": async () => ({ ...(await backfillAll({ calls: 40 })) }),
+  "sync-tasks": async () => ({ ...(await syncTasksFromMemory()) }),
 };
 
 export const RATE_MAX = 6; // starts per job per RATE_WINDOW_MS

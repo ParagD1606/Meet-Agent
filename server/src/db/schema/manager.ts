@@ -15,7 +15,7 @@ export const commitments = pgTable("commitments", {
   channelId: text("channel_id"),
   threadTs: text("thread_ts"),
   scopeTag: text("scope_tag").notNull(),
-  status: text("status", { enum: ["open", "done", "dropped", "overdue"] }).notNull().default("open"),
+  status: text("status", { enum: ["open", "done", "dropped", "overdue", "in_progress"] }).notNull().default("open"),
   lastNudgedAt: timestamp("last_nudged_at", { withTimezone: true }),
   nudgeCount: integer("nudge_count").notNull().default(0),
   completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -23,7 +23,11 @@ export const commitments = pgTable("commitments", {
   assignerId: text("assigner_id"), // Slack user id of whoever gave the task (message author)
   sourceTs: text("source_ts"), // Slack ts of the originating message (edit/delete sync)
   sourceHash: text("source_hash"), // hash of that message's raw text (skips no-op message_changed events)
+  priority: text("priority", { enum: ["normal", "urgent"] }).notNull().default("normal"),
+  memoryId: integer("memory_id"), // the active memory fact that mirrors this task (superseded on every status change)
+  titleKey: text("title_key"), // normalized title: dedupe by owner + title + channel
 }, (t) => [
+  index("commitments_dedupe_idx").on(t.ownerId, t.titleKey, t.channelId),
   index("commitments_source_ts_idx").on(t.channelId, t.sourceTs),
   index("commitments_thread_idx").on(t.channelId, t.threadTs),
   uniqueIndex("commitments_source_uniq").on(t.sourceRef),

@@ -7,6 +7,7 @@ import { ambientIo, hasSecret, textHash } from "../memory/ambient";
 import { scanMemoryText } from "../memory/core-blocks";
 import { addFact } from "../memory/facts";
 import { completeJson } from "../memory/llm";
+import { syncTaskFact } from "./task-sync";
 import { ACTIVE, channelScope, COMMIT_CUE, extractFromText, resolveCommitment, resolveOwner, type Commitment } from "./commitments";
 
 /**
@@ -73,6 +74,7 @@ export async function applyThreadReply(ev: TaskEv): Promise<"done" | "reassign" 
     if (!owner.id || owner.id === row.ownerId) return "none";
     const [after] = await db.update(commitments).set({ ownerId: owner.id, ownerName: owner.name, nudgeCount: 0, lastNudgedAt: null }).where(and(eq(commitments.id, row.id), inArray(commitments.status, [...ACTIVE]))).returning();
     if (!after) return "none";
+    await syncTaskFact(after);
     await statusFact(row, `${owner.name ?? "A teammate"} took over "${row.text}" from ${row.ownerName ?? "the previous owner"}`, ev);
     return "reassign";
   } catch (e) {
@@ -94,7 +96,8 @@ async function statusFact(row: Commitment, text: string, ev: TaskEv): Promise<vo
 /** message_deleted: retire (dropped) every still-active commitment that came from this message. */
 export async function retireTaskMessage(channel: string, ts: string): Promise<number> {
   const r = await db.update(commitments).set({ status: "dropped", completedAt: new Date() })
-    .where(and(eq(commitments.channelId, channel), eq(commitments.sourceTs, ts), inArray(commitments.status, [...ACTIVE]))).returning({ id: commitments.id });
+    .where(and(eq(commitments.channelId, channel), eq(commitments.sourceTs, ts), inArray(commitments.status, [...ACTIVE]))).returning();
+  for (const row of r) await syncTaskFact(row); // memory follows the tab
   return r.length;
 }
 

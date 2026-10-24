@@ -85,13 +85,13 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     find_tasks: tool({
-      description: "Look up tracked tasks and commitments: who was given a task, who owns X, what is due or overdue, what someone assigned. Filter by text, owner, assigner, channel, status or due range. Read-only; only returns tasks the asker may read. Each row has the owner, assigner, due date, status and a Source link to the original message.",
+      description: "Look up tracked tasks and commitments: who was given a task, who owns X, what is due or overdue, what someone assigned. Filter by text, owner, assigner, channel, status or due range. Read-only; only returns tasks the asker may read. Each row has the owner, assigner, due date, priority, status (open/in_progress/overdue/done/dropped) and a Source link to the original message.",
       inputSchema: z.object({
         query: z.string().max(300).optional().describe("What the task is about"),
         owner: z.string().max(100).optional().describe("Person doing it: Slack id, name, or 'me'"),
         assigner: z.string().max(100).optional().describe("Person who gave it: Slack id, name, or 'me'"),
         channel: z.string().max(100).optional().describe("Channel id"),
-        status: z.enum(["open", "overdue", "done", "dropped", "all"]).optional().describe("Default open (open + overdue)"),
+        status: z.enum(["open", "overdue", "in_progress", "done", "dropped", "all"]).optional().describe("Default: active tasks; with a text query, every status (so you can answer 'is X done?' from the [status] on the row)"),
         dueAfter: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(), dueBefore: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(),
         limit: z.number().int().min(1).max(25).optional(),
       }),

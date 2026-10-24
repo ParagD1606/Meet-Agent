@@ -17,7 +17,7 @@ export async function openTasksFor(userId: string): Promise<{ mine: Commitment[]
 }
 
 const line = (c: Commitment, who: "owner" | "assigner") =>
-  sanitizeForSlack(`${c.status === "overdue" ? ":warning: " : ""}${c.text} (due ${day(c.dueAt)})${who === "owner" && c.ownerId ? ` - <@${c.ownerId}>` : ""}${c.permalink ? ` - <${c.permalink}|source>` : ""}`);
+  sanitizeForSlack(`${c.priority === "urgent" ? ":rotating_light: *URGENT* " : ""}${c.status === "overdue" ? ":warning: " : ""}${c.status === "in_progress" ? "[in progress] " : ""}${c.text} (due ${day(c.dueAt)})${who === "owner" && c.ownerId ? ` - <@${c.ownerId}>` : ""}${c.permalink ? ` - <${c.permalink}|source>` : ""}`);
 
 function rows(title: string, list: Commitment[], who: "owner" | "assigner", buttons: boolean): unknown[] {
   if (!list.length) return [];

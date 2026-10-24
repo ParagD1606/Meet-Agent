@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { id as newId } from "../crypto";
 import { db } from "../db";
@@ -6,9 +6,10 @@ import { channelMembers, channels, commitments, episodes, meetings, memories, se
 import { log } from "../log";
 import { completeJson } from "../memory/llm";
 import { SHARED_TAG } from "../memory/scope";
+import { syncTaskFact } from "./task-sync";
 
 export type Commitment = typeof commitments.$inferSelect;
-export const ACTIVE = ["open", "overdue"] as const;
+export const ACTIVE = ["open", "overdue", "in_progress"] as const;
 const DAY = 86_400_000;
 
 export async function getSetting<T = unknown>(key: string): Promise<T | undefined> {
@@ -41,7 +42,7 @@ export async function resolveOwner(raw: string | null | undefined, channelId?: s
 }
 
 /** Channel a fact came from: source_ref is either a channel id or a thread ts. */
-async function channelOfRef(ref: string | null): Promise<{ channelId: string | null; threadTs: string | null }> {
+export async function channelOfRef(ref: string | null): Promise<{ channelId: string | null; threadTs: string | null }> {
   if (!ref) return { channelId: null, threadTs: null };
   const [c] = await db.select({ id: channels.id }).from(channels).where(eq(channels.id, ref));
   if (c) return { channelId: c.id, threadTs: null };
@@ -60,7 +61,12 @@ export const channelScope = async (channelId: string) => {
 /** Anything that repeats a commitment's text (nudge, digest, /brain-tasks) only goes to a person who can read its scope (never a DM / private-channel item to an outsider). */
 export async function canRead(c: Pick<Commitment, "scopeTag">, userId: string): Promise<boolean> {
   if (c.scopeTag === "shared") return true;
-  if (c.scopeTag.startsWith("user_")) return c.scopeTag === `user_${userId}`;
+  // an EXPLICIT assignment made in a DM (assign_task / the console) is also readable by the person it was assigned to: they were told about it.
+  // Ambient or fact-derived DM items are not (their text was never shared with the owner).
+  if (c.scopeTag.startsWith("user_")) {
+    const o = c as { ownerId?: string | null; sourceRef?: string };
+    return c.scopeTag === `user_${userId}` || (o.ownerId === userId && !!o.sourceRef?.startsWith("assign:"));
+  }
   if (!c.scopeTag.startsWith("channel_")) return false;
   const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.scopeTag.slice(8)), eq(channelMembers.userId, userId)));
   return !!m;
@@ -73,21 +79,53 @@ export type NewCommitment = {
   assignerId?: string | null; sourceTs?: string | null; sourceHash?: string | null;
   /** Backfilled history: a task that is already past due is listed but never chased. */
   noChase?: boolean;
+  priority?: "normal" | "urgent";
+  /** Already-linked memory fact (backfill): skips writing a new one. */
+  memoryId?: number | null;
 };
 
-/** Idempotent on sourceRef. Returns true when a new row was written. */
-export async function addCommitment(c: NewCommitment): Promise<boolean> {
-  const r = await db.insert(commitments).values({
-    id: newId("cm_"), ownerId: c.ownerId ?? null, ownerName: c.ownerName ?? null, text: c.text.slice(0, 500),
+/** Stop-words dropped so "the Tales launch task" and "Tales launch" dedupe together. */
+export const titleKey = (s: string): string =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter((w) => w && !["the", "a", "an", "task", "of", "to", "for"].includes(w)).join(" ");
+
+/**
+ * Idempotent on sourceRef AND on owner + normalized title + channel (an active duplicate is never created twice).
+ * Mirrors the task into memory. Returns the new row, or null when it already existed.
+ */
+export async function insertCommitment(c: NewCommitment): Promise<Commitment | null> {
+  const key = titleKey(c.text);
+  if (c.ownerId && key) {
+    const [dup] = await db.select({ id: commitments.id }).from(commitments).where(and(
+      eq(commitments.ownerId, c.ownerId), eq(commitments.titleKey, key),
+      c.channelId ? eq(commitments.channelId, c.channelId) : isNull(commitments.channelId),
+      inArray(commitments.status, [...ACTIVE]),
+    )).limit(1);
+    if (dup) return null;
+    // the same message already produced an explicit assignment for this person (assign_task): ambient capture must not add a second row
+    if (c.sourceTs && c.channelId && !c.sourceRef.startsWith("assign:")) {
+      const [asg] = await db.select({ id: commitments.id }).from(commitments).where(and(
+        eq(commitments.ownerId, c.ownerId), eq(commitments.channelId, c.channelId), eq(commitments.sourceTs, c.sourceTs), like(commitments.sourceRef, "assign:%"),
+      )).limit(1);
+      if (asg) return null;
+    }
+  }
+  const [row] = await db.insert(commitments).values({
+    id: newId("cm_"), ownerId: c.ownerId ?? null, ownerName: c.ownerName ?? null, text: c.text.slice(0, 500), titleKey: key,
     dueAt: c.dueAt ?? null, sourceType: c.sourceType, sourceRef: c.sourceRef, permalink: c.permalink ?? null,
     channelId: c.channelId ?? null, threadTs: c.threadTs ?? null, scopeTag: c.scopeTag,
     assignerId: c.assignerId ?? null, sourceTs: c.sourceTs ?? null, sourceHash: c.sourceHash ?? null,
+    priority: c.priority ?? "normal", memoryId: c.memoryId ?? null,
     nudgeCount: c.noChase && c.dueAt && c.dueAt.getTime() < Date.now() ? 99 : 0,
-  }).onConflictDoNothing().returning({ id: commitments.id });
-  return r.length > 0;
+  }).onConflictDoNothing().returning();
+  if (!row) return null;
+  if (!c.memoryId) await syncTaskFact(row); // every task is also a memory fact (never throws)
+  return row;
 }
 
-const parseDue = (s: unknown): Date | null => {
+/** Idempotent. Returns true when a new row was written. */
+export const addCommitment = async (c: NewCommitment): Promise<boolean> => !!(await insertCommitment(c));
+
+export const parseDue = (s: unknown): Date | null => {
   if (typeof s !== "string" || !s.trim()) return null;
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -151,23 +189,24 @@ export async function runExtraction(now = new Date()): Promise<{ created: number
   }
 
   const ms = await db.select().from(meetings).where(and(eq(meetings.status, "ready"), gt(meetings.updatedAt, since), lte(meetings.updatedAt, now))).limit(100);
-  for (const m of ms) {
-    const scopeTag = await channelScope(m.channelId);
-    const tasks = Array.isArray(m.tasks) ? (m.tasks as Record<string, unknown>[]) : [];
-    await guard(async () => {
-      let n = 0;
-      for (const [i, t] of tasks.entries()) {
-        const title = typeof t.title === "string" ? t.title : "";
-        if (!title) continue;
-        const owner = await resolveOwner((t.assigneeId as string) || (t.assigneeName as string) || null, m.channelId);
-        if (await addCommitment({ ownerId: owner.id, ownerName: owner.name, text: title, dueAt: parseDue(t.dueDate), sourceType: "meeting", sourceRef: `meeting:${m.id}:${i}`, channelId: m.channelId, threadTs: m.threadTs, scopeTag })) n++;
-      }
-      return n;
-    });
-  }
+  for (const m of ms) await guard(() => meetingTasksToCommitments(m));
 
   if (!failed) await putSetting(CURSOR, now.toISOString());
   return { created, failed };
+}
+
+/** Meeting tasks -> commitments (idempotent by meeting:<id>:<i> and by owner+title+channel). */
+export async function meetingTasksToCommitments(m: typeof meetings.$inferSelect): Promise<number> {
+  const scopeTag = await channelScope(m.channelId);
+  const tasks = Array.isArray(m.tasks) ? (m.tasks as Record<string, unknown>[]) : [];
+  let n = 0;
+  for (const [i, t] of tasks.entries()) {
+    const title = typeof t.title === "string" ? t.title : "";
+    if (!title) continue;
+    const owner = await resolveOwner((t.assigneeId as string) || (t.assigneeName as string) || null, m.channelId);
+    if (await addCommitment({ ownerId: owner.id, ownerName: owner.name, text: title, dueAt: parseDue(t.dueDate), sourceType: "meeting", sourceRef: `meeting:${m.id}:${i}`, channelId: m.channelId, threadTs: m.threadTs, scopeTag })) n++;
+  }
+  return n;
 }
 
 // ---------- status ----------
@@ -182,19 +221,22 @@ export async function resolveCommitment(id: string, status: "done" | "dropped", 
   const [row] = await db.update(commitments).set({ status, completedAt: new Date() })
     .where(and(eq(commitments.id, id), inArray(commitments.status, [...ACTIVE]), by.admin ? undefined : or(eq(commitments.ownerId, by.id), eq(commitments.assignerId, by.id))))
     .returning();
+  if (row) await syncTaskFact(row);
   return row ?? null;
 }
 
 export type ListFilter = {
   tags: string[]; status?: Commitment["status"][]; ownerId?: string; assignerId?: string; channelId?: string;
   dueAfter?: Date; dueBefore?: Date; limit?: number;
+  /** Also include DM-scoped tasks that were assigned TO this person. */
+  alsoOwnedBy?: string | null;
 };
 
 /** Commitments the holder of `tags` may read (readTags of the asker). Never widens past the scope model. */
 export async function listCommitments(a: ListFilter): Promise<Commitment[]> {
   if (!a.tags.length) return [];
   return db.select().from(commitments).where(and(
-    inArray(commitments.scopeTag, a.tags),
+    a.alsoOwnedBy ? or(inArray(commitments.scopeTag, a.tags), and(eq(commitments.ownerId, a.alsoOwnedBy), like(commitments.scopeTag, "user\\_%"), like(commitments.sourceRef, "assign:%"))) : inArray(commitments.scopeTag, a.tags),
     a.status?.length ? inArray(commitments.status, a.status) : undefined,
     a.ownerId ? eq(commitments.ownerId, a.ownerId) : undefined,
     a.assignerId ? eq(commitments.assignerId, a.assignerId) : undefined,
