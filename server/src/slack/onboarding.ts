@@ -7,6 +7,7 @@ import { homeFacts } from "./commands";
 import { channelIntroCard, homeView, teamInviteCard, welcomeCard } from "./cards";
 import { postDm, postMessage, slackClient } from "./client";
 import { pruneEvents } from "./dedupe";
+import { expireStaleAsks } from "./teammate";
 import { journeyTick as sweepJourneys, startJourney } from "./journey/engine";
 import { ensureUser } from "./sync";
 
@@ -49,6 +50,7 @@ export async function sendInstallOnboarding(installerId: string | undefined): Pr
 
 /** Cron entrypoint (jobs): nudge eligible users, and trim the dedupe table while we are at it. */
 export async function journeyTick(): Promise<{ checked: number; sent: number }> {
+  await expireStaleAsks().catch((err) => log.warn("ask expiry failed", { error: (err as Error).message }));
   await pruneEvents().catch((err) => log.warn("event prune failed", { error: (err as Error).message }));
   return sweepJourneys();
 }

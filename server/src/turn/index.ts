@@ -130,6 +130,7 @@ async function execute(input: TurnInput): Promise<void> {
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
     stage = "context";
     const bc = await buildContext(input, { ...ctx, skipRecall: !plan.recall });
+    if (bc.recallExternal) ctx.untrustedContext = true;
     const [self, asker, chan] = await Promise.all([
       botUserId().catch(() => null),
       input.userId ? db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, input.userId)).then((r) => r[0] ?? { id: input.userId!, name: null }) : Promise.resolve(null),

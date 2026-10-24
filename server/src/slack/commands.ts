@@ -4,7 +4,7 @@ import { channels, memories, users } from "../db/schema";
 import { log } from "../log";
 import { forgetMemories, rememberFact } from "../memory/facts";
 import { deleteMemory, listMemories } from "../memory/graph";
-import { decideReview, listReviews, type Review } from "../memory/review";
+import { decideReview, listReviews, sharedReviews, type Review } from "../memory/review";
 import { readTags, SHARED_TAG, writeTag, type SlackScope } from "../memory/scope";
 import { slackClient } from "./client";
 import { button, section } from "./cards";
@@ -92,7 +92,7 @@ async function reviewLine(r: Review): Promise<string> {
 }
 
 async function reviewView() {
-  const pending = await listReviews("pending", 20); // 2 blocks each: stays under the modal's 100-block cap
+  const pending = (await sharedReviews(await listReviews("pending", 200))).slice(0, 20); // 2 blocks each: stays under the modal's 100-block cap
   const blocks: unknown[] = pending.length ? [] : [section("_Nothing pending. All clear._")];
   for (const r of pending) {
     blocks.push(section(await reviewLine(r)), { type: "actions", elements: [

@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 import { cookieOpts, requireAuth } from "../auth/session";
 import { decrypt, encrypt, id } from "../crypto";
 import { db } from "../db";
-import { syncSources } from "../db/schema";
+import { settings, syncSources } from "../db/schema";
 import { log, redactError } from "../log";
 import { ingestDocument } from "../memory/ingest";
 import { gdrive } from "./providers/gdrive";
@@ -142,11 +142,27 @@ export function mountSyncOAuth(app: Hono<any>): void {
   });
 }
 
+/**
+ * Jira's base URL receives the admin's API token (Basic auth), so it must be https on *.atlassian.net, or a host the admin listed in
+ * settings `sync_jira_hosts` (self-hosted Jira). Never an IP literal, localhost or a private name.
+ */
+export async function assertJiraBase(raw: string): Promise<void> {
+  let u: URL;
+  try { u = new URL(raw); } catch { throw new Error("baseUrl must be a valid URL"); }
+  if (u.protocol !== "https:" || u.username || u.password) throw new Error("baseUrl must be https");
+  const host = u.hostname.toLowerCase();
+  if (/^[\d.]+$/.test(host) || host.includes(":") || host === "localhost" || !host.includes(".")) throw new Error("baseUrl must be a public hostname");
+  if (host.endsWith(".atlassian.net")) return;
+  const [row] = await db.select().from(settings).where(eq(settings.key, "sync_jira_hosts"));
+  const allowed = Array.isArray(row?.value) ? (row!.value as unknown[]).map((h) => String(h).toLowerCase()) : [];
+  if (!allowed.includes(host)) throw new Error("baseUrl must be on atlassian.net (or an allow-listed host)");
+}
+
 /** Connects a token-based source (GitHub PAT, Linear API key, Jira email + API token). Nothing syncs until a selection is set. */
 export async function connectWithToken(a: { provider: SyncProviderId; token: string; baseUrl?: string; email?: string }): Promise<string> {
   if (!(TOKEN_PROVIDER_IDS as readonly string[]).includes(a.provider)) throw new Error("invalid_provider");
   if (a.provider === "jira" && (!a.baseUrl || !a.email)) throw new Error("jira needs baseUrl and email");
-  if (a.baseUrl && !a.baseUrl.startsWith("https://")) throw new Error("baseUrl must be https");
+  if (a.provider === "jira") await assertJiraBase(a.baseUrl!);
   const auth: SyncAuth = { accessToken: a.token, ...(a.provider === "jira" ? { extra: { baseUrl: a.baseUrl!, email: a.email! } } : {}) };
   const sourceId = id("sync_");
   await db.insert(syncSources).values({ id: sourceId, provider: a.provider as never, authEnc: encrypt(JSON.stringify(auth)) });

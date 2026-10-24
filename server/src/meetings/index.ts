@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { id as newId } from "../crypto";
 import { db } from "../db";
@@ -45,10 +45,10 @@ const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
 const asTasks = (value: unknown): MeetingTask[] => Array.isArray(value) ? value as MeetingTask[] : [];
 const asStrings = (value: unknown): string[] => Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 
-/** Public channels are visible to every member; private-channel records require membership. */
+/** Public channels are visible to every member; private-channel and DM records require membership. */
 const readable = (actor: Actor) => admin(actor)
-  ? undefined
-  : or(eq(channels.isPrivate, false), eq(channelMembers.userId, actor.userId));
+  ? sql`${channels.isIm} is not true` // admins see public + private channel meetings, never a DM huddle
+  : or(and(eq(channels.isPrivate, false), eq(channels.isIm, false)), eq(channelMembers.userId, actor.userId));
 
 async function rowsFor(actor: Actor) {
   const q = db.select({ meeting: meetings })
@@ -142,6 +142,9 @@ export async function rememberMeeting(a: { channelId: string; fileId: string; ti
   }
 }
 
+const MAX_CANVAS_BYTES = 2 * 1024 * 1024;
+export const MAX_HUDDLE_IMPORTS = 20;
+let syncing: Promise<HuddleSyncResult> | null = null;
 const SLACK_HOST = /(^|\.)(slack\.com|slack-files\.com|slack-edge\.com)$/i;
 
 /** files.info that reports a missing OAuth scope clearly (which scope is needed) instead of a generic failure. */
@@ -173,7 +176,9 @@ async function downloadedText(client: Awaited<ReturnType<typeof slackClient>>, f
     const res: Response = await fetch(u, { headers: { authorization: `Bearer ${token}` }, redirect: "manual", signal: AbortSignal.timeout(30_000) });
     if (res.status >= 300 && res.status < 400 && res.headers.get("location")) { url = new URL(res.headers.get("location")!, u).toString(); continue; }
     if (!res.ok) throw new Error(`canvas download ${res.status}`);
-    const body = await res.text();
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_CANVAS_BYTES) throw new Error("canvas too large");
+    const body = new TextDecoder().decode(buf);
     const text = (/html|xml/i.test(res.headers.get("content-type") ?? "") || /^\s*</.test(body) ? htmlToText(body) : body).replace(/\n{3,}/g, "\n\n").trim();
     return text ? { text } : null;
   }
@@ -200,8 +205,11 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
     const date = (n: unknown) => typeof n === "number" ? new Date(n * 1000) : undefined;
     parsed = { text: dl.text, participantIds: asStrings(notes.huddle_participant_ids), startedAt: date(notes.huddle_date_start), endedAt: date(notes.huddle_date_end) };
   }
-  const channelId = parsed.channelId ?? hintedChannelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined) ?? (Array.isArray(notes.channels) ? notes.channels[0] : undefined);
+  // Slack's own record of where the file lives wins over the caller's hint (a hint comes from whoever posted the message)
+  const channelId = parsed.channelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined) ?? (Array.isArray(notes.channels) ? notes.channels[0] : undefined) ?? hintedChannelId;
   if (!channelId) return false;
+  const [known] = await db.select({ bot: channels.botIsMember }).from(channels).where(eq(channels.id, channelId));
+  if (!known?.bot) { log.warn("huddle skipped: bot is not in the channel", { channelId }); return false; }
   const sourceFileId = String(file.id ?? fileId);
   const title = typeof file.title === "string" && file.title.trim() ? file.title.trim() : "Slack Huddle";
   const base = {
@@ -209,7 +217,7 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
     startedAt: parsed.startedAt ?? null, endedAt: parsed.endedAt ?? new Date(), updatedAt: new Date(),
   };
   await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
-    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } });
+    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, channelId: sql`${meetings.channelId}`, status: "processing", summary: null, tasks: [] } }); // a re-import never moves a meeting to another channel
   try {
     const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: parsed.text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
     await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
@@ -226,7 +234,13 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
  * This is deliberately callable on demand: Slack does not replay file events that happened
  * before an app subscribed, and a Huddle transcript can finish processing after its first event.
  */
-export async function syncRecentHuddles(opts: { force?: boolean; maxPages?: number } = {}): Promise<HuddleSyncResult> {
+export function syncRecentHuddles(opts: { force?: boolean; maxPages?: number } = {}): Promise<HuddleSyncResult> {
+  // single flight: concurrent callers share one run (each import is an LLM call)
+  syncing ??= syncHuddles(opts).finally(() => { syncing = null; });
+  return syncing;
+}
+
+async function syncHuddles(opts: { force?: boolean; maxPages?: number }): Promise<HuddleSyncResult> {
   const client = await slackClient();
   const files: HuddleFile[] = [];
   // files.list is page-numbered, newest first; walk every page (capped) so older huddles are found too
@@ -240,6 +254,7 @@ export async function syncRecentHuddles(opts: { force?: boolean; maxPages?: numb
   let imported = 0;
   let failed = 0;
   for (const file of candidates) {
+    if (imported + failed >= MAX_HUDDLE_IMPORTS) break; // the rest is picked up by the next call
     if (typeof file.id !== "string" || done.has(file.id) || (typeof file.huddle_transcript_file_id === "string" && done.has(file.huddle_transcript_file_id))) continue; // rows are keyed by the transcript file when notes point to one
     try {
       const channelId = Array.isArray(file.channels) && typeof file.channels[0] === "string" ? file.channels[0] : undefined;

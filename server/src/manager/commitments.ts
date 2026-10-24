@@ -2,7 +2,7 @@ import { and, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { id as newId } from "../crypto";
 import { db } from "../db";
-import { channels, commitments, episodes, meetings, memories, settings, turns, users } from "../db/schema";
+import { channelMembers, channels, commitments, episodes, meetings, memories, settings, turns, users } from "../db/schema";
 import { log } from "../log";
 import { completeJson } from "../memory/llm";
 import { SHARED_TAG } from "../memory/scope";
@@ -20,7 +20,7 @@ export const putSetting = (key: string, value: unknown) =>
 
 // ---------- owner / channel resolution ----------
 /** Slack id from "<@U1>" / "U1", else an exact (then unique partial) name match among active humans. Unresolved -> id null. */
-export async function resolveOwner(raw: string | null | undefined): Promise<{ id: string | null; name: string | null }> {
+export async function resolveOwner(raw: string | null | undefined, channelId?: string | null): Promise<{ id: string | null; name: string | null }> {
   const s = (raw ?? "").trim();
   if (!s) return { id: null, name: null };
   const m = s.match(/^<?@?([UW][A-Z0-9]{3,})(?:\|[^>]*)?>?$/);
@@ -31,8 +31,12 @@ export async function resolveOwner(raw: string | null | undefined): Promise<{ id
   }
   const name = s.replace(/^@/, "");
   const exact = await db.select({ id: users.id, name: users.name }).from(users).where(and(base, sql`lower(${users.name}) = lower(${name})`));
-  const rows = exact.length ? exact : await db.select({ id: users.id, name: users.name }).from(users)
-    .where(and(base, sql`lower(${users.name}) like ${`%${name.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`}`)).limit(2);
+  let rows = exact.length ? exact : await db.select({ id: users.id, name: users.name }).from(users)
+    .where(and(base, sql`lower(${users.name}) like ${`%${name.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`}`)).limit(5);
+  if (rows.length > 1 && channelId) { // ambiguous name: the person who is actually in this channel
+    const members = new Set((await db.select({ u: channelMembers.userId }).from(channelMembers).where(eq(channelMembers.channelId, channelId))).map((m) => m.u));
+    rows = rows.filter((r) => members.has(r.id));
+  }
   return rows.length === 1 ? { id: rows[0]!.id, name: rows[0]!.name } : { id: null, name };
 }
 
@@ -48,8 +52,9 @@ async function channelOfRef(ref: string | null): Promise<{ channelId: string | n
 }
 
 const channelScope = async (channelId: string) => {
-  const [c] = await db.select({ p: channels.isPrivate }).from(channels).where(eq(channels.id, channelId));
-  return c?.p ? `channel_${channelId}` : SHARED_TAG;
+  const [c] = await db.select({ p: channels.isPrivate, im: channels.isIm }).from(channels).where(eq(channels.id, channelId));
+  // fail closed: only a known public channel is shared; DMs / unknown channels get a tag nobody can read
+  return c && !c.p && !c.im ? SHARED_TAG : `channel_${channelId}`;
 };
 
 // ---------- writing ----------
@@ -98,7 +103,7 @@ export async function extractFromText(text: string, ctx: ExtractCtx): Promise<nu
   const out = await completeJson({ system: SYSTEM, prompt: `Today: ${today}\n\nTEXT:\n${text.slice(0, 4000)}`, role: "extract", maxOutputTokens: 600 }, extracted);
   let n = 0;
   for (const [i, c] of out.commitments.entries()) {
-    const owner = await resolveOwner(c.owner);
+    const owner = await resolveOwner(c.owner, ctx.channelId);
     if (await addCommitment({ ...ctx, ownerId: owner.id, ownerName: owner.name, text: c.text, dueAt: parseDue(c.due), sourceRef: `${ctx.sourceRef}:${i}` })) n++;
   }
   return n;
@@ -136,7 +141,7 @@ export async function runExtraction(now = new Date()): Promise<{ created: number
       for (const [i, t] of tasks.entries()) {
         const title = typeof t.title === "string" ? t.title : "";
         if (!title) continue;
-        const owner = await resolveOwner((t.assigneeId as string) || (t.assigneeName as string) || null);
+        const owner = await resolveOwner((t.assigneeId as string) || (t.assigneeName as string) || null, m.channelId);
         if (await addCommitment({ ownerId: owner.id, ownerName: owner.name, text: title, dueAt: parseDue(t.dueDate), sourceType: "meeting", sourceRef: `meeting:${m.id}:${i}`, channelId: m.channelId, threadTs: m.threadTs, scopeTag })) n++;
       }
       return n;

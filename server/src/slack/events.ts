@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { channels, turns } from "../db/schema";
+import { channels, meetings, turns } from "../db/schema";
+import { checkRate } from "../limits/rate";
 import { log } from "../log";
 import { claimEvent } from "./dedupe";
 import { handleChannelMessage } from "./chime";
@@ -79,6 +80,9 @@ async function ingestHuddleAttachments(ev: SlackMessageEvent): Promise<void> {
   for (const file of ev.files ?? []) {
     if (!file.id) continue;
     try {
+      const [seen] = await db.select({ s: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, file.id));
+      if (seen && seen.s !== "failed") continue; // already imported (or being imported): a repost never re-runs it
+      if (ev.user && !(await checkRate({ userId: ev.user, channelId: ev.channel, kind: "huddle" })).ok) continue;
       const imported = await ingestHuddleFile(file.id, ev.channel);
       if (imported) log.info("huddle imported from message attachment", { fileId: file.id, channelId: ev.channel });
     } catch (err) {

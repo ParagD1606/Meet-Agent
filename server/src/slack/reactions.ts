@@ -1,6 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "../db";
-import { messageFeedback } from "../db/schema";
+import { messageFeedback, turns } from "../db/schema";
 import { log } from "../log";
 import { addReaction, removeReaction } from "./client";
 import { applyFeedback } from "./feedback";
@@ -75,5 +75,25 @@ export async function recordFeedback(a: { channelId: string; messageTs: string; 
     target: [messageFeedback.channelId, messageFeedback.messageTs, messageFeedback.userId],
     set: { rating: a.rating, createdAt: sql`now()` },
   });
-  if (prev?.rating !== a.rating) await applyFeedback({ ...row, threadTs }); // a repeated identical reaction must not count twice
+  // one rating per user per message: neither a repeat nor a flip (up/down/up...) is learned again
+  if (prev) return;
+  if (!(await countsNow({ ...a, threadTs }))) return;
+  await applyFeedback({ ...row, threadTs });
+}
+
+/**
+ * The asker's own reaction counts at once. A bystander's counts only once a second distinct person gave the same rating,
+ * so one drive-by thumbs-down cannot demote facts or flood the review queue. Unknown asker (no turn row): counts.
+ */
+async function countsNow(a: { channelId: string; messageTs: string; userId: string; rating: "up" | "down"; threadTs?: string | null }): Promise<boolean> {
+  const at = new Date(Number(a.messageTs) * 1000 + 5_000);
+  if (Number.isNaN(at.getTime())) return true;
+  const [t] = await db.select({ u: turns.userId }).from(turns).where(and(
+    eq(turns.channelId, a.channelId), a.threadTs ? eq(turns.threadTs, a.threadTs) : undefined, isNotNull(turns.userId), lte(turns.startedAt, at),
+  )).orderBy(desc(turns.startedAt)).limit(1);
+  if (!t?.u || t.u === a.userId) return true;
+  const [n] = await db.select({ n: sql<number>`count(*)::int` }).from(messageFeedback).where(and(
+    eq(messageFeedback.channelId, a.channelId), eq(messageFeedback.messageTs, a.messageTs), eq(messageFeedback.rating, a.rating),
+  ));
+  return (n?.n ?? 0) >= 2;
 }

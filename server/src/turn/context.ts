@@ -5,7 +5,8 @@ import { recallLog, threadState, users } from "../db/schema";
 import { log } from "../log";
 import { breakdown, estimateTokens, type Breakdown } from "../memory/budget";
 import { getCoreBlocks } from "../memory/core-blocks";
-import { buildRecall, recallBudget } from "../memory/recall";
+import { buildRecall, recallBudget, type Recall } from "../memory/recall";
+import { isExternalSource } from "../sync/types";
 import { getWorkspacePrompt, skillsPromptSection } from "../skills/skills";
 import { botUserId } from "../slack/client";
 import type { TurnInput } from "./index";
@@ -145,6 +146,8 @@ export type BuiltContext = {
   /** How many leading blocks are identical for every user of this thread (the cross-user cacheable part). */
   sharedBlockCount: number;
   recallText: string;
+  /** Recall included text from an external system (mail, calendar, tickets, docs): attacker-writable, so writes need a card. */
+  recallExternal: boolean;
   /** Rolling summary (REFERENCE ONLY) + recent window, sized by tokens. */
   history: ModelMessage[];
   /** Cleaned, not-yet-summarised messages: feed to maybeCompact. */
@@ -187,5 +190,6 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
   const bd = breakdown({
     coreBlocks: frozenPrefixBlocks.join("\n\n"), history: historyText, recall: recall.text, user: i.text,
   });
-  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd };
+  const recallExternal = "hits" in recall && (recall as Recall).hits.some((h) => isExternalSource(h.source));
+  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, recallExternal, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd };
 }

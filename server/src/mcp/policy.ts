@@ -47,7 +47,7 @@ export type ActionClass = (typeof ACTION_CLASSES)[number] | "other";
 export type ApprovalCards = Partial<Record<(typeof ACTION_CLASSES)[number], boolean>>;
 
 // Destructive / irreversible-by-nature verbs: always a card, whatever the class setting says.
-const DESTRUCTIVE = new Set(["delete", "remove", "revoke", "archive", "purge", "drop", "destroy", "cancel", "merge", "deploy", "release", "push", "exec", "execute", "run", "trigger", "restart", "transfer", "disable"]);
+const DESTRUCTIVE = new Set(["delete", "remove", "revoke", "archive", "purge", "drop", "destroy", "cancel", "merge", "deploy", "release", "push", "exec", "execute", "run", "trigger", "restart", "transfer", "disable", "share", "invite", "grant", "permission", "permissions", "fork", "collaborator", "publish"]);
 const EMAIL_CAL = new Set(["email", "mail", "gmail", "draft", "calendar", "event", "invite", "meeting", "attendee"]);
 const SLACK = new Set(["slack", "channel", "message", "dm"]);
 const DOC = new Set(["page", "doc", "docs", "document", "sheet", "slide", "file", "block", "database", "note", "drive", "folder"]);
@@ -57,15 +57,18 @@ const PROVIDER_CLASS: Record<string, ActionClass> = { "gmail-personal-only": "em
 /** Pure and fail-closed: destructive => "other"; else name hints (email/calendar first: irreversible), then the app, else "other". */
 export function actionClass(name: string, provider: string, annotations?: ToolAnnotations): ActionClass {
   const t = tokens(name);
-  if (annotations?.destructiveHint === true || t.some((x) => DESTRUCTIVE.has(x))) return "other";
+  if (annotations?.destructiveHint === true || t.some((x) => DESTRUCTIVE.has(x)) || (t.includes("create") && t.includes("or") && t.includes("update"))) return "other";
   if (t.some((x) => EMAIL_CAL.has(x))) return "email_calendar";
-  if (!PROVIDER_CLASS[provider] && t.some((x) => SLACK.has(x))) return "slack_post";
+  if ((!PROVIDER_CLASS[provider] || provider === "slack") && t.some((x) => SLACK.has(x))) return "slack_post";
   if (t.some((x) => DOC.has(x))) return PROVIDER_CLASS[provider] === "ticket" ? "ticket" : "doc_edit";
   if (t.some((x) => TICKET.has(x))) return "ticket";
-  return PROVIDER_CLASS[provider] ?? "other";
+  return "other"; // nothing identified the action: carded, whatever the app
 }
 
-export const needsApproval = (cls: ActionClass, cards: ApprovalCards): boolean => cls === "other" || cards[cls] === true;
+/** `untrusted`: external-system text is in this turn, so even the classes an admin left card-free get a card. */
+export const needsApproval = (cls: ActionClass, cards: ApprovalCards, untrusted = false): boolean => cls === "other" || untrusted || cards[cls] === true;
+/** Fail-closed settings when the row cannot be read. */
+export const ALL_CARDED: ApprovalCards = { ticket: true, slack_post: true, doc_edit: true, email_calendar: true };
 
 export function parseApprovalCards(raw: unknown): ApprovalCards {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;

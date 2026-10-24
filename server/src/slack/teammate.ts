@@ -21,7 +21,10 @@ export type Ask = {
   asker: string; owner: string; question: string;
   origin: { channelId: string; threadTs?: string; isPrivate: boolean; isIm: boolean };
   target?: { channelId: string; threadTs?: string };
+  /** ISO time the ask was proposed; an unanswered ask stops capturing replies after ASK_TTL_MS. */
+  createdAt?: string;
 };
+export const ASK_TTL_MS = 24 * 3_600_000;
 
 /** Test seam: how a deferred delivery is scheduled (pg-boss in production). */
 export const askDeps = {
@@ -60,7 +63,7 @@ const clean = (s: string) => s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\
 
 /** Posts the consent card to the asker's thread. Nothing reaches the owner until the asker clicks. */
 export async function proposeAsk(a: { asker: string; owner: string; question: string; origin: Ask["origin"] }): Promise<string> {
-  const ask: Ask = { id: newId("ask_"), status: "proposed", asker: a.asker, owner: a.owner, question: clean(a.question), origin: a.origin };
+  const ask: Ask = { id: newId("ask_"), status: "proposed", asker: a.asker, owner: a.owner, question: clean(a.question), origin: a.origin, createdAt: askDeps.now().toISOString() };
   await saveAsk(ask);
   const card = askConfirmCard({ id: ask.id, owner: ask.owner, question: ask.question });
   await postMessage({ channel: a.origin.channelId, thread_ts: a.origin.threadTs, text: card.text, blocks: card.blocks });
@@ -128,6 +131,14 @@ export async function handleAskAction(payload: Payload, a: { action_id?: string;
   return true;
 }
 
+/** Closes asks nobody answered within the TTL (legacy rows without createdAt included). Returns how many changed. */
+export async function expireStaleAsks(now = askDeps.now()): Promise<number> {
+  const r = await db.execute(sql`update settings set value = value || '{"status":"failed"}'::jsonb
+    where key like 'ask:%' and value->>'status' in ('proposed','confirmed','sent')
+      and (value->>'createdAt' is null or (value->>'createdAt')::timestamptz < ${new Date(now.getTime() - ASK_TTL_MS).toISOString()}::timestamptz) returning key`);
+  return r.rows.length;
+}
+
 type Msg = { user?: string; text?: string; channel: string; thread_ts?: string };
 
 /**
@@ -138,7 +149,8 @@ export async function captureOwnerReply(m: Msg): Promise<boolean> {
   if (!m.user || !m.text?.trim()) return false;
   const rows = await db.select().from(settings).where(sql`${settings.key} like 'ask:%' and ${settings.value}->>'status' = 'sent' and ${settings.value}->>'owner' = ${m.user}`);
   const ask = rows.map((r) => r.value as Ask).find((a) => a.target && a.target.channelId === m.channel
-    && (a.target.channelId === a.origin.channelId ? m.thread_ts === a.target.threadTs : !m.thread_ts || m.thread_ts === a.target.threadTs));
+    && m.thread_ts === a.target.threadTs // in the asked thread (channel) or as a reply to our DM; a stray DM is not an answer
+    && !!a.createdAt && askDeps.now().getTime() - Date.parse(a.createdAt) < ASK_TTL_MS);
   if (!ask) return false;
   if (!(await advance(ask.id, "sent", "answered"))) return true;
   const answer = clean(m.text).slice(0, 700);

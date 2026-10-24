@@ -131,7 +131,7 @@ describe("Real-time Search", () => {
   test("success parses messages from assistant.search.context", async () => {
     ctx = await setup({ apiCall: () => ({ ok: true, results: { messages: [{ channel_id: "C9", message_ts: "1.2", author_user_id: "U7", content: "the launch is friday", permalink: "https://x/p" }] } }) });
     const r = await searchSlackRealtime({ actionToken: "tok", query: "launch" });
-    expect(r).toEqual({ ok: true, hits: [{ channelId: "C9", ts: "1.2", user: "U7", text: "the launch is friday", permalink: "https://x/p" }] });
+    expect(r).toEqual({ ok: true, hits: [{ channelId: "C9", ts: "1.2", user: "U7", text: "the launch is friday", permalink: "https://x/p" }], sawPrivate: true });
     const call = ctx.fake.calls.find((c) => c.method === "apiCall")!;
     expect(call.args).toBe("assistant.search.context"); // first positional arg
   });

@@ -1,6 +1,8 @@
 import { config } from "../config";
 
 export type SyncProviderId = "gdrive" | "onedrive" | "notion" | "github" | "linear" | "jira" | "gmail" | "gcal";
+/** Memory sources fed by an external system (not Slack, uploads or commands): their text may be written by outsiders. */
+export const isExternalSource = (source: string) => (SYNC_PROVIDER_IDS as readonly string[]).includes(source);
 export const SYNC_PROVIDER_IDS: readonly SyncProviderId[] = ["gdrive", "onedrive", "notion", "github", "linear", "jira", "gmail", "gcal"];
 /** Connected with a pasted token/API key instead of OAuth. */
 export const TOKEN_PROVIDER_IDS: readonly SyncProviderId[] = ["github", "linear", "jira"];
@@ -49,14 +51,17 @@ function retryAfterMs(res: Response): number | null {
   return Math.min(60_000, Math.max(0, (Number.isFinite(secs) ? secs : 1) * 1000));
 }
 
+const MAX_TOTAL_WAIT_MS = 60_000; // across all retries of one request
 export async function http(url: string, init: RequestInit = {}, auth?: SyncAuth): Promise<Response> {
   const headers = new Headers(init.headers);
   if (auth && !headers.has("authorization")) headers.set("authorization", `Bearer ${auth.accessToken}`);
   let res: Response;
+  let waited = 0;
   for (let attempt = 0; ; attempt++) {
     res = await fetch(url, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(30_000) });
     const wait = retryAfterMs(res);
-    if (wait === null || attempt >= 3) break;
+    if (wait === null || attempt >= 3 || waited + wait > MAX_TOTAL_WAIT_MS) break;
+    waited += wait;
     await new Promise((r) => setTimeout(r, wait));
   }
   if (!res.ok) throw new Error(`${init.method ?? "GET"} ${new URL(url).host}${new URL(url).pathname} -> ${res.status}`);

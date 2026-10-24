@@ -13,13 +13,14 @@ const WINDOW_MS = 15 * 60_000;
 export async function recalledFor(a: { channelId: string; messageTs: string; threadTs?: string | null }): Promise<number[]> {
   const at = Number(a.messageTs) * 1000;
   if (!Number.isFinite(at)) return [];
-  const [row] = await db.select({ hitIds: recallLog.hitIds }).from(recallLog).where(and(
+  const rows = await db.select({ hitIds: recallLog.hitIds }).from(recallLog).where(and(
     eq(recallLog.channelId, a.channelId),
     a.threadTs ? eq(recallLog.threadKey, a.threadTs) : undefined,
     lte(recallLog.createdAt, new Date(at + 5_000)),
     gte(recallLog.createdAt, new Date(at - WINDOW_MS)),
-  )).orderBy(desc(recallLog.createdAt)).limit(1);
-  return row?.hitIds ?? [];
+  )).orderBy(desc(recallLog.createdAt)).limit(a.threadTs ? 1 : 2);
+  // without a thread several turns in the channel fit the window: guessing would blame another turn's facts
+  return !a.threadTs && rows.length > 1 ? [] : rows[0]?.hitIds ?? [];
 }
 
 /**

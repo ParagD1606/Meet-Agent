@@ -61,7 +61,9 @@ describe("lazy tool threshold", () => {
     expect(calls).toEqual([{ connectionId: expect.any(String), name: "list_issues", args: { repo: "a/b" } }]);
     expect((await run(tools, "call_tool", { name: "github__list_issues" })).kind).toBe("invalid_input"); // missing required
     expect((await run(tools, "call_tool", { name: "nope" })).kind).toBe("not_found");
-    expect(await run(tools, "call_tool", { name: "github__create_issue", args: { title: "x" } })).toBe("ok:create_issue"); // ticket write: no card by default
+    // the read above fed app data into this turn (untrusted), so a ticket write on THIS turn is carded; a clean turn is not
+    expect((await run(tools, "call_tool", { name: "github__create_issue", args: { title: "x" } })).status).toBe("awaiting_approval");
+    expect(await run((await buildMcpTools(ctx())).tools, "call_tool", { name: "github__create_issue", args: { title: "x" } })).toBe("ok:create_issue"); // ticket write on a clean turn: no card by default
     const w = await run(tools, "call_tool", { name: "github__merge_pull_request", args: {} });
     expect(w.status).toBe("awaiting_approval");
     expect(calls).toHaveLength(2);

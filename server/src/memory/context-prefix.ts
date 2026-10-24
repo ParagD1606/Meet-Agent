@@ -28,8 +28,11 @@ export async function backfillContextPrefixes(limit = 100): Promise<number> {
     .orderBy(sql`${memories.id} desc`)
     .limit(limit);
   let done = 0;
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH);
+  // a batch never mixes scopes: the model sees one prompt, and a private fact's details must not leak into a shared fact's prefix
+  const byScope = new Map<string, typeof rows>();
+  for (const r of rows) byScope.set(r.scopeTag, [...(byScope.get(r.scopeTag) ?? []), r]);
+  const batches = [...byScope.values()].flatMap((g) => Array.from({ length: Math.ceil(g.length / BATCH) }, (_, i) => g.slice(i * BATCH, (i + 1) * BATCH)));
+  for (const batch of batches) {
     try {
       const prompt = batch.map((r) => `[${r.id}] (${r.source}, ${scopeLabel(r.scopeTag)}, ${r.validAt.toISOString().slice(0, 10)}) ${r.text.slice(0, 400)}`).join("\n");
       const out = await completeJson({ system: SYSTEM, prompt, role: "extract", maxOutputTokens: 1500 }, reply);

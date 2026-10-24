@@ -76,6 +76,15 @@ async function sendNudge(c: Commitment, now: Date): Promise<void> {
   await slack.chat.postMessage({ channel, text, blocks: nudgeBlocks(c, text) });
 }
 
+/** A nudge repeats the commitment text, so only an owner who can read its scope gets one (never a DM / private-channel item to an outsider). */
+async function ownerCanRead(c: Commitment): Promise<boolean> {
+  if (c.scopeTag === "shared") return true;
+  if (c.scopeTag.startsWith("user_")) return c.scopeTag === `user_${c.ownerId}`;
+  if (!c.scopeTag.startsWith("channel_")) return false;
+  const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.scopeTag.slice(8)), eq(channelMembers.userId, c.ownerId!)));
+  return !!m;
+}
+
 /** Marks overdue, then nudges every owner whose commitment is due for it. Respects quiet hours and the per-person chase bucket. */
 export async function chaseTick(now = new Date()): Promise<number> {
   await markOverdue(now);
@@ -85,7 +94,7 @@ export async function chaseTick(now = new Date()): Promise<number> {
   )).limit(200);
   let sent = 0;
   for (const c of rows) {
-    if (!shouldNudge(c, now)) continue;
+    if (!shouldNudge(c, now) || !(await ownerCanRead(c))) continue;
     if (!(await checkRate({ userId: c.ownerId!, channelId: c.channelId ?? "dm", kind: "chase" }, now.getTime())).ok) continue;
     // claim first so two workers never double-nudge; restored when the send fails
     const claimed = await db.update(commitments).set({ lastNudgedAt: now, nudgeCount: c.nudgeCount + 1 })

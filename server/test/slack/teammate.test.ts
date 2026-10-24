@@ -105,7 +105,7 @@ describe("owner reply", () => {
   test("DM answer from a non-member is relayed to the asker's thread and stored in the asker's scope", async () => {
     const id = await propose("CPRIV", true);
     await click("UASK", "brain_ask_yes", id);
-    expect(await captureOwnerReply({ user: "UOWN", channel: "D_UOWN", text: "Finance lead, Priya." })).toBe(true);
+    expect(await captureOwnerReply({ user: "UOWN", channel: "D_UOWN", thread_ts: "999.1", text: "Finance lead, Priya." })).toBe(true);
     const [m] = await db.select().from(memories);
     expect(m!.scopeTag).toBe("channel_CPRIV");
     const relay = posts().at(-1)!;

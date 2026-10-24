@@ -39,7 +39,7 @@ export const jira: SyncProvider = {
       fields: "summary,description,comment,updated,project", maxResults: "50", ...(st.p ? { nextPageToken: st.p } : {}),
     });
     const r = await json<{ issues: JIssue[]; nextPageToken?: string }>(`${base}/rest/api/3/search/jql?${q}`, {
-      headers: { authorization: `Basic ${Buffer.from(`${auth.extra.email}:${auth.accessToken}`).toString("base64")}`, accept: "application/json" },
+      headers: { authorization: `Basic ${Buffer.from(`${auth.extra.email}:${auth.accessToken}`).toString("base64")}`, accept: "application/json" }, redirect: "error", // the token must never follow a redirect elsewhere
     });
     let newest = st.w;
     const docs: DocRef[] = [];

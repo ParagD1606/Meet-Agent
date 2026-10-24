@@ -11,7 +11,7 @@ import { callConnectionTool, listConnectionTools, type ConnectionRow, type McpTo
 import { isTransientError, toolError } from "./errors";
 import { capResult, minifyResult } from "./minify";
 import { runForConnection } from "./operation-queue";
-import { actionClass, classifyTool, getApprovalCards, needsApproval } from "./policy";
+import { actionClass, ALL_CARDED, classifyTool, getApprovalCards, needsApproval } from "./policy";
 import { withResetRetry } from "./reset-retry";
 import { lazyToolSet, shortDesc, type LazyEntry } from "./tool-search";
 
@@ -22,6 +22,8 @@ export type McpToolCtx = {
   threadTs?: string;
   readOnly: boolean;
   orgConnectionsOnly: boolean;
+  /** Mutated during the turn: once external text entered it, every write is carded. */
+  untrustedContext?: boolean;
   /** Apps with more tools than this are reached through search_tools/call_tool. Default 12. */
   lazyThreshold?: number;
 };
@@ -95,7 +97,7 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
     }
   }
 
-  const cards = await getApprovalCards().catch(() => ({}));
+  const cards = await getApprovalCards().catch(() => ALL_CARDED);
   const used = new Set<string>();
   const lazy: LazyEntry[] = [];
   const lazyApps: string[] = [];
@@ -116,15 +118,17 @@ export async function buildMcpTools(ctx: McpToolCtx): Promise<{ tools: ToolSet; 
       const kind = classifyTool(t.name, t.description, t.annotations, { trustAnnotations: trust });
       if (kind === "write" && !(writeConn && ctx.userId)) continue;
       const name = toolKey(readConn, t.name, used);
-      const gated = kind === "write" && needsApproval(actionClass(t.name, readConn.provider, t.annotations), cards);
+      const cls = actionClass(t.name, readConn.provider, t.annotations);
+      const gated = kind === "write" && needsApproval(cls, cards);
       const run = kind === "read"
         ? async (input: Record<string, unknown>, fields?: string[]) => {
             if (leased && !(await consumeLease(leased.leaseId, ctx.userId!))) return "ERROR: the teammate's one-time access has already been used or has expired. Ask them again with request_teammate_access.";
+            ctx.untrustedContext = true; // a connected app's data may carry injected instructions
             return runRead(readConn, t.name, name, input, ctx, fields);
           }
         : async (input: Record<string, unknown>) => {
             // No card for ticket/slack/doc/email-calendar writes unless an admin turned that class on; destructive or unclassified always gets one.
-            if (!gated) return runWrite(writeConn!, t.name, name, input, ctx);
+            if (!gated && !needsApproval(cls, cards, ctx.untrustedContext)) return runWrite(writeConn!, t.name, name, input, ctx);
             try {
               const { approvalId } = await requestApproval({
                 turnId: ctx.turnId, requesterId: ctx.userId!, channelId: ctx.channelId, threadTs: ctx.threadTs,

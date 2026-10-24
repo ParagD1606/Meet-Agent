@@ -40,6 +40,8 @@ export type ToolContext = {
   depth?: Depth;
   /** Set when personal/leased data entered this turn: shared memory capture and web_extract are then off. */
   touchedPrivateData?: boolean;
+  /** Set when text from an external system (recalled sync chunks, MCP reads, web pages) entered this turn: every write then needs an approval card. */
+  untrustedContext?: boolean;
   /** The user's own message text: URLs typed there are the only ones web_extract may read (plus search results). */
   userText?: string;
   allowedUrlSet?: Set<string>;
@@ -104,6 +106,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
     inputSchema: z.object({ query: z.string().min(1).max(500) }),
     execute: async ({ query }) => {
       const r = await webSearch(query);
+      ctx.untrustedContext = true;
       if (!r.results.length) return r.message ?? "No results.";
       for (const x of r.results) registerUrls(ctx, x.url);
       return r.results.map((x) => `- ${x.title}\n  ${x.url}\n  ${x.snippet}`).join("\n");
@@ -115,6 +118,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
     execute: async ({ urls }) => {
       const verdict = allowedUrls(ctx, urls);
       if (!verdict.ok) return `ERROR: ${verdict.error}`;
+      ctx.untrustedContext = true;
       const list = verdict.urls;
       return (await Promise.all(list.map(async (u) => {
         try { const p = await extractUrl(u); return `## ${p.title || p.url}\n${p.url}\n\n${p.text}`; }
@@ -122,7 +126,7 @@ export async function assembleTools(ctx: ToolContext, o: { depth?: Depth; text?:
       }))).join("\n\n---\n\n");
     },
   });
-  Object.assign(fam.slack_search, slackSearchTools({ userId: ctx.userId, actionToken: ctx.actionToken }));
+  Object.assign(fam.slack_search, slackSearchTools(Object.assign(ctx, { isIm: ctx.scope.isIm, isPrivate: ctx.scope.isPrivate })));
   if (writable) {
     Object.assign(fam.automations, await automationTools(ctx as never));
     Object.assign(fam.research, await researchTools(ctx as never));

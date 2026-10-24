@@ -6,6 +6,8 @@ const PAGE = 100;
 const MAX_PAGES_PER_REPO = 10; // ponytail: 1000 issues per repo per call; a capped repo holds the watermark back so the next call resumes
 const MAX_COMMENTS = 30;
 
+const REPO = /^(?!\.+\/)[\w.-]+\/(?!\.+$)[\w.-]+$/;
+const DOC_PATH = /^[\w.-]+(\/[\w.-]+)*$/; // no "..", no query/fragment characters
 type Issue = { number: number; title: string; updated_at: string; html_url: string; pull_request?: unknown };
 type Comment = { body?: string | null; user?: { login: string } | null };
 type Entry = { type: string; name: string; path: string; html_url: string };
@@ -26,6 +28,7 @@ export const github: SyncProvider = {
     const repos = ids.includes("*")
       ? (await json<{ full_name: string }[]>(`${API}/user/repos?per_page=100&sort=pushed`, { headers: H }, auth)).map((r) => r.full_name)
       : ids;
+    for (const r of repos) if (!REPO.test(r)) throw new Error(`invalid github repo id: ${r.slice(0, 80)}`);
     const docs: DocRef[] = [];
     let newest = cursor;
     const cappedAt: string[] = [];
@@ -64,6 +67,7 @@ export const github: SyncProvider = {
   },
   async fetchDoc(auth, doc) {
     const [repo, rest] = doc.id.includes("#") ? doc.id.split("#") : doc.id.split(":");
+    if (!repo || !REPO.test(repo) || !rest || (doc.id.includes("#") ? !/^\d+$/.test(rest) : !DOC_PATH.test(rest) || rest.split("/").includes(".."))) throw new Error("invalid github doc id");
     if (doc.id.includes("#")) {
       const issue = await json<{ title: string; body?: string | null }>(`${API}/repos/${repo}/issues/${rest}`, { headers: H }, auth);
       const comments = await json<Comment[]>(`${API}/repos/${repo}/issues/${rest}/comments?per_page=${MAX_COMMENTS}`, { headers: H }, auth);
