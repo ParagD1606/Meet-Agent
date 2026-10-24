@@ -28,4 +28,5 @@ export const SLACK_SLASH_COMMANDS = [
   { command: "/brain-new", description: "Start a fresh chat (forget this conversation's history, keep memory)" },
   { command: "/brain-pause", description: "Stop learning from this channel (admins, channel creator)" },
   { command: "/brain-resume", description: "Resume learning from this channel (admins, channel creator)" },
+  { command: "/repos", description: "List your connected GitHub repositories", usage_hint: "[page]" },
 ] as const;
