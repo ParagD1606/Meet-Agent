@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { api, errMsg, isAdmin, type MeetingFull, type MeetingItem, type MeetingItemPatch, type MeetingRow, type MeetingStatus } from "@/lib/api"
 import { ago, dateTime } from "@/lib/format"
 import { Badge, type Tone } from "@/ui/badge"
@@ -18,6 +18,33 @@ import { TranscriptDrawer } from "./meetings/transcript-drawer"
 const tone: Record<MeetingStatus, Tone> = { processing: "warn", ready: "ok", failed: "danger" }
 const statusLabel: Record<MeetingStatus, string> = { processing: "Analysing", ready: "Ready", failed: "Failed" }
 const today = () => new Date().toISOString().slice(0, 10)
+
+// Meeting summaries are model-generated Markdown. Render a deliberately small,
+// safe subset instead of injecting HTML from the transcript/model into the page.
+const inlineMarkdown = (value: string): ReactNode[] => value.replace(/<@([A-Z0-9]+)>/g, "@$1").split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((part, i) => {
+  if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>
+  if (part.startsWith("`") && part.endsWith("`")) return <code key={i} className="rounded bg-hover px-1 py-0.5 text-[0.9em]">{part.slice(1, -1)}</code>
+  return <span key={i}>{part}</span>
+})
+
+function MeetingMarkdown({ text }: { text: string }) {
+  const nodes: ReactNode[] = []
+  let paragraph: string[] = []
+  let bullets: string[] = []
+  const flushParagraph = () => { if (paragraph.length) { nodes.push(<p key={`p-${nodes.length}`} className="leading-6">{inlineMarkdown(paragraph.join(" "))}</p>); paragraph = [] } }
+  const flushBullets = () => { if (bullets.length) { nodes.push(<ul key={`ul-${nodes.length}`} className="list-disc space-y-1 pl-5">{bullets.map((line, i) => <li key={i}>{inlineMarkdown(line)}</li>)}</ul>); bullets = [] } }
+  for (const raw of text.replace(/\r/g, "").split("\n")) {
+    const line = raw.trim()
+    const heading = line.match(/^(#{1,3})\s+(.+)$/)
+    const bullet = line.match(/^[-*]\s+(.+)$/)
+    if (heading) { flushParagraph(); flushBullets(); const Tag = (`h${heading[1].length}` as "h1" | "h2" | "h3"); nodes.push(<Tag key={`h-${nodes.length}`} className={heading[1].length === 1 ? "text-base font-semibold" : "text-sm font-semibold"}>{inlineMarkdown(heading[2]!)}</Tag>); continue }
+    if (bullet) { flushParagraph(); bullets.push(bullet[1]!); continue }
+    if (!line) { flushParagraph(); flushBullets(); continue }
+    flushBullets(); paragraph.push(line)
+  }
+  flushParagraph(); flushBullets()
+  return <div className="mt-1.5 space-y-3 rounded-lg border border-line bg-sunken p-3 text-sm leading-6">{nodes}</div>
+}
 
 // ---- derived views -------------------------------------------------------
 const live = (items: MeetingItem[]) => items.filter((i) => i.approval !== "rejected")
@@ -230,7 +257,7 @@ function Detail({ id, admin }: { id: string; admin: boolean }) {
       </div>
 
       {error && <p role="alert" className="mb-3 flex items-center justify-between gap-2 rounded-md bg-danger-soft px-3 py-2 text-sm text-danger">{error}<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button></p>}
-      {m.summary && <section className="mb-5"><h3 className="text-sm font-semibold">Summary</h3><p className="mt-1.5 whitespace-pre-wrap rounded-lg border border-line bg-sunken p-3 text-sm leading-6">{m.summary}</p></section>}
+      {m.summary && <section className="mb-5"><h3 className="text-sm font-semibold">Summary</h3><MeetingMarkdown text={m.summary} /></section>}
 
       <Tabs label="Meeting views" value={tab} onChange={setTab} items={[{ id: "review", label: "Review" }, { id: "open", label: `Open actions (${track.open.length})` }]} />
 
