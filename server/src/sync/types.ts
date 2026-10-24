@@ -5,7 +5,7 @@ export type SyncProviderId = "gdrive" | "onedrive" | "notion" | "github" | "line
 export const isExternalSource = (source: string) => (SYNC_PROVIDER_IDS as readonly string[]).includes(source);
 export const SYNC_PROVIDER_IDS: readonly SyncProviderId[] = ["gdrive", "onedrive", "notion", "github", "linear", "jira", "gmail", "gcal"];
 /** Connected with a pasted token/API key instead of OAuth. */
-export const TOKEN_PROVIDER_IDS: readonly SyncProviderId[] = ["github", "linear", "jira"];
+export const TOKEN_PROVIDER_IDS: readonly SyncProviderId[] = ["linear", "jira"];
 /** Per-user sources: chunks land in user_<owner>, never shared; the user connects their own account. */
 export const PERSONAL_PROVIDER_IDS: readonly SyncProviderId[] = ["gmail", "gcal"];
 

@@ -23,12 +23,12 @@ export function Dialog({ open, onClose, title, description, children, footer, wi
       {open && bare && children}
       {open && !bare && (
         <>
-          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+          <div className="shrink-0 flex items-start justify-between gap-4 border-b border-line px-5 py-4">
             <div><h2 className="text-lg">{title}</h2>{description && <p className="mt-0.5 text-sm text-muted">{description}</p>}</div>
             <Button variant="ghost" size="sm" icon="x" aria-label="Close" onClick={onClose} />
           </div>
-          <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-          {footer && <div className="flex justify-end gap-2 border-t border-line bg-sunken px-5 py-3">{footer}</div>}
+          <div ref={bodyRef} className={cn("overflow-y-auto px-5 py-4", Boolean(height) && "min-h-0 flex-1")}>{children}</div>
+          {footer && <div className="shrink-0 flex justify-end gap-2 border-t border-line bg-sunken px-5 py-3">{footer}</div>}
         </>
       )}
     </dialog>

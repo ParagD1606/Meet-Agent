@@ -1,4 +1,6 @@
-import { http, json, type DocRef, type SyncProvider } from "../types";
+import { createPrivateKey, sign } from "node:crypto";
+import { config } from "../../config";
+import { http, json, type DocRef, type SyncAuth, type SyncProvider } from "../types";
 
 const API = "https://api.github.com";
 const H = { accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28" };
@@ -12,17 +14,55 @@ type Issue = { number: number; title: string; updated_at: string; html_url: stri
 type Comment = { body?: string | null; user?: { login: string } | null };
 type Entry = { type: string; name: string; path: string; html_url: string };
 
+const b64url = (value: Buffer | string) => Buffer.from(value).toString("base64url");
+const privateKey = () => {
+  const raw = config.GITHUB_APP_PRIVATE_KEY!;
+  return raw.includes("BEGIN") ? raw.replace(/\\n/g, "\n") : Buffer.from(raw, "base64").toString("utf8");
+};
+
+/** Short-lived GitHub App JWT used only to mint an installation token. */
+function appJwt(): string {
+  const now = Math.floor(Date.now() / 1000);
+  const encoded = `${b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }))}.${b64url(JSON.stringify({ iat: now - 60, exp: now + 9 * 60, iss: config.GITHUB_APP_ID }))}`;
+  return `${encoded}.${sign("RSA-SHA256", Buffer.from(encoded), createPrivateKey(privateKey())).toString("base64url")}`;
+}
+
+export const githubAppConfigured = () => Boolean(config.GITHUB_APP_ID && config.GITHUB_APP_SLUG && config.GITHUB_APP_PRIVATE_KEY);
+
+/** Verifies that the selected installation belongs to this configured GitHub App. */
+export async function verifyGithubInstallation(installationId: string): Promise<void> {
+  if (!/^\d+$/.test(installationId)) throw new Error("invalid github installation id");
+  await http(`${API}/app/installations/${installationId}`, { headers: { ...H, authorization: `Bearer ${appJwt()}` } });
+}
+
+/** Installation tokens expire in an hour, so they are minted on demand and never accepted from the browser. */
+export async function githubInstallationAuth(installationId: string): Promise<SyncAuth> {
+  if (!githubAppConfigured()) throw new Error("github app is not configured");
+  if (!/^\d+$/.test(installationId)) throw new Error("invalid github installation id");
+  const res = await json<{ token: string; expires_at: string }>(`${API}/app/installations/${installationId}/access_tokens`, {
+    method: "POST", headers: { ...H, authorization: `Bearer ${appJwt()}` },
+  });
+  const expiresAt = Date.parse(res.expires_at);
+  if (!res.token || !Number.isFinite(expiresAt)) throw new Error("invalid github installation token response");
+  return { accessToken: res.token, expiresAt, extra: { installationId } };
+}
+
 /**
- * PAT auth (admin pastes a fine-grained token with read access). Selection ids are "owner/name" repos ("*" = every repo the
- * token sees). Ingests issue/PR title + body + comments, plus README and docs/*.md. Live state (open/closed/merged, labels,
+ * GitHub App installation auth. Selection ids are "owner/name" repos ("*" = every repo the
+ * installation sees). Ingests issue/PR title + body + comments, plus README and docs/*.md. Live state (open/closed/merged, labels,
  * assignees) is deliberately NOT ingested: the GitHub connection answers that live.
  * Cursor: ISO `updated_at` watermark (issues use `since`, sort=updated asc). Docs are re-read when the repo was pushed after it.
  */
 export const github: SyncProvider = {
   id: "github",
-  configured: () => true, // no server-side client credentials: each source carries its own PAT
-  authUrl() { throw new Error("GitHub connects with a personal access token"); },
+  configured: githubAppConfigured,
+  authUrl(state) { return `https://github.com/apps/${encodeURIComponent(config.GITHUB_APP_SLUG!)}/installations/new?state=${encodeURIComponent(state)}`; },
   async exchange() { throw new Error("GitHub connects with a personal access token"); },
+  refresh: async (auth) => {
+    const installationId = auth.extra?.installationId;
+    if (!installationId) throw new Error("github app installation is missing");
+    return githubInstallationAuth(installationId);
+  },
   async listChanges(auth, cursor, selection) {
     const ids = selection?.ids ?? [];
     const repos = ids.includes("*")

@@ -161,7 +161,7 @@ export interface SyncSource {
   selection?: { ids?: string[]; scopeTag?: string } | null; error?: string | null
   connected?: boolean; configured?: boolean
 }
-export type TokenProvider = "github" | "linear" | "jira"
+export type TokenProvider = "linear" | "jira"
 export interface TokenSourceBody { provider: TokenProvider; token: string; email?: string; baseUrl?: string }
 export type MemoryJob = "capture-flush" | "observe" | "consolidate" | "sync" | "backfill-prefix" | "backfill-history" | "sync-tasks"
 export interface Freshness { mode: "normal" | "fast"; tuning: Record<string, number | string>; options: string[] }
