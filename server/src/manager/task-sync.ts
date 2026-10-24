@@ -56,22 +56,23 @@ export async function notifyTaskOwner(c: Commitment, o: { assignerId?: string | 
   const by = o.assignerId ? `<@${o.assignerId}>` : "Someone";
   const body = `${c.priority === "urgent" ? ":rotating_light: *Urgent* " : ":pushpin: "}${by} ${o.reassigned ? "reassigned" : "assigned"} you a task: *${c.text}*${c.dueAt ? ` - due ${day(c.dueAt)}` : ""}${src}`;
   try {
-    let inThread = false;
+    // The assignee always gets a DM (the buttons live there); a thread mention is only the fallback when the DM cannot be opened.
+    const channel = await openDm(c.ownerId);
+    if (channel) {
+      const text = sanitizeForSlack(body);
+      await postMessage({ channel, text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }, buttons(c.id)] });
+      return "dm";
+    }
     if (c.channelId && c.threadTs) {
       const [ch] = await db.select({ im: channels.isIm }).from(channels).where(eq(channels.id, c.channelId));
       const [m] = await db.select({ u: channelMembers.userId }).from(channelMembers).where(and(eq(channelMembers.channelId, c.channelId), eq(channelMembers.userId, c.ownerId)));
-      inThread = !!m && !ch?.im;
+      if (m && !ch?.im) {
+        const text = sanitizeForSlack(`<@${c.ownerId}> ${body}`);
+        await postMessage({ channel: c.channelId, thread_ts: c.threadTs, text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }, buttons(c.id)] });
+        return "thread";
+      }
     }
-    if (inThread) {
-      const text = sanitizeForSlack(`<@${c.ownerId}> ${body}`);
-      await postMessage({ channel: c.channelId!, thread_ts: c.threadTs!, text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }, buttons(c.id)] });
-      return "thread";
-    }
-    const channel = await openDm(c.ownerId);
-    if (!channel) return "none";
-    const text = sanitizeForSlack(body);
-    await postMessage({ channel, text, blocks: [{ type: "section", text: { type: "mrkdwn", text } }, buttons(c.id)] });
-    return "dm";
+    return "none";
   } catch (e) {
     log.warn("task notify failed", { id: c.id, err: String(e).slice(0, 200) });
     return "none";
