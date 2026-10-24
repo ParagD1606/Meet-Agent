@@ -155,7 +155,8 @@ export type ExtractCtx = {
 /** Extracts commitments from free text (a message, thread summary, decision) and stores them. Exported so a writeback hook can call it. */
 export async function extractFromText(text: string, ctx: ExtractCtx): Promise<number> {
   if (!ctx.anyCue && !COMMIT_CUE.test(text)) return 0;
-  const today = (ctx.now ?? new Date()).toISOString().slice(0, 10);
+  const nowD = ctx.now ?? new Date();
+  const today = `${nowD.toISOString().slice(0, 10)} (${nowD.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" })})`; // the weekday lets 'by Friday' resolve correctly
   const out = await completeJson({ system: SYSTEM, prompt: `Today: ${today}\n${ctx.author ? `Message author: <@${ctx.author}>\n` : ""}\nTEXT:\n${text.slice(0, 4000)}`, role: "extract", maxOutputTokens: 600 }, extracted);
   let n = 0;
   for (const [i, c] of out.commitments.entries()) {

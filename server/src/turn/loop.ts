@@ -126,6 +126,12 @@ export type LoopArgs = {
   abortSignal?: AbortSignal;
 };
 
+/** Gemini 3.x spends hidden "thinking" tokens out of maxOutputTokens: on memory turns that was ~90% of the budget and cut answers mid-link. Keep it small for quick turns; deep turns keep the model default. Other providers ignore these keys. */
+export const thinkingOptions = (depth: Depth) => {
+  const level = depth === "direct" || depth === "memory" ? "minimal" : depth === "tools" ? "low" : undefined;
+  return level ? { vertex: { thinkingConfig: { thinkingLevel: level } }, google: { thinkingConfig: { thinkingLevel: level } } } : undefined;
+};
+
 const WRAP_UP = "[host] You are almost out of room for this request. Answer now with what you have found. Say plainly what you did not get to and what would let you go further. Do not call tools.";
 
 /** A model sometimes writes a tool call as plain text (`call:name arg="x" /`, <tool_call>, ```tool_code```) instead of calling it. Never show that. */
@@ -228,6 +234,7 @@ async function runOnce(a: LoopArgs, model: LanguageModel): Promise<LoopResult> {
     messages: a.messages,
     tools: wrapTools(a.tools, a.turnId),
     maxOutputTokens: a.maxOutputTokens,
+    ...(thinkingOptions(a.depth) ? { providerOptions: thinkingOptions(a.depth) } : {}),
     abortSignal,
     onStepFinish: (s: { usage: Parameters<TurnBudget["add"]>[0] }) => { budget.add(s.usage); },
     stopWhen: ({ steps }: { steps: unknown[] }) => budget.exceeded || steps.length >= cap,

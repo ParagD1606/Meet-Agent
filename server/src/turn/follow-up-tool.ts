@@ -11,7 +11,7 @@ import type { ToolContext } from "./tools";
  */
 export function scheduleFollowUpTool(ctx: ToolContext) {
   return tool({
-    description: "Schedule a DM follow-up. Without `person`, DMs the asker at the time (a reminder). With `person`, posts a consent card and DMs that person only after the asker confirms. `at` is an ISO 8601 datetime WITH timezone offset (resolve 'Friday', 'in 3 days' from the current time); DMs are only delivered. `repeatEveryDays` makes it recurring (1-90). Tell the asker what you scheduled; for a person, say you are waiting for their OK on the card.",
+    description: "Schedule a DM follow-up. `text` is only the message content: no greeting or sign-off (the DM adds its own). Without `person`, DMs the asker at the time (a reminder). With `person`, posts a consent card and DMs that person only after the asker confirms. `at` is an ISO 8601 datetime WITH timezone offset (resolve 'Friday', 'in 3 days' from the current time); DMs are only delivered. `repeatEveryDays` makes it recurring (1-90). Tell the asker what you scheduled; for a person, say you are waiting for their OK on the card.",
     inputSchema: z.object({
       text: z.string().min(3).max(500).describe("What to remind or follow up about. Plain words; it is DMed verbatim."),
       at: z.string().describe("ISO 8601 datetime with offset, e.g. 2026-06-12T09:00:00+05:30"),

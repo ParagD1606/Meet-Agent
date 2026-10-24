@@ -47,7 +47,7 @@ export async function findTasks(a: FindTasksArgs): Promise<{ tasks: Commitment[]
 export function formatTasks(r: Awaited<ReturnType<typeof findTasks>>): string {
   if (!r.tasks.length && !r.related.length) return "No matching task found in anything you can read. Say you don't know; do not guess an owner.";
   const lines = r.tasks.map((t) =>
-    `- [${t.status}${t.priority === "urgent" ? ", URGENT" : ""}] ${t.text} | id: ${t.id} | owner: ${t.ownerId ? `<@${t.ownerId}>` : t.ownerName ?? "unknown"} | assigned by: ${t.assignerId ? `<@${t.assignerId}>` : "unknown"} | due: ${day(t.dueAt)}${t.completedAt ? ` | closed: ${day(t.completedAt)}` : ""}${t.channelId ? ` | in <#${t.channelId}>` : ""} | Source: ${t.permalink ?? "no link"}`);
+    `- [${t.status}${t.priority === "urgent" ? ", URGENT" : ""}] ${t.text} | id: ${t.id} | owner: ${t.ownerId ? `<@${t.ownerId}>${t.ownerName ? ` (${t.ownerName})` : ""}` : t.ownerName ?? "unknown"} | assigned by: ${t.assignerId ? `<@${t.assignerId}>` : "unknown"} | due: ${day(t.dueAt)}${t.completedAt ? ` | closed: ${day(t.completedAt)}` : ""}${t.channelId ? ` | in <#${t.channelId}>` : ""} | Source: ${t.permalink ?? "no link"}`);
   const rel = r.related.map((x) => `- ${x.text} (Source: ${x.permalink})`);
   return [lines.join("\n"), rel.length ? `Related memory:\n${rel.join("\n")}` : ""].filter(Boolean).join("\n\n");
 }

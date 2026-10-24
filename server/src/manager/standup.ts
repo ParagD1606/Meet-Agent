@@ -55,7 +55,7 @@ export async function buildWeeklyStatus(ch: Ch, now = new Date()): Promise<strin
   const live = and(inArray(memories.scopeTag, tags), eq(memories.kind, "fact"), eq(memories.status, "active"), eq(memories.reviewState, "ok"), gte(memories.createdAt, week));
   const external = sql`(${memories.source} in ('github','linear') or ${memories.permalink} ~* 'github\\.com|linear\\.app')`;
   // a public channel only claims shared facts sourced from itself or its threads; a private one's own tag is already specific
-  const attrib = ch.isPrivate ? undefined : sql`${memories.sourceRef} in (select ${ch.id}::text union select thread_ts from episodes where channel_id = ${ch.id})`;
+  const attrib = ch.isPrivate ? undefined : sql`(${memories.sourceRef} in (select ${ch.id}::text union select thread_ts from episodes where channel_id = ${ch.id}) or ${memories.sourceRef} like ${ch.id + "/%"})`;
   const [cs, decisions, ext, threads, meets] = await Promise.all([
     channelCommitments(ch, week),
     db.select({ text: memories.text }).from(memories).where(and(live, eq(memories.factType, "decision"), attrib)).orderBy(desc(memories.createdAt)).limit(5),
