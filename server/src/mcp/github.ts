@@ -125,7 +125,10 @@ export async function githubSession(conn: ConnectionRow): Promise<McpSession> {
     // Health checks use listTools, so verify the token against GitHub here instead of
     // reporting a dead/revoked account as healthy merely because the local schema exists.
     listTools: async () => { const token = await freshToken(conn.id); await githubFetch(token, "/user"); return githubTools(); },
-    callTool: (name, args) => githubCall(conn, name, args),
+    // The shared MCP pipeline serializes structuredContent. Wrap native REST
+    // responses in that shape so arrays (such as repository listings) are not
+    // mistaken for an empty MCP response.
+    callTool: async (name, args) => ({ structuredContent: await githubCall(conn, name, args) }),
     close: async () => {},
   };
 }
