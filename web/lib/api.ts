@@ -125,8 +125,9 @@ export interface Automation {
 }
 export type MeetingStatus = "processing" | "ready" | "failed"
 export interface MeetingTask {
-  title: string; description: string; assigneeName: string | null; assigneeId: string | null; dueDate: string | null
+  id: string; title: string; description: string; assigneeName: string | null; assigneeId: string | null; dueDate: string | null
   jiraKey?: string | null; jiraUrl?: string | null
+  notification?: { status: "needs_assignee" | "pending" | "sent" | "acknowledged" | "declined" | "failed"; error?: string | null }
 }
 export interface Meeting {
   id: string; sourceFileId: string; channelId: string; threadTs?: string | null; platform?: string; title: string
@@ -207,6 +208,9 @@ export const api = {
   meetings: () => get<unknown>("/api/meetings").then((d) => list<Meeting>(d, "meetings")),
   meeting: (id: string) => get<Meeting>(`/api/meetings/${id}`),
   syncMeetings: () => send<{ found: number; imported: number; failed: number }>("POST", "/api/meetings/sync"),
+  sendMeetingTaskDms: (id: string, taskIds?: string[]) => send<{ sent: number; skipped: number; failed: number }>("POST", `/api/meetings/${id}/task-dms`, taskIds ? { taskIds } : {}),
+  updateMeetingTaskAssignee: (meetingId: string, taskId: string, assigneeId: string | null) => send<Meeting>("PATCH", `/api/meetings/${meetingId}/tasks/${taskId}`, { assigneeId }),
+  meetingAssignees: (id: string, q = "") => get<{ id: string; name: string | null; avatarUrl?: string | null }[]>(`/api/meetings/${id}/assignees${qs({ q })}`),
   presets: () => get<unknown>("/api/mcp/presets").then((d) => list<Preset>(d, "presets")),
   marketplace: (q: string, limit = 60) => get<unknown>(`/api/marketplace${qs({ q, limit })}`).then((d): MarketPage => { const items = list<MarketItem>(d, "items"); return { items, total: (d as { total?: number })?.total ?? items.length } }),
   installMarketplace: (key: string, body: { scope: "org" | "user"; token?: string; label?: string; url?: string }) => send<{ connection?: Connection; authUrl?: string }>("POST", `/api/marketplace/${encodeURIComponent(key)}/install`, body),

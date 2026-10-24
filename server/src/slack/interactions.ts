@@ -21,6 +21,7 @@ export async function handleInteraction(payload: BlockActions): Promise<void> {
   try {
     if (payload.type !== "block_actions") return;
     const actions = payload.actions ?? [];
+    if (await (await import("../meetings")).handleMeetingTaskAction(payload)) return;
     const own = actions.filter((a) => a.action_id?.startsWith("journey_") || a.action_id?.startsWith("brain_"));
     for (const a of own) {
       if (a.action_id === "journey_quiet" && payload.user?.id) {

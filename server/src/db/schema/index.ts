@@ -188,6 +188,26 @@ export const meetings = pgTable("meetings", {
   index("meetings_ended_idx").on(t.endedAt),
 ]);
 
+/** Delivery history for task-assignment DMs. A task may be reassigned after a recipient declines it. */
+export const meetingTaskNotifications = pgTable("meeting_task_notifications", {
+  id: text("id").primaryKey(),
+  meetingId: text("meeting_id").notNull(),
+  taskId: text("task_id").notNull(),
+  recipientUserId: text("recipient_user_id").notNull(),
+  status: text("status", { enum: ["sent", "acknowledged", "declined", "failed"] }).notNull(),
+  dmChannelId: text("dm_channel_id"),
+  messageTs: text("message_ts"),
+  error: text("error"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+  declinedAt: timestamp("declined_at", { withTimezone: true }),
+  createdAt: ts("created_at"),
+  updatedAt: ts("updated_at"),
+}, (t) => [
+  uniqueIndex("meeting_task_notification_recipient_uniq").on(t.meetingId, t.taskId, t.recipientUserId),
+  index("meeting_task_notification_meeting_idx").on(t.meetingId),
+]);
+
 export const researchRuns = pgTable("research_runs", {
   id: text("id").primaryKey(),
   requesterId: text("requester_id").notNull(),

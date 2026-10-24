@@ -4,8 +4,8 @@ import { requireAuth, type AppEnv } from "../auth/session";
 import { z } from "zod";
 import { authenticateToken } from "../mcp-server";
 import { checkRate } from "../limits";
-import { analyzeLiveMeeting, askLiveMeeting, getMeeting, ingestExtensionTranscript, listMeetings, syncRecentHuddles } from "../meetings";
-import { httpError } from "./util";
+import { analyzeLiveMeeting, askLiveMeeting, getMeeting, ingestExtensionTranscript, listMeetings, meetingAssigneeCandidates, sendMeetingTaskDms, syncRecentHuddles, updateMeetingTaskAssignee } from "../meetings";
+import { httpError, readBody } from "./util";
 
 export const meetingRoutes = new Hono<AppEnv>();
 
@@ -21,6 +21,38 @@ meetingRoutes.get("/meetings/:id", requireAuth(), async (c) => {
 // A workspace-wide import can discover transcripts in channels other than the caller's;
 // keep the trigger with workspace admins while the resulting rows retain normal visibility rules.
 meetingRoutes.post("/meetings/sync", requireAuth("admin"), async (c) => c.json(await syncRecentHuddles()));
+
+const taskIdsSchema = z.object({ taskIds: z.array(z.string().trim().min(1).max(80)).max(100).optional() });
+const assigneeSchema = z.object({ assigneeId: z.string().trim().min(1).max(80).nullable() });
+
+async function meetingFor(c: import("hono").Context<AppEnv>) {
+  const id = c.req.param("id");
+  if (!id) throw httpError(404, "not_found");
+  const meeting = await getMeeting(id, actorOf(c.get("user")));
+  if (!meeting) throw httpError(404, "not_found");
+  return meeting;
+}
+
+/** Anyone who can view a meeting may send its task DMs; already delivered tasks are skipped. */
+meetingRoutes.post("/meetings/:id/task-dms", requireAuth(), async (c) => {
+  await meetingFor(c);
+  const body = await readBody(c, taskIdsSchema);
+  return c.json(await sendMeetingTaskDms(c.req.param("id"), body.taskIds));
+});
+
+meetingRoutes.patch("/meetings/:id/tasks/:taskId", requireAuth(), async (c) => {
+  await meetingFor(c);
+  const body = await readBody(c, assigneeSchema);
+  try { await updateMeetingTaskAssignee(c.req.param("id"), c.req.param("taskId"), body.assigneeId); }
+  catch (err) { throw httpError(404, "not_found", { message: err instanceof Error ? err.message : String(err) }); }
+  return c.json(await getMeeting(c.req.param("id"), actorOf(c.get("user"))));
+});
+
+/** Small, meeting-authorized typeahead instead of exposing the admin-only workspace user list. */
+meetingRoutes.get("/meetings/:id/assignees", requireAuth(), async (c) => {
+  await meetingFor(c);
+  return c.json(await meetingAssigneeCandidates(c.req.query("q") ?? ""));
+});
 
 const extSchema = z.object({
   externalId: z.string().trim().min(1).max(200),

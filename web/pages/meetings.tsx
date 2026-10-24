@@ -8,25 +8,43 @@ import { EmptyState } from "@/ui/empty"
 import { Async, PageHeader, Panel } from "@/ui/page"
 import { Tabs } from "@/ui/tabs"
 
+const deliveryTone = { needs_assignee: "danger", pending: "warn", sent: "accent", acknowledged: "ok", declined: "danger", failed: "danger" } as const
+const deliveryLabel = { needs_assignee: "Needs assignee", pending: "Ready to send", sent: "Sent", acknowledged: "Acknowledged", declined: "Declined", failed: "Delivery failed" } as const
+
 const tone: Record<MeetingStatus, "neutral" | "ok" | "warn" | "danger"> = { processing: "warn", ready: "ok", failed: "danger" }
 const statusLabel: Record<MeetingStatus, string> = { processing: "Processing", ready: "Ready", failed: "Summary failed" }
 
-function Task({ task }: { task: MeetingTask }) {
+function Task({ meetingId, task }: { meetingId: string; task: MeetingTask }) {
+  const client = useQueryClient()
+  const [editing, setEditing] = useState(false)
+  const [query, setQuery] = useState("")
+  const candidates = useQuery({ queryKey: ["meeting-assignees", meetingId, query], queryFn: () => api.meetingAssignees(meetingId, query), enabled: editing })
+  const assign = useMutation({ mutationFn: (assigneeId: string | null) => api.updateMeetingTaskAssignee(meetingId, task.id, assigneeId), onSuccess: () => { setEditing(false); setQuery(""); client.invalidateQueries({ queryKey: ["meeting", meetingId] }); client.invalidateQueries({ queryKey: ["meetings"] }) } })
   const who = task.assigneeName ?? (task.assigneeId ? `Slack user ${task.assigneeId}` : "Unassigned")
+  const status = task.notification?.status ?? "needs_assignee"
   return <li className="rounded-lg border border-line bg-sunken px-3 py-3">
-    <div className="flex flex-wrap items-start justify-between gap-2"><span className="font-medium">{task.title}</span>{task.jiraUrl ? <a className="text-sm text-accent hover:underline" href={task.jiraUrl} target="_blank" rel="noreferrer">{task.jiraKey ?? "Open in Jira"}</a> : <Badge tone="neutral">Not created in Jira</Badge>}</div>
+    <div className="flex flex-wrap items-start justify-between gap-2"><span className="font-medium">{task.title}</span><span className="flex gap-2"><Badge tone={deliveryTone[status]}>{deliveryLabel[status]}</Badge>{task.jiraUrl ? <a className="text-sm text-accent hover:underline" href={task.jiraUrl} target="_blank" rel="noreferrer">{task.jiraKey ?? "Open in Jira"}</a> : <Badge tone="neutral">Not created in Jira</Badge>}</span></div>
     {task.description && <p className="mt-1 text-sm text-muted">{task.description}</p>}
-    <p className="mt-2 text-xs text-muted">Owner: {who}{task.dueDate ? ` · Due ${task.dueDate}` : ""}</p>
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted"><span>Owner: {who}{task.dueDate ? ` · Due ${task.dueDate}` : ""}</span><Button size="sm" variant="ghost" onClick={() => setEditing((v) => !v)}>{editing ? "Cancel" : task.assigneeId ? "Change assignee" : "Assign"}</Button></div>
+    {status === "failed" && task.notification?.error && <p className="mt-2 text-xs text-danger">{task.notification.error}</p>}
+    {editing && <div className="mt-3 rounded-md border border-line bg-panel p-2">
+      <input className="w-full rounded border border-line bg-sunken px-2 py-1.5 text-sm" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search Slack members" autoFocus />
+      <div className="mt-2 max-h-36 overflow-auto">{candidates.data?.map((user) => <button key={user.id} className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-hover" disabled={assign.isPending} onClick={() => assign.mutate(user.id)}>{user.name ?? user.id}</button>)}</div>
+      <Button size="sm" variant="ghost" className="mt-2" loading={assign.isPending} onClick={() => assign.mutate(null)}>Clear assignment</Button>
+      {assign.error && <p className="mt-2 text-xs text-danger">Could not update the assignee.</p>}
+    </div>}
   </li>
 }
 
 function Detail({ meeting }: { meeting: Meeting }) {
+  const client = useQueryClient()
   const [tab, setTab] = useState<"transcript" | "summary">("summary")
+  const send = useMutation({ mutationFn: () => api.sendMeetingTaskDms(meeting.id), onSuccess: () => { client.invalidateQueries({ queryKey: ["meeting", meeting.id] }); client.invalidateQueries({ queryKey: ["meetings"] }) } })
   const date = meeting.endedAt ?? meeting.createdAt
   return <div className="min-w-0">
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div><h2 className="text-lg font-semibold">{meeting.title}</h2><p className="mt-1 text-sm text-muted">Completed {dateTime(date)} · {meeting.participantIds.length} participant{meeting.participantIds.length === 1 ? "" : "s"}</p></div>
-      <Badge tone={tone[meeting.status]}>{statusLabel[meeting.status]}</Badge>
+      <span className="flex items-center gap-2"><Button size="sm" loading={send.isPending} disabled={!meeting.tasks.length} onClick={() => send.mutate()}>Send task DMs</Button><Badge tone={tone[meeting.status]}>{statusLabel[meeting.status]}</Badge></span>
     </div>
     <Tabs label="Meeting content" value={tab} onChange={setTab} items={[{ id: "summary", label: `Summary & tasks (${meeting.tasks.length})` }, { id: "transcript", label: "Source notes" }]} />
     {tab === "transcript" ? (
@@ -36,7 +54,9 @@ function Detail({ meeting }: { meeting: Meeting }) {
         {meeting.status === "processing" && <p className="rounded-lg bg-sunken p-4 text-sm text-muted">Company Brain is reading the saved Huddle transcript and preparing notes.</p>}
         {meeting.status === "failed" && <p className="rounded-lg bg-danger-soft p-4 text-sm text-danger">The source notes were saved, but the summary could not be generated. You can still read them in the Source notes tab.</p>}
         {meeting.summary && <section><h3 className="text-sm font-semibold">Meeting summary</h3><div className="mt-2 whitespace-pre-wrap rounded-lg border border-line bg-sunken p-4 text-sm leading-6">{meeting.summary}</div></section>}
-        <section><h3 className="text-sm font-semibold">Action items</h3>{meeting.tasks.length ? <ul className="mt-2 space-y-2">{meeting.tasks.map((task, i) => <Task key={`${task.title}-${i}`} task={task} />)}</ul> : <p className="mt-2 text-sm text-muted">No explicit action items were found.</p>}</section>
+        {send.isSuccess && <p className="rounded-lg bg-accent-soft p-3 text-sm text-accent-text">Task DMs: {send.data.sent} sent, {send.data.skipped} skipped, {send.data.failed} failed.</p>}
+        {send.isError && <p className="rounded-lg bg-danger-soft p-3 text-sm text-danger">Could not send task DMs. Try again.</p>}
+        <section><h3 className="text-sm font-semibold">Action items</h3>{meeting.tasks.length ? <ul className="mt-2 space-y-2">{meeting.tasks.map((task) => <Task key={task.id} meetingId={meeting.id} task={task} />)}</ul> : <p className="mt-2 text-sm text-muted">No explicit action items were found.</p>}</section>
       </div>
     )}
   </div>

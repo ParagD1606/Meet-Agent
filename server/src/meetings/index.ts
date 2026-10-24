@@ -1,13 +1,15 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
-import { id as newId } from "../crypto";
+import { id as newId, sha256 } from "../crypto";
 import { db } from "../db";
-import { channelMembers, channels, meetings } from "../db/schema";
+import { channelMembers, channels, meetings, meetingTaskNotifications, users } from "../db/schema";
 import { log } from "../log";
 import { completeJson, completeText } from "../memory/llm";
-import { slackClient } from "../slack/client";
+import { config } from "../config";
+import { openDm, postMessage, slackClient } from "../slack/client";
 
 export type MeetingTask = {
+  id: string;
   title: string;
   description: string;
   assigneeName: string | null;
@@ -15,7 +17,11 @@ export type MeetingTask = {
   dueDate: string | null;
   jiraKey?: string | null;
   jiraUrl?: string | null;
+  notification?: { status: "needs_assignee" | "pending" | "sent" | "acknowledged" | "declined" | "failed"; error?: string | null };
 };
+
+type NewMeetingTask = Omit<MeetingTask, "id" | "notification">;
+type SendResult = { sent: number; skipped: number; failed: number };
 
 type Actor = { userId: string; role: "owner" | "admin" | "member" };
 type HuddleFile = Record<string, any>;
@@ -39,7 +45,17 @@ Use only the supplied text. Write a concise Markdown summary with headings for D
 Extract only explicit commitments as tasks. Never invent an owner or due date. If a speaker's Slack user id is shown, preserve it as assigneeId. Return JSON only: {"summary":"...","tasks":[{"title":"...","description":"...","assigneeName":null,"assigneeId":null,"dueDate":null}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
-const asTasks = (value: unknown): MeetingTask[] => Array.isArray(value) ? value as MeetingTask[] : [];
+const asTasks = (meetingId: string, value: unknown): MeetingTask[] => !Array.isArray(value) ? [] : value.map((value, index) => {
+  const task = value as Partial<NewMeetingTask & { id: string }>;
+  // Old rows predate task ids. The deterministic fallback lets them participate in delivery safely.
+  const fallback = `mtask_${sha256(`${meetingId}:${index}:${task.title ?? ""}`).slice(0, 24)}`;
+  return {
+    id: typeof task.id === "string" && task.id ? task.id : fallback,
+    title: task.title ?? "Untitled task", description: task.description ?? "",
+    assigneeName: task.assigneeName ?? null, assigneeId: task.assigneeId ?? null, dueDate: task.dueDate ?? null,
+    jiraKey: task.jiraKey ?? null, jiraUrl: task.jiraUrl ?? null,
+  };
+});
 const asStrings = (value: unknown): string[] => Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -64,6 +80,47 @@ export function cleanTitle(raw: string, channelName?: string | null, fallbackDat
   return ["Huddle" + (channel ? ` in #${channel}` : ""), date].filter(Boolean).join(" · ");
 }
 
+const taskSignature = (task: Pick<NewMeetingTask, "title" | "description">) => `${task.title.trim().toLowerCase()}\u0000${task.description.trim().toLowerCase()}`;
+const slackText = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function assignTaskIds(meetingId: string, fresh: NewMeetingTask[], previous: unknown): MeetingTask[] {
+  const old = new Map(asTasks(meetingId, previous).map((task) => [taskSignature(task), task.id]));
+  return fresh.map((task) => ({ ...task, id: old.get(taskSignature(task)) ?? newId("mtask_") }));
+}
+
+const cleanName = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const similarity = (a: string, b: string) => {
+  if (!a || !b) return 0;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]!; row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const saved = row[j]!;
+      row[j] = Math.min(row[j]! + 1, row[j - 1]! + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = saved;
+    }
+  }
+  return 1 - row[b.length]! / Math.max(a.length, b.length);
+};
+
+async function resolveAssignee(task: MeetingTask) {
+  if (task.assigneeId) {
+    const [user] = await db.select({ id: users.id, name: users.name }).from(users)
+      .where(and(eq(users.id, task.assigneeId), eq(users.deactivated, false), eq(users.isBot, false))).limit(1);
+    if (user) return user;
+  }
+  if (!task.assigneeName?.trim()) return null;
+  const candidates = await db.select({ id: users.id, name: users.name }).from(users)
+    .where(and(eq(users.deactivated, false), eq(users.isBot, false)));
+  const needle = cleanName(task.assigneeName);
+  const exact = candidates.filter((u) => cleanName(u.name ?? "") === needle);
+  if (exact.length === 1) return exact[0]!;
+  const ranked = candidates.map((u) => ({ user: u, score: similarity(needle, cleanName(u.name ?? "")) }))
+    .sort((a, b) => b.score - a.score);
+  // Never pick a close misspelling if another teammate is almost as likely.
+  return ranked[0] && ranked[0].score >= 0.9 && ranked[0].score - (ranked[1]?.score ?? 0) >= 0.08 ? ranked[0].user : null;
+}
+
 /** Public channels are visible to every member; private-channel records require membership. */
 const readable = (actor: Actor) => admin(actor)
   ? undefined
@@ -81,14 +138,28 @@ async function rowsFor(actor: Actor) {
 /** Meeting list intentionally omits the raw transcript. */
 export async function listMeetings(actor: Actor) {
   const rows = await rowsFor(actor);
-  return rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => ({ ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), tasks: asTasks(meeting.tasks), participantIds: asStrings(meeting.participantIds) }));
+  return Promise.all(rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => presentMeeting(meeting, channelName)));
 }
 
 export async function getMeeting(id: string, actor: Actor) {
   const rows = await rowsFor(actor);
   const found = rows.find((r) => r.meeting.id === id);
   const row = found?.meeting;
-  return row ? { ...row, title: cleanTitle(row.title, found!.channelName, row.endedAt), tasks: asTasks(row.tasks), participantIds: asStrings(row.participantIds) } : null;
+  return row ? presentMeeting(row, found!.channelName) : null;
+}
+
+async function presentMeeting(meeting: Omit<typeof meetings.$inferSelect, "transcript">, channelName?: string | null) {
+  const tasks = asTasks(meeting.id, meeting.tasks);
+  const notificationRows = tasks.length ? await db.select().from(meetingTaskNotifications)
+    .where(and(eq(meetingTaskNotifications.meetingId, meeting.id), inArray(meetingTaskNotifications.taskId, tasks.map((t) => t.id)))) : [];
+  const delivery = new Map(notificationRows.map((r) => [`${r.taskId}:${r.recipientUserId}`, r]));
+  const lastByTask = new Map(notificationRows.map((r) => [r.taskId, r]));
+  const withDelivery = tasks.map((task) => {
+    const row = task.assigneeId ? delivery.get(`${task.id}:${task.assigneeId}`) : lastByTask.get(task.id);
+    const status = row?.status === "declined" && !task.assigneeId ? "declined" : row?.status ?? (task.assigneeId ? "pending" : "needs_assignee");
+    return { ...task, notification: { status: status as NonNullable<MeetingTask["notification"]>["status"], ...(row?.error ? { error: row.error } : {}) } };
+  });
+  return { ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), tasks: withDelivery, participantIds: asStrings(meeting.participantIds) };
 }
 
 const lineText = (v: unknown): string => {
@@ -144,10 +215,128 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
   };
 }
 
+const meetingUrl = (id: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}/meetings?meeting=${encodeURIComponent(id)}`;
+
+const dmBlocks = (meeting: typeof meetings.$inferSelect, task: MeetingTask, notificationId: string) => ([
+  { type: "section", text: { type: "mrkdwn", text: `*Meeting task assigned to you*\n*${slackText(task.title)}*` } },
+  ...(task.description ? [{ type: "section", text: { type: "mrkdwn", text: slackText(task.description) } }] : []),
+  { type: "context", elements: [{ type: "mrkdwn", text: `From <${meetingUrl(meeting.id)}|${slackText(meeting.title)}>${task.dueDate ? ` · Due: ${slackText(task.dueDate)}` : ""}` }] },
+  { type: "actions", elements: [
+    { type: "button", style: "primary", text: { type: "plain_text", text: "Acknowledge" }, action_id: "meeting_task_ack", value: notificationId },
+    { type: "button", text: { type: "plain_text", text: "Not mine" }, action_id: "meeting_task_decline", value: notificationId },
+  ] },
+]);
+
+/** Sends only unsent or failed task notifications. Already delivered tasks are never duplicated. */
+export async function sendMeetingTaskDms(meetingId: string, taskIds?: string[]): Promise<SendResult> {
+  const [meeting] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+  if (!meeting) throw new Error("meeting not found");
+  const selected = asTasks(meeting.id, meeting.tasks).filter((task) => !taskIds || taskIds.includes(task.id));
+  let tasks = selected;
+  let sent = 0; let skipped = 0; let failed = 0; let changed = false;
+  for (let i = 0; i < tasks.length; i++) {
+    let task = tasks[i]!;
+    const assignee = await resolveAssignee(task);
+    if (!assignee) { skipped += 1; continue; }
+    if (task.assigneeId !== assignee.id || task.assigneeName !== assignee.name) {
+      task = { ...task, assigneeId: assignee.id, assigneeName: assignee.name ?? task.assigneeName };
+      tasks[i] = task; changed = true;
+    }
+    const [existing] = await db.select().from(meetingTaskNotifications)
+      .where(and(eq(meetingTaskNotifications.meetingId, meeting.id), eq(meetingTaskNotifications.taskId, task.id), eq(meetingTaskNotifications.recipientUserId, assignee.id))).limit(1);
+    if (existing?.status === "sent" || existing?.status === "acknowledged") { skipped += 1; continue; }
+    const notificationId = existing?.id ?? newId("mtn_");
+    if (!existing) {
+      const [claimed] = await db.insert(meetingTaskNotifications).values({ id: notificationId, meetingId: meeting.id, taskId: task.id, recipientUserId: assignee.id, status: "failed", error: "Preparing Slack DM" })
+        .onConflictDoNothing().returning({ id: meetingTaskNotifications.id });
+      // Automatic delivery and a viewer's manual retry can race; the winner owns this one DM.
+      if (!claimed) { skipped += 1; continue; }
+    }
+    try {
+      const channel = await openDm(assignee.id);
+      if (!channel) throw new Error("Could not open a Slack DM with the assignee");
+      const message = await postMessage({ channel, text: `Meeting task: ${task.title}`, blocks: dmBlocks(meeting, task, notificationId) });
+      if (!message.ts) throw new Error("Slack did not return a message timestamp");
+      await db.update(meetingTaskNotifications).set({ status: "sent", dmChannelId: channel, messageTs: message.ts, error: null, sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(meetingTaskNotifications.id, notificationId));
+      sent += 1;
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      await db.update(meetingTaskNotifications).set({ status: "failed", error, updatedAt: new Date() }).where(eq(meetingTaskNotifications.id, notificationId));
+      log.warn("meeting task DM failed", { meetingId: meeting.id, taskId: task.id, userId: assignee.id, error });
+      failed += 1;
+    }
+  }
+  if (changed) {
+    const updated = asTasks(meeting.id, meeting.tasks).map((task) => tasks.find((next) => next.id === task.id) ?? task);
+    await db.update(meetings).set({ tasks: updated, updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+  }
+  return { sent, skipped, failed };
+}
+
+/** Called after task extraction. It is intentionally detached from ingestion so Slack event ACKs stay fast. */
+function queueMeetingTaskDms(meetingId: string) {
+  void sendMeetingTaskDms(meetingId).catch((err) => log.warn("automatic meeting task DMs failed", { meetingId, error: err instanceof Error ? err.message : String(err) }));
+}
+
+export async function updateMeetingTaskAssignee(meetingId: string, taskId: string, assigneeId: string | null): Promise<void> {
+  const [meeting] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+  if (!meeting) throw new Error("meeting not found");
+  let assignee: { id: string; name: string | null } | null = null;
+  if (assigneeId) {
+    [assignee] = await db.select({ id: users.id, name: users.name }).from(users)
+      .where(and(eq(users.id, assigneeId), eq(users.deactivated, false), eq(users.isBot, false))).limit(1);
+    if (!assignee) throw new Error("assignee not found");
+  }
+  let found = false;
+  const tasks = asTasks(meeting.id, meeting.tasks).map((task) => {
+    if (task.id !== taskId) return task;
+    found = true;
+    return { ...task, assigneeId: assignee?.id ?? null, assigneeName: assignee?.name ?? null };
+  });
+  if (!found) throw new Error("task not found");
+  await db.update(meetings).set({ tasks, updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+}
+
+export async function meetingAssigneeCandidates(q: string) {
+  const needle = q.trim().toLowerCase();
+  const rows = await db.select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl }).from(users)
+    .where(and(eq(users.deactivated, false), eq(users.isBot, false))).orderBy(users.name);
+  return rows.filter((u) => !needle || (u.name ?? "").toLowerCase().includes(needle)).slice(0, 20);
+}
+
+export async function handleMeetingTaskAction(payload: { user?: { id?: string }; actions?: { action_id?: string; value?: string }[] }): Promise<boolean> {
+  const action = payload.actions?.find((a) => a.action_id === "meeting_task_ack" || a.action_id === "meeting_task_decline");
+  if (!action?.value || !payload.user?.id) return false;
+  const [notification] = await db.select().from(meetingTaskNotifications).where(eq(meetingTaskNotifications.id, action.value)).limit(1);
+  if (!notification || notification.recipientUserId !== payload.user.id) return true;
+  if (notification.status !== "sent") return true;
+  const decline = action.action_id === "meeting_task_decline";
+  const now = new Date();
+  await db.update(meetingTaskNotifications).set({ status: decline ? "declined" : "acknowledged", updatedAt: now, ...(decline ? { declinedAt: now } : { acknowledgedAt: now }) })
+    .where(and(eq(meetingTaskNotifications.id, notification.id), eq(meetingTaskNotifications.status, "sent")));
+  if (decline) {
+    const [meeting] = await db.select().from(meetings).where(eq(meetings.id, notification.meetingId)).limit(1);
+    if (meeting) {
+      const tasks = asTasks(meeting.id, meeting.tasks).map((task) => task.id === notification.taskId && task.assigneeId === notification.recipientUserId
+        ? { ...task, assigneeId: null, assigneeName: null } : task);
+      await db.update(meetings).set({ tasks, updatedAt: now }).where(eq(meetings.id, meeting.id));
+    }
+  }
+  if (notification.dmChannelId && notification.messageTs) {
+    await (await slackClient()).chat.update({ channel: notification.dmChannelId, ts: notification.messageTs,
+      text: decline ? "Task declined — it needs reassignment." : "Task acknowledged.", blocks: [] }).catch((err) => log.warn("meeting task DM update failed", { notificationId: notification.id, error: String(err) }));
+  }
+  return true;
+}
+
 async function analyze(sourceFileId: string, text: string): Promise<void> {
   try {
     const analysis = await completeJson({ system: SUMMARY_SYSTEM, prompt: text.slice(-50_000), role: "summarize", maxOutputTokens: 1_400 }, analysisSchema);
-    await db.update(meetings).set({ summary: analysis.summary, tasks: analysis.tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    const [meeting] = await db.select({ id: meetings.id, tasks: meetings.tasks }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId)).limit(1);
+    if (!meeting) return;
+    const tasks = assignTaskIds(meeting.id, analysis.tasks, meeting.tasks);
+    await db.update(meetings).set({ summary: analysis.summary, tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
@@ -156,14 +345,16 @@ async function analyze(sourceFileId: string, text: string): Promise<void> {
 
 /** Adds the user's own decisions and tasks to the AI result; their entries win over duplicate AI ones. */
 async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
-  const [row] = await db.select({ summary: meetings.summary, tasks: meetings.tasks, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
+  const [row] = await db.select({ id: meetings.id, summary: meetings.summary, tasks: meetings.tasks, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
   if (!row) return;
-  const mine: MeetingTask[] = (t.tasks ?? []).map((k) => ({
+  const mine: NewMeetingTask[] = (t.tasks ?? []).map((k) => ({
     title: k.title, description: k.done ? "Marked done during the call." : "",
     assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
   }));
   const seen = new Set(mine.map((k) => k.title.toLowerCase()));
-  const tasks = [...mine, ...asTasks(row.tasks).filter((k) => !seen.has(k.title.toLowerCase()))];
+  const existing = asTasks(row.id, row.tasks);
+  const fresh: NewMeetingTask[] = [...mine, ...existing.filter((k) => !seen.has(k.title.toLowerCase())).map(({ id: _id, notification: _notification, ...task }) => task)];
+  const tasks = assignTaskIds(row.id, fresh, existing);
   const decisions = (t.decisions ?? []).map((d) => `- ${d}`).join("\n");
   const section = decisions ? `## Decisions recorded in the call\n${decisions}` : "";
   const summary = [section, row.summary ?? ""].filter(Boolean).join("\n\n") || null;
@@ -197,6 +388,7 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
     .returning({ id: meetings.id });
   await analyze(sourceFileId, text);
   if (t.decisions?.length || t.tasks?.length) await mergeUserNotes(sourceFileId, t);
+  queueMeetingTaskDms(row!.id);
   return { id: row!.id };
 }
 
@@ -225,6 +417,8 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
   await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
     .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } });
   await analyze(sourceFileId, parsed.text);
+  const [saved] = await db.select({ id: meetings.id }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId)).limit(1);
+  if (saved) queueMeetingTaskDms(saved.id);
   return true;
 }
 
