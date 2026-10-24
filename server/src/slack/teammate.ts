@@ -53,7 +53,7 @@ function localParts(d: Date): { wd: string; h: number } {
 const inWindow = (d: Date) => { const { wd, h } = localParts(d); return wd !== "Sat" && wd !== "Sun" && h >= 9 && h < 18; };
 /** null when `now` is inside the window, else the start of the next one (hourly scan: windows start on the hour in whole-hour zones). */
 export function nextWindow(now: Date): Date | null {
-  if (inWindow(now)) return null;
+  if (process.env.QUIET_HOURS !== "1" || inWindow(now)) return null; // quiet hours are off unless QUIET_HOURS=1
   let t = new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000 + 3_600_000);
   for (let i = 0; i < 24 * 8 && !inWindow(t); i++) t = new Date(t.getTime() + 3_600_000);
   return t;

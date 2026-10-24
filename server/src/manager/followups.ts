@@ -9,7 +9,7 @@ import { followUpConfirmCard } from "../slack/cards";
 import { openDm, postMessage, slackClient } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
 import { getSetting, putSetting } from "./commitments";
-import { inWorkingHours, workingHours } from "./chase";
+import { inWorkingHours, quietHoursOn, workingHours } from "./chase";
 import { taskListMessage, openTasksFor } from "./tasks";
 
 /**
@@ -101,7 +101,7 @@ async function dm(userId: string, text: string, blocks?: unknown[]): Promise<voi
 
 /** Sends every due follow-up (working hours only, recipient cap). Returns how many were delivered. */
 export async function followUpTick(now = new Date()): Promise<number> {
-  if (!inWorkingHours(now, await workingHours())) return 0;
+  if (quietHoursOn() && !inWorkingHours(now, await workingHours())) return 0;
   const due = await db.select().from(followUps).where(and(eq(followUps.status, "pending"), lte(followUps.dueAt, now))).orderBy(asc(followUps.dueAt)).limit(100);
   let sent = 0;
   for (const f of due) {
@@ -161,7 +161,7 @@ async function sendCapped(userId: string, now: Date, text: string, blocks?: unkn
 export async function digestTick(now = new Date()): Promise<{ digests: number; weekly: number }> {
   const out = { digests: 0, weekly: 0 };
   const h = await workingHours();
-  if (!inWorkingHours(now, h)) return out;
+  if (quietHoursOn() && !inWorkingHours(now, h)) return out;
   const lp = localParts(now, h.tz);
   const rows = await db.select().from(settings).where(like(settings.key, "followprefs:%"));
   for (const r of rows) {

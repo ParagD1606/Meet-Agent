@@ -15,6 +15,8 @@ import {
 import { fakeSlack } from "../slack/helpers";
 import { installFakes, removeFakes, seedMemory } from "../memory/helpers";
 
+process.env.QUIET_HOURS = "1"; // quiet hours are opt-in; these tests cover the opt-in behaviour
+
 beforeAll(installFakes);
 afterAll(removeFakes);
 
@@ -231,4 +233,15 @@ describe("risk scan", () => {
     await riskTick(NOW);
     expect(posts()[0].text).toContain("stale decision");
   });
+});
+
+test("quiet hours are off by default: chases and routed questions are not held to a working window", async () => {
+  const { nextWindow } = await import("../../src/slack/teammate");
+  const night = new Date("2026-10-24T22:30:00Z"); // Saturday night UTC
+  process.env.QUIET_HOURS = "";
+  try {
+    expect(nextWindow(night)).toBeNull();
+    process.env.QUIET_HOURS = "1";
+    expect(nextWindow(night)).not.toBeNull();
+  } finally { process.env.QUIET_HOURS = "1"; }
 });

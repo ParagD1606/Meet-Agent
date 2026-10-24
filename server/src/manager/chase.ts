@@ -23,6 +23,8 @@ export function shouldNudge(c: Pick<Commitment, "status" | "ownerId" | "dueAt" |
 }
 
 // ---------- quiet hours ----------
+/** Quiet/working hours are OFF by default (Pixel messages people straight away). Set QUIET_HOURS=1 to hold chases, follow-ups and routed questions to the working window. */
+export const quietHoursOn = (): boolean => process.env.QUIET_HOURS === "1";
 export type Hours = { tz: string; start: number; end: number };
 /** Workspace timezone from settings.timezone (IANA), working window from settings.manager_hours; default UTC 9-18 Mon-Fri. */
 export async function workingHours(): Promise<Hours> {
@@ -82,7 +84,7 @@ const ownerCanRead = (c: Commitment) => canRead(c, c.ownerId!);
 /** Marks overdue, then nudges every owner whose commitment is due for it. Respects quiet hours and the per-person chase bucket. */
 export async function chaseTick(now = new Date()): Promise<number> {
   await markOverdue(now);
-  if (!inWorkingHours(now, await workingHours())) return 0;
+  if (quietHoursOn() && !inWorkingHours(now, await workingHours())) return 0;
   const rows = await db.select().from(commitments).where(and(
     inArray(commitments.status, [...ACTIVE]), isNotNull(commitments.ownerId), lte(commitments.dueAt, new Date(now.getTime() + DAY)),
   )).limit(200);

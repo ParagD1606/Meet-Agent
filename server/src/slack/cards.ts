@@ -99,6 +99,6 @@ export function askConfirmCard(a: { id: string; owner: string; question: string 
 /** Consent card for "follow up with @X": the requester sees the exact text and time before anyone is messaged. */
 export function followUpConfirmCard(a: { id: string; target: string; text: string; at: Date; repeatDays?: number | null }): Card {
   const when = `${a.at.toISOString().slice(0, 16).replace("T", " ")} UTC${a.repeatDays ? `, then every ${a.repeatDays} day(s)` : ""}`;
-  const text = `Want me to follow up with <@${a.target}> on ${when}? I'll DM them only this (during working hours): "${escapeSlackText(a.text)}"`;
+  const text = `Want me to follow up with <@${a.target}> on ${when}? I'll DM them only this: "${escapeSlackText(a.text)}"`;
   return { text, blocks: [section(text), { type: "actions", elements: [button("Yes, follow up", "brain_fu_yes", { value: a.id, style: "primary" }), button("No thanks", "brain_fu_no", { value: a.id })] }] };
 }

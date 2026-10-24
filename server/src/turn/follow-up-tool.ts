@@ -11,7 +11,7 @@ import type { ToolContext } from "./tools";
  */
 export function scheduleFollowUpTool(ctx: ToolContext) {
   return tool({
-    description: "Schedule a DM follow-up. Without `person`, DMs the asker at the time (a reminder). With `person`, posts a consent card and DMs that person only after the asker confirms. `at` is an ISO 8601 datetime WITH timezone offset (resolve 'Friday', 'in 3 days' from the current time); DMs are only delivered during working hours. `repeatEveryDays` makes it recurring (1-90). Tell the asker what you scheduled; for a person, say you are waiting for their OK on the card.",
+    description: "Schedule a DM follow-up. Without `person`, DMs the asker at the time (a reminder). With `person`, posts a consent card and DMs that person only after the asker confirms. `at` is an ISO 8601 datetime WITH timezone offset (resolve 'Friday', 'in 3 days' from the current time); DMs are only delivered. `repeatEveryDays` makes it recurring (1-90). Tell the asker what you scheduled; for a person, say you are waiting for their OK on the card.",
     inputSchema: z.object({
       text: z.string().min(3).max(500).describe("What to remind or follow up about. Plain words; it is DMed verbatim."),
       at: z.string().describe("ISO 8601 datetime with offset, e.g. 2026-06-12T09:00:00+05:30"),
@@ -34,7 +34,7 @@ export function scheduleFollowUpTool(ctx: ToolContext) {
           await proposeFollowUp(f);
           return `Posted a consent card asking the asker whether to follow up with <@${f.targetId}> on ${f.dueAt.toISOString()}. Nothing is sent until they click yes; tell them briefly you are waiting for their OK.`;
         }
-        return `Scheduled ${f.id}: DM to the asker at ${f.dueAt.toISOString()}${f.repeatDays ? `, repeating every ${f.repeatDays} day(s)` : ""} (delivered during working hours). They can list or cancel it with /brain-followups.`;
+        return `Scheduled ${f.id}: DM to the asker at ${f.dueAt.toISOString()}${f.repeatDays ? `, repeating every ${f.repeatDays} day(s)` : ""}. They can list or cancel it with /brain-followups.`;
       } catch (e) {
         if (e instanceof FollowUpError) return `Could not schedule: ${e.message}`;
         throw e;

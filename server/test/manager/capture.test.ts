@@ -19,6 +19,8 @@ import { heuristicDepth } from "../../src/turn/depth";
 import { fakeSlack } from "../slack/helpers";
 import { installFakes, removeFakes } from "../memory/helpers";
 
+process.env.QUIET_HOURS = "1"; // quiet hours are opt-in; these tests cover the opt-in behaviour
+
 beforeAll(installFakes);
 afterAll(removeFakes);
 
