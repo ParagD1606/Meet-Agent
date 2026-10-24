@@ -34,6 +34,16 @@ describe("marketplace REST", () => {
     expect(all.items).toHaveLength(5);
   });
 
+  test("an admin does not see a teammate's personal connection as their own", async () => {
+    const cookie = await login("UADMIN");
+    await db.insert(mcpConnections).values({ id: "g1", provider: "github", label: "GitHub (@teammate)", url: "https://api.github.com", scope: "user", ownerUserId: "UM", status: "connected" });
+    const r = await (await call("GET", "/api/marketplace?q=github", { cookie })).json() as any;
+    expect(r.items.find((i: any) => i.key === "github")?.connected).toBe(false);
+    await db.insert(mcpConnections).values({ id: "g2", provider: "github", label: "GitHub (@admin)", url: "https://api.github.com", scope: "user", ownerUserId: "UADMIN", status: "connected" });
+    const r2 = await (await call("GET", "/api/marketplace?q=github", { cookie })).json() as any;
+    expect(r2.items.find((i: any) => i.key === "github")?.connected).toBe(true);
+  });
+
   test("api-key apps need a token; with one the connection is created connected and the token is stored encrypted", async () => {
     const cookie = await login("UM");
     const { MARKET } = await import("../../src/mcp/directory");
