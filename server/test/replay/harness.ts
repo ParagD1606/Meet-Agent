@@ -79,12 +79,21 @@ export async function boot(o: { extractFacts?: string[]; slackResponses?: Record
   let n = 0;
   store.length = 0;
   // the fake workspace remembers what was said, so history/thread reads (used for "tell him", "continue") look like real Slack
+  // what real Slack enforces and a lenient fake hides: every action_id in one actions block must be unique (else invalid_blocks and the message is never delivered)
+  const badBlocks = (a: any) => {
+    for (const b of Array.isArray(a.blocks) ? a.blocks : []) {
+      if (b?.type !== "actions") continue;
+      const ids = (b.elements ?? []).map((e: any) => e.action_id).filter(Boolean);
+      const dup = ids.find((id: string, i: number) => ids.indexOf(id) !== i);
+      if (dup) throw new Error(`invalid_blocks: action_id "${dup}" already exists in one actions block`);
+    }
+  };
   const fake = fakeSlack({
     "conversations.replies": (a) => ({ ok: true, messages: store.filter((m) => m.channel === a.channel && (m.ts === a.ts || m.thread_ts === a.ts)).map(pub) }),
     "conversations.history": (a) => ({ ok: true, messages: store.filter((m) => m.channel === a.channel && (!m.thread_ts || m.thread_ts === m.ts)).map(pub).reverse() }),
     "chat.getPermalink": (a) => ({ ok: true, permalink: `https://acme.slack.com/archives/${a.channel}/p${String(a.message_ts).replace(".", "")}` }),
-    "chat.postMessage": (a) => { const ts = nextTs(); ++n; store.push({ channel: a.channel, ts, thread_ts: a.thread_ts, user: BOT, text: String(a.text ?? "") }); return { ok: true, ts, channel: a.channel }; },
-    "chat.update": (a) => { const m = store.find((x) => x.channel === a.channel && x.ts === a.ts); if (m) m.text = String(a.text ?? ""); return { ok: true, ts: a.ts, channel: a.channel }; },
+    "chat.postMessage": (a) => { badBlocks(a); const ts = nextTs(); ++n; store.push({ channel: a.channel, ts, thread_ts: a.thread_ts, user: BOT, text: String(a.text ?? "") }); return { ok: true, ts, channel: a.channel }; },
+    "chat.update": (a) => { badBlocks(a); const m = store.find((x) => x.channel === a.channel && x.ts === a.ts); if (m) m.text = String(a.text ?? ""); return { ok: true, ts: a.ts, channel: a.channel }; },
     ...o.slackResponses,
   });
   setSlackClientForTest(fake.client);
