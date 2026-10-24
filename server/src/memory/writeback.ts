@@ -170,7 +170,7 @@ async function flush(channelId: string, threadTs: string): Promise<number> {
   pending.delete(key);
   await db.insert(threadState).values({ channelId, threadTs, turnsSinceReflect: 0 })
     .onConflictDoUpdate({ target: [threadState.channelId, threadState.threadTs], set: { turnsSinceReflect: 0, updatedAt: new Date() } })
-    .catch(() => {});
+    .catch((e) => log.warn("threadState reset failed", { channelId, threadTs, err: String(e) }));
   const [row] = await db.delete(captureBuffer).where(and(eq(captureBuffer.channelId, channelId), eq(captureBuffer.threadTs, threadTs))).returning();
   if (!row) return 0;
   const scope = row.scope as SlackScope;

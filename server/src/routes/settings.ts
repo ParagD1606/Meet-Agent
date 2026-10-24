@@ -13,6 +13,9 @@ import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "..
 import { DEFAULT_PERSONA, getPersona, PERSONA_LIMITS, setPersona } from "../persona";
 import { getFreshness, saveFreshness, TUNING } from "../memory/freshness";
 import { setObserve } from "../memory/ambient";
+import { log } from "../log";
+import { applyManagerSchedules, quietHoursOn, workingHours } from "../manager";
+import { backfillDays, MAX_DAYS } from "../memory/backfill";
 import { httpError, readBody, codedError } from "./util";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -58,6 +61,31 @@ settingsRoutes.put("/settings/memory-freshness", requireAuth("admin"), async (c)
   const { mode } = await readBody(c, z.object({ mode: z.enum(["normal", "fast"]) }));
   await saveFreshness(mode);
   return c.json(freshness());
+});
+
+// ---------- workspace hours: one timezone/window for asks, chases, follow-ups, digests and standups ----------
+const validTz = (tz: string) => { try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); return true; } catch { return false; } };
+async function workspaceHours() {
+  const h = await workingHours();
+  return { timezone: h.tz, start: h.start, end: h.end, quietHours: quietHoursOn(), backfillDays: await backfillDays() };
+}
+settingsRoutes.get("/settings/workspace-hours", requireAuth("admin"), async (c) => c.json(await workspaceHours()));
+settingsRoutes.put("/settings/workspace-hours", requireAuth("admin"), async (c) => {
+  const b = await readBody(c, z.object({
+    timezone: z.string().trim().min(1).max(64).refine(validTz, "invalid IANA timezone"),
+    start: z.number().int().min(0).max(23),
+    end: z.number().int().min(1).max(24),
+    quietHours: z.boolean(),
+    backfillDays: z.number().int().min(1).max(MAX_DAYS),
+  }).refine((v) => v.start < v.end, { message: "start must be before end", path: ["end"] }));
+  await putSetting("timezone", b.timezone);
+  await putSetting("manager_hours", { start: b.start, end: b.end });
+  await putSetting("quiet_hours_enabled", b.quietHours);
+  await putSetting("memory_backfill_days", b.backfillDays);
+  await applyManagerSchedules().catch((e) => log.warn("manager reschedule failed", { err: String(e) }));
+  const jobs = await import("../jobs"); // deferred asks may now be deliverable (quiet hours off / window changed)
+  if (jobs.jobsStarted()) await jobs.sweepAskDeliveries().catch((e) => log.warn("ask-deliver sweep failed", { err: String(e) }));
+  return c.json(await workspaceHours());
 });
 
 // ---------- ambient capture: the bot learns from every channel it is in unless an admin opts the channel out ----------

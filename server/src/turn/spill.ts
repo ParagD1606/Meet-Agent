@@ -126,5 +126,3 @@ export function clearOldToolResults(messages: ModelMessage[], keepLast = 1): Mod
   });
 }
 
-/** Per-turn totals for observability (`turns.promptBreakdown.toolResults`). */
-export const turnSpillChars = (turnId: string) => used.get(turnId) ?? 0;

@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
+import { tuningEnv } from "../config";
 import { db } from "../db";
 import { channelMembers, commitments, users } from "../db/schema";
 import { checkRate } from "../limits";
@@ -24,14 +25,29 @@ export function shouldNudge(c: Pick<Commitment, "status" | "ownerId" | "dueAt" |
 }
 
 // ---------- quiet hours ----------
-/** Quiet/working hours are OFF by default (Pixel messages people straight away). Set QUIET_HOURS=1 to hold chases, follow-ups and routed questions to the working window. */
-export const quietHoursOn = (): boolean => process.env.QUIET_HOURS === "1";
+/**
+ * Quiet/working hours are OFF by default (Pixel messages people straight away). Turn on with the admin setting
+ * (settings.quiet_hours_enabled) or force on with QUIET_HOURS=1: chases, follow-ups, digests and routed questions then wait for the working window.
+ * Sync reads use a cache that every workingHours() call (and the settings PUT) refreshes.
+ */
 export type Hours = { tz: string; start: number; end: number };
+let cached: { hours: Hours; quiet: boolean } = { hours: { tz: "UTC", start: 9, end: 18 }, quiet: false };
+export const quietHoursOn = (): boolean => tuningEnv().quietHoursForced || cached.quiet;
 /** Workspace timezone from settings.timezone (IANA), working window from settings.manager_hours; default UTC 9-18 Mon-Fri. */
 export async function workingHours(): Promise<Hours> {
   const tz = await getSetting<string>("timezone");
   const h = await getSetting<{ start?: number; end?: number }>("manager_hours");
-  return { tz: typeof tz === "string" && tz ? tz : "UTC", start: h?.start ?? 9, end: h?.end ?? 18 };
+  const quiet = await getSetting<boolean>("quiet_hours_enabled");
+  const hours = { tz: typeof tz === "string" && tz ? tz : "UTC", start: h?.start ?? 9, end: h?.end ?? 18 };
+  cached = { hours, quiet: quiet === true };
+  return hours;
+}
+/** Last window read by workingHours(); for sync callers (teammate.nextWindow). */
+export const cachedHours = (): Hours => cached.hours;
+/** True when quiet hours are on and `now` is outside the working window. */
+export async function heldByQuietHours(now: Date): Promise<boolean> {
+  const h = await workingHours();
+  return quietHoursOn() && !inWorkingHours(now, h);
 }
 
 /** Pure. True inside the window, Mon-Fri; an invalid timezone falls back to UTC. */
@@ -85,7 +101,7 @@ const ownerCanRead = (c: Commitment) => canRead(c, c.ownerId!);
 /** Marks overdue, then nudges every owner whose commitment is due for it. Respects quiet hours and the per-person chase bucket. */
 export async function chaseTick(now = new Date()): Promise<number> {
   await markOverdue(now);
-  if (quietHoursOn() && !inWorkingHours(now, await workingHours())) return 0;
+  if (await heldByQuietHours(now)) return 0;
   const rows = await db.select().from(commitments).where(and(
     inArray(commitments.status, [...ACTIVE]), isNotNull(commitments.ownerId), lte(commitments.dueAt, new Date(now.getTime() + DAY)),
   )).limit(200);

@@ -121,7 +121,7 @@ export default function Tasks() {
   }
 
   const columns = (): Column<Task>[] => [
-    { key: "title", header: "Task", primary: true, sort: (t) => t.title.toLowerCase(), cell: (t) => <span className="flex min-w-0 flex-wrap items-center gap-1.5"><span className="line-clamp-2">{t.title}</span>{t.priority === "urgent" && <Badge tone="danger">Urgent</Badge>}</span> },    { key: "owner", header: "Assigned to", sort: nameOf, cell: (t) => <Who name={t.ownerId || t.ownerName ? nameOf(t) : null} src={t.ownerAvatar} /> },
+    { key: "title", header: "Task", primary: true, sort: (t) => t.title.toLowerCase(), cell: (t) => <span className="flex min-w-[220px] max-w-[440px] flex-wrap items-center gap-1.5 whitespace-normal"><span className="line-clamp-2 break-words">{t.title}</span>{t.priority === "urgent" && <Badge tone="danger">Urgent</Badge>}</span> },    { key: "owner", header: "Assigned to", sort: nameOf, cell: (t) => <Who name={t.ownerId || t.ownerName ? nameOf(t) : null} src={t.ownerAvatar} /> },
     { key: "by", header: "Assigned by", hideSm: true, sort: (t) => t.assignerName, cell: (t) => <Who name={t.assignerName} src={t.assignerAvatar} /> },
     { key: "due", header: "Due", sort: (t) => t.dueAt, cell: (t) => t.dueAt ? <span className={t.overdue ? "font-medium text-danger" : undefined}>{dateShort(t.dueAt)}{t.overdue && <span className="sr-only"> (overdue)</span>}</span> : <span className="text-subtle">No date</span> },
     { key: "status", header: "Status", end: true, sort: (t) => t.status, cell: (t) => t.canEdit

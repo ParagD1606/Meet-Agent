@@ -5,7 +5,7 @@ export const memoryReminders = pgTable("memory_reminders", {
   memoryId: bigint("memory_id", { mode: "number" }).primaryKey(),
   channelId: text("channel_id").notNull(),
   remindedAt: timestamp("reminded_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [index("memory_reminders_reminded_at_idx").on(t.remindedAt)]);
 
 /** 👍/👎 reactions on messages the bot authored. One row per (message, user); changing your mind updates it. */
 export const messageFeedback = pgTable("message_feedback", {

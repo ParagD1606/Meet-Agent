@@ -1,4 +1,4 @@
-import { count, desc, eq, and, lt, sql } from "drizzle-orm";
+import { count, desc, eq, and, isNull, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { HTTPException } from "hono/http-exception";
@@ -100,7 +100,7 @@ core.get("/overview", requireAuth(), async (c) => {
   const user = c.get("user");
   const admin = hasRole(user.role, "admin");
   const [[mem], [conn], [auto], recentTurns] = await Promise.all([
-    db.select({ n: count() }).from(memories).where(and(eq(memories.scopeTag, "shared"), eq(memories.status, "active"))),
+    db.select({ n: count() }).from(memories).where(and(eq(memories.scopeTag, "shared"), eq(memories.status, "active"), eq(memories.reviewState, "ok"), isNull(memories.invalidAt))),
     db.select({ n: count() }).from(mcpConnections).where(eq(mcpConnections.status, "connected")),
     db.select({ n: count() }).from(automations).where(eq(automations.enabled, true)),
     // Members only ever see their own turns.

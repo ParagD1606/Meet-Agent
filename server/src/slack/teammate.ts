@@ -7,6 +7,7 @@ import { log } from "../log";
 import { scanMemoryText } from "../memory/core-blocks";
 import { addFact } from "../memory/facts";
 import { writeTag } from "../memory/scope";
+import { cachedHours, inWorkingHours, quietHoursOn, workingHours } from "../manager/chase";
 import { askConfirmCard, button, section } from "./cards";
 import { openDm, postMessage, slackClient } from "./client";
 import { sanitizeForSlack } from "./sanitize";
@@ -44,18 +45,13 @@ async function advance(id: string, from: Ask["status"], to: Ask["status"], patch
   return r.rows.length > 0;
 }
 
-// ---- quiet hours: weekdays 09:00-18:00 in ASK_TIMEZONE (default UTC); outside that, delivery waits for the next window ----
-const TZ = () => process.env.ASK_TIMEZONE || "UTC";
-function localParts(d: Date): { wd: string; h: number } {
-  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: TZ(), weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(d).map((x) => [x.type, x.value]));
-  return { wd: p.weekday!, h: Number(p.hour) };
-}
-const inWindow = (d: Date) => { const { wd, h } = localParts(d); return wd !== "Sat" && wd !== "Sun" && h >= 9 && h < 18; };
-/** null when `now` is inside the window, else the start of the next one (hourly scan: windows start on the hour in whole-hour zones). */
+// ---- quiet hours: the workspace window and timezone from manager/chase (one setting for asks, chases, follow-ups and digests) ----
+/** null when quiet hours are off or `now` is inside the window, else the start of the next one (hourly scan: windows start on the hour in whole-hour zones). Uses the hours cached by the last workingHours() call. */
 export function nextWindow(now: Date): Date | null {
-  if (process.env.QUIET_HOURS !== "1" || inWindow(now)) return null; // quiet hours are off unless QUIET_HOURS=1
+  const h = cachedHours();
+  if (!quietHoursOn() || inWorkingHours(now, h)) return null;
   let t = new Date(Math.floor(now.getTime() / 3_600_000) * 3_600_000 + 3_600_000);
-  for (let i = 0; i < 24 * 8 && !inWindow(t); i++) t = new Date(t.getTime() + 3_600_000);
+  for (let i = 0; i < 24 * 8 && !inWorkingHours(t, h); i++) t = new Date(t.getTime() + 3_600_000);
   return t;
 }
 
@@ -77,6 +73,7 @@ export async function attemptDelivery(id: string, o: { now?: Date; notify?: bool
   const ask = await getAsk(id);
   if (!ask || ask.status !== "confirmed") return "skipped";
   const now = o.now ?? askDeps.now();
+  await workingHours(); // refresh the cached window/quiet flag
   const at = nextWindow(now);
   if (at) {
     await askDeps.defer(id, at);

@@ -95,7 +95,7 @@ async function recentChannel(i: TurnInput, selfId: string | null): Promise<strin
   const [ch] = await db.select().from(channels).where(eq(channels.id, i.channelId));
   if (!ch || ch.isIm || ch.observe === false) return [];
   const pending = await db.select().from(ambientMessages)
-    .where(and(eq(ambientMessages.channelId, i.channelId), isNull(ambientMessages.flushedAt))).catch(() => []);
+    .where(and(eq(ambientMessages.channelId, i.channelId), isNull(ambientMessages.flushedAt))).catch((e) => { log.warn("ambient pending read failed", { channelId: i.channelId, error: String(e) }); return []; });
   const rows = new Map<string, { ts: string; user: string | null; text: string }>();
   for (const r of pending) if (!r.threadTs || r.threadTs === r.ts) rows.set(r.ts, { ts: r.ts, user: r.userId, text: r.text });
   if (pending.length) {

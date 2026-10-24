@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tuningEnv } from "../config";
 import { log } from "../log";
 import { completeJson } from "./llm";
 
@@ -7,7 +8,7 @@ const reply = z.object({ ranked: z.array(z.number().int()) });
 const SYSTEM = `You rerank candidate company-memory facts for a search query. Return the ids of the candidates that help answer the query, most useful first. Omit candidates that are irrelevant. Reply with JSON only: {"ranked":[<ids>]}.`;
 
 /** Off by default (extra latency + cost per turn); enable with MEMORY_RERANK=true once the eval shows it pays off. */
-export const rerankEnabled = () => /^(1|true|on)$/i.test(process.env.MEMORY_RERANK ?? "");
+export const rerankEnabled = () => tuningEnv().MEMORY_RERANK;
 export const RERANK_TOP = 30;
 
 /**

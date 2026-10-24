@@ -38,7 +38,6 @@ export function triagePrefilter(i: PrefilterInput): PrefilterResult {
 
 // ---- sampling: past a daily volume per channel, only a fraction of eligible messages go to the model ----
 export const FULL_TRIAGE_PER_CHANNEL_DAY = 150;
-export const DOWNSHIFT_RATE = 0.2;
 const counts = new Map<string, { day: number; n: number }>();
 
 /** Stable FNV-1a so a retried event cannot flip its own sample. */

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
-import { ACTION_CLASSES, FEATURES, api, fieldErr, type ActionClass, type ApprovalCards, type Feature, type Persona, type ProactiveFeatures } from "@/lib/api"
+import { useEffect, useMemo, useState } from "react"
+import { ACTION_CLASSES, FEATURES, api, fieldErr, type ActionClass, type ApprovalCards, type Feature, type Persona, type ProactiveFeatures, type WorkspaceHours } from "@/lib/api"
 import { useAction } from "@/lib/action"
 import { useDirtyGuard } from "@/lib/hooks"
 import { Button } from "@/ui/button"
 import { ChannelPicker } from "@/ui/channel-picker"
-import { FormField, Input, SettingRow, Switch, Textarea } from "@/ui/fields"
+import { FormField, Input, SettingRow, Select, Switch, Textarea } from "@/ui/fields"
 import { Async, PageHeader, Panel, Section } from "@/ui/page"
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -120,6 +120,48 @@ function FeaturesCard() {
   )
 }
 
+const ZONES: string[] = (() => { try { return (Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone") } catch { return ["UTC"] } })()
+const HOURS = Array.from({ length: 24 }, (_, h) => h)
+const hourLabel = (h: number) => `${String(h).padStart(2, "0")}:00`
+
+function HoursCard() {
+  const q = useQuery({ queryKey: ["workspace-hours"], queryFn: api.workspaceHours })
+  const [d, setD] = useState<WorkspaceHours | null>(null)
+  const [zq, setZq] = useState("")
+  useEffect(() => { if (q.data) setD(q.data) }, [q.data])
+  const dirty = !!d && !same(d, q.data)
+  useDirtyGuard(dirty)
+  const save = useAction(api.saveWorkspaceHours, { invalidate: [["workspace-hours"]], ok: "Workspace hours saved", inline: true })
+  const tz = d?.timezone
+  const zones = useMemo(() => {
+    const f = zq.trim().toLowerCase().replace(/ /g, "_")
+    const list = f ? ZONES.filter((z) => z.toLowerCase().includes(f)) : ZONES
+    return tz && !list.includes(tz) ? [tz, ...list] : list
+  }, [zq, tz])
+  return (
+    <Async q={q} rows={4}>{() => d && (
+      <form onSubmit={(e) => { e.preventDefault(); save.mutate(d) }}>
+        <Panel className="p-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField label="Find a timezone" hint={`${zones.length} match${zones.length === 1 ? "" : "es"}. Type a city or region, such as "kolkata" or "europe".`}>{(p) => <Input {...p} type="search" value={zq} onChange={(e) => setZq(e.target.value)} />}</FormField>
+            <FormField label="Timezone" error={fieldErr(save.error, "timezone")}>{(p) => <Select {...p} value={d.timezone} onChange={(e) => setD({ ...d, timezone: e.target.value })}>{zones.map((z) => <option key={z} value={z}>{z}</option>)}</Select>}</FormField>
+            <FormField label="Day starts" error={fieldErr(save.error, "start")}>{(p) => <Select {...p} value={d.start} onChange={(e) => setD({ ...d, start: +e.target.value })}>{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}</Select>}</FormField>
+            <FormField label="Day ends" hint={d.end <= d.start ? "Ends before it starts: the working day runs past midnight." : undefined} error={fieldErr(save.error, "end")}>{(p) => <Select {...p} value={d.end} onChange={(e) => setD({ ...d, end: +e.target.value })}>{HOURS.map((h) => <option key={h} value={h}>{hourLabel(h)}</option>)}</Select>}</FormField>
+            <FormField label="History backfill days" hint="How far back to learn from channel history (1 to 90)." error={fieldErr(save.error, "backfillDays")}>{(p) => <Input {...p} type="number" min={1} max={90} step={1} className="w-28" value={d.backfillDays} onChange={(e) => setD({ ...d, backfillDays: Math.round(+e.target.value) })} />}</FormField>
+          </div>
+          <div className="divide mt-2">
+            <SettingRow title="Hold messages outside working hours" desc="Proactive posts (digests, nudges, standups) wait until the next working hour instead of going out at night.">
+              <Switch label="Hold messages outside working hours" checked={d.quietHours} onChange={(v) => setD({ ...d, quietHours: v })} />
+            </SettingRow>
+          </div>
+        </Panel>
+        {save.error && !save.error.message.startsWith("Some fields") && <p role="alert" className="mt-2 text-sm text-danger">{save.error.message}</p>}
+        <div className="mt-3"><Button type="submit" variant="primary" loading={save.isPending} disabled={!dirty || !(d.backfillDays >= 1 && d.backfillDays <= 90)}>Save hours</Button></div>
+      </form>
+    )}</Async>
+  )
+}
+
 export default function Pixel() {
   return (
     <>
@@ -127,6 +169,7 @@ export default function Pixel() {
       <Section title="Persona" desc="Changes how it sounds and introduces itself."><PersonaCard /></Section>
       <Section title="Approvals" desc="Show an approval card before the bot does these things."><ApprovalsCard /></Section>
       <Section title="Proactive features" desc="Opt channels in, feature by feature."><FeaturesCard /></Section>
+      <Section title="Workspace hours" desc="When your team works, and how far back the bot learns from history."><HoursCard /></Section>
     </>
   )
 }

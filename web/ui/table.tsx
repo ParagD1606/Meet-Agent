@@ -30,6 +30,7 @@ export function Table<T>({ rows, columns, rowKey, onRowClick, selectedKey, capti
     })
   }, [rows, columns, sort])
   return (
+    <div className="overflow-x-auto"> {/* wide tables scroll instead of being clipped by the Panel */}
     <table className="tbl">
       <caption className="sr-only">{caption}</caption>
       <thead>
@@ -65,5 +66,6 @@ export function Table<T>({ rows, columns, rowKey, onRowClick, selectedKey, capti
         })}
       </tbody>
     </table>
+    </div>
   )
 }

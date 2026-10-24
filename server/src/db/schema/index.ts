@@ -60,7 +60,7 @@ export const settings = pgTable("settings", {
 export const events = pgTable("events", {
   id: text("id").primaryKey(), // Slack event_id / client_msg_id, dedupe
   createdAt: ts("created_at"),
-});
+}, (t) => [index("events_created_at_idx").on(t.createdAt)]);
 
 // ---------- memory ----------
 export const memories = pgTable("memories", {
@@ -438,7 +438,7 @@ export const captureBuffer = pgTable("capture_buffer", {
   permalink: text("permalink"),
   attempts: integer("attempts").notNull().default(0),
   lastAt: ts("last_at"),
-}, (t) => [primaryKey({ columns: [t.channelId, t.threadTs] })]);
+}, (t) => [primaryKey({ columns: [t.channelId, t.threadTs] }), index("capture_buffer_last_at_idx").on(t.lastAt)]);
 
 /** Ambient channel messages: buffer (text kept until flushed, then blanked) and the (channel, ts) idempotency ledger shared by events and the poll. */
 export const ambientMessages = pgTable("ambient_messages", {

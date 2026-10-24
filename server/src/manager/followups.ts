@@ -9,7 +9,7 @@ import { followUpConfirmCard } from "../slack/cards";
 import { openDm, postMessage, slackClient } from "../slack/client";
 import { sanitizeForSlack } from "../slack/sanitize";
 import { getSetting, putSetting } from "./commitments";
-import { inWorkingHours, quietHoursOn, workingHours } from "./chase";
+import { heldByQuietHours, inWorkingHours, quietHoursOn, workingHours } from "./chase";
 import { taskListMessage, openTasksFor } from "./tasks";
 
 /**
@@ -101,7 +101,7 @@ async function dm(userId: string, text: string, blocks?: unknown[]): Promise<voi
 
 /** Sends every due follow-up (working hours only, recipient cap). Returns how many were delivered. */
 export async function followUpTick(now = new Date()): Promise<number> {
-  if (quietHoursOn() && !inWorkingHours(now, await workingHours())) return 0;
+  if (await heldByQuietHours(now)) return 0;
   const due = await db.select().from(followUps).where(and(eq(followUps.status, "pending"), lte(followUps.dueAt, now))).orderBy(asc(followUps.dueAt)).limit(100);
   let sent = 0;
   for (const f of due) {

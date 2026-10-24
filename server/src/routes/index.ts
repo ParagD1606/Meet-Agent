@@ -5,6 +5,7 @@ import { mountAuth } from "../auth/slack";
 import { csrf, type AppEnv } from "../auth/session";
 import { mountMcpServer } from "../mcp-server";
 import { mountSyncOAuth } from "../sync";
+import { tuningEnv } from "../config";
 import { log } from "../log";
 import { limitsRoutes } from "../limits/routes";
 import { mountExportRoutes } from "./export";
@@ -48,7 +49,7 @@ export function buildApi(): Hono<AppEnv> {
   return api;
 }
 
-const WEB_DIST = () => resolve(process.env.WEB_DIST ?? `${import.meta.dir}/../../../web/dist`);
+const WEB_DIST = () => resolve(tuningEnv().WEB_DIST ?? `${import.meta.dir}/../../../web/dist`);
 
 /** Static web app with SPA fallback. Never answers /api, /auth, /slack, /mcp or /sync paths. */
 function mountStatic(app: Hono<any>): void {

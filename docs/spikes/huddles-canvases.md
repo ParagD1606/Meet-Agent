@@ -1,5 +1,7 @@
 # Spike: Slack huddle notes/transcripts and canvases (2026-10-24)
 
+> **Current conclusion (supersedes "no read path" below):** `canvases.getContent` (scope `canvases:read`, `content_type: markdown`) works and returns canvas content, including Huddle notes. It is used first by `huddleCanvasText` in `server/src/meetings/index.ts`; the `url_private` download is only a fallback. Huddle notes are imported on `file_created` / `file_shared` / `file_change` events and on channel messages that attach a huddle canvas, by the admin's manual Sync (`POST /api/meetings/sync`), and as a backfill of older files. The bot must be in the channel. After pasting the manifest with `canvases:read`, reinstall the app. User guide: [../guide/slack.md](../guide/slack.md). The findings below are the original research and are kept for history. General (non-huddle) canvas ingestion into memory is still not built.
+
 ## Findings (from docs.slack.dev, fetched today)
 
 - `canvases.sections.lookup` needs `canvases:read` (bot or user token) but returns **only section ids**, not content. Its ids exist to target `canvases.edit`.

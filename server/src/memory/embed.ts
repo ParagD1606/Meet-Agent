@@ -25,8 +25,7 @@ export function setEmbedder(fn: Embedder | null, opts?: { useCache?: boolean }):
 export const embedStats = { hits: 0, misses: 0, calls: 0 };
 
 function endpoint(): { url: string; key: string } {
-  // EMBEDDING_BASE_URL may not be in the typed config yet; read the environment directly.
-  const explicit = (config as { EMBEDDING_BASE_URL?: string }).EMBEDDING_BASE_URL ?? process.env.EMBEDDING_BASE_URL;
+  const explicit = config.EMBEDDING_BASE_URL;
   if (explicit) {
     // A dedicated embedding host never receives the chat key.
     return { url: `${explicit.replace(/\/+$/, "")}/embeddings`, key: config.EMBEDDING_API_KEY ?? "none" };

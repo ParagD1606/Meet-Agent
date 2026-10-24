@@ -26,7 +26,7 @@ export function automationTools(ctx: ToolContext): ToolSet {
   return {
     schedule_automation: tool({
       description:
-        "Schedule a reminder (posts the asker's text back) or a recurring digest (read-only recap from org-shared tools and memory). Give exactly one timing: cron (5-field, UTC, at most hourly) or runAt (ISO datetime, future). Set research=true on a digest to run a research pass each time (watchlist). destination: 'dm' (default, asker's DM), 'here' (this channel) or a channel id.",
+        "Schedule a reminder (posts the asker's text back) or a recurring digest (read-only recap from org-shared tools and memory). Give exactly one timing: cron (5-field, UTC, at least every 3 minutes) or runAt (ISO datetime, future). Set research=true on a digest to run a research pass each time (watchlist). destination: 'dm' (default, asker's DM), 'here' (this channel) or a channel id.",
       inputSchema: z.object({
         kind: z.enum(["reminder", "digest"]),
         prompt: z.string().describe("Reminder text, or the digest instruction / research question."),

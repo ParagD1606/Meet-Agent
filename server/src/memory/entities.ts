@@ -3,6 +3,7 @@ import { z } from "zod";
 import { id as newId } from "../crypto";
 import { db } from "../db";
 import { channels, entities, factEntities, memories, memoryEdges, users } from "../db/schema";
+import { tuningEnv } from "../config";
 import { log } from "../log";
 import { embed } from "./embed";
 import { completeJson } from "./llm";
@@ -25,7 +26,7 @@ const lit = (v: number[]) => `[${v.join(",")}]`;
 /** drizzle expands a JS array in sql`` into a tuple; this builds a real text[] */
 const arr = (xs: string[]) => sql`ARRAY[${sql.join(xs.map((x) => sql`${x}`), sql`, `)}]::text[]`;
 const compatible = (a: string, b: string) => a === "other" || b === "other" || a === b;
-export const expansionEnabled = () => process.env.MEMORY_ENTITY_EXPANSION !== "0";
+export const expansionEnabled = () => tuningEnv().entityExpansion;
 
 const verdict = z.object({ match: z.number().int().nullable() });
 const TIE_SYSTEM = `You resolve entity mentions in a company knowledge base. Given a MENTION (a name as written in a fact) and numbered CANDIDATE entities, decide whether the mention refers to one of the candidates (same person, customer, project, product or channel; "Dana" and "Dana S." can be the same person, two different people called Dana cannot).
