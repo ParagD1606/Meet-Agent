@@ -181,7 +181,7 @@ extensionRoutes.post("/notes", async (c) => {
 
 extensionRoutes.post("/suggest", async (c) => {
   const r = await live(c, z.object({
-    tasks: z.array(z.object({ id: z.string().min(1).max(80), title: z.string().trim().min(1).max(300) })).min(1).max(12),
+    tasks: z.array(z.object({ id: z.string().min(1).max(80), title: z.string().trim().min(1).max(300), due: z.string().max(40).optional() })).min(1).max(12),
     roster: z.array(z.string().trim().min(1).max(120)).max(100).default([]),
     context: z.string().max(300).optional(),
   }));

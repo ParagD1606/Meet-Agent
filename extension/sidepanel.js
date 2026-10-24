@@ -292,7 +292,9 @@ $("itemList").addEventListener("change", async (e) => {
 });
 
 // ---------- who should do what ----------
-const suggestTasks = () => state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected").slice(0, 12).map((i) => ({ id: i.id, title: i.title }));
+const isoDue = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? v : undefined);
+// A task's deadline decides who is free: availability is what each person must clear before it.
+const suggestTasks = () => state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected").slice(0, 12).map((i) => ({ id: i.id, title: i.title, due: isoDue(i.due) }));
 async function fetchSuggest(force) {
   const tasks = suggestTasks(), sig = JSON.stringify(tasks);
   if (!tasks.length) { state.suggest = { sig, data: null, loading: false }; return renderSuggest(); }
@@ -326,10 +328,14 @@ function renderSuggest() {
         <div class="pills"><span class="pill ${c.availability}">${AVAIL[c.availability]}</span>${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}<span class="pill">${c.skill > 0 ? `Skill match ${Math.round(c.skill * 100)}%` : "No skill signal"}</span></div>
         <details><summary>Why</summary><ul>${c.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details></div>`;
     }).join("") + (t?.noSkillSignal ? `<p class="muted">Nobody has a clear track record for this, so these are ranked by availability.</p>` : "");
-    return `<div class="sug"><div class="t">${esc(i.title)}</div><div class="cur">${cur}</div>${cands}</div>`;
+    const iso = isoDue(i.due);
+    const when = iso ? `<span class="muted">Due <b>${esc(iso)}</b></span>` : `<span class="chipsrow"><span class="q">${i.due ? `Due “${esc(i.due)}” is not a date. ` : ""}Due when? Availability depends on it.</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="setdue" data-task="${esc(i.id)}" data-v="${v}">${l}</button>`).join("")}</span>`;
+    return `<div class="sug"><div class="t">${esc(i.title)}</div><div class="cur">${cur} · ${when}</div>${cands}</div>`;
   }).join("");
 }
 $("suggestList").addEventListener("click", async (e) => {
+  const due = e.target.closest('[data-act="setdue"]');
+  if (due) { const it = state.store.items.find((x) => x.id === due.dataset.task); if (it) { it.due = due.dataset.v; await persist(); } return; }
   const btn = e.target.closest('[data-act="assign"]'); if (!btn) return;
   const card = btn.closest(".cand"); const item = state.store.items.find((x) => x.id === card.dataset.task);
   if (!item) return;

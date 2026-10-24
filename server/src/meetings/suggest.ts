@@ -6,14 +6,14 @@ import { personScope, recallForMeeting, type MemorySource } from "./index";
 
 /**
  * Who could take a task, from what the signed-in person is allowed to see. Deliberately a transparent score rather than a model
- * guess: every suggestion carries the evidence behind it. Availability here means workload (open, overdue, urgent and due-soon
- * tasks), who is on this call, and time off mentioned in memory; Slack presence and calendars are not connected.
+ * guess: every suggestion carries the evidence behind it. Availability means what a person already has to finish before the new
+ * task is due (their assigned tasks and deadlines), who is on this call, and time off mentioned in memory.
  */
-export type SuggestTask = { id: string; title: string };
+export type SuggestTask = { id: string; title: string; /** ISO date (YYYY-MM-DD) the new task is due; other wording is ignored */ due?: string };
 export type Candidate = {
   userId: string; name: string; title: string | null; score: number;
   skill: number; availability: "light" | "busy" | "overloaded"; onCall: boolean; possibleTimeOff: boolean;
-  load: { open: number; overdue: number; dueSoon: number; urgent: number };
+  load: { open: number; overdue: number; dueBefore: number; undated: number; urgent: number };
   reasons: string[];
 };
 export type Suggestions = {
@@ -54,13 +54,19 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
   const byOwner = new Map<string, typeof rows>();
   for (const r of rows) byOwner.set(r.ownerId!, [...(byOwner.get(r.ownerId!) ?? []), r]);
 
-  const load = (id: string) => {
+  // What this person must clear before `horizon` (the new task's deadline, or a week out when it has none).
+  const load = (id: string, horizon: number) => {
     const mine = (byOwner.get(id) ?? []).filter((r) => r.status !== "done");
+    const late = (r: (typeof mine)[number]) => r.status === "overdue" || (!!r.dueAt && r.dueAt.getTime() < now);
     return {
       open: mine.length,
-      overdue: mine.filter((r) => r.status === "overdue" || (r.dueAt && r.dueAt.getTime() < now)).length,
-      dueSoon: mine.filter((r) => r.dueAt && r.dueAt.getTime() >= now && r.dueAt.getTime() < now + 7 * DAY).length,
+      overdue: mine.filter(late).length,
+      dueBefore: mine.filter((r) => !late(r) && r.dueAt && r.dueAt.getTime() <= horizon).length,
+      undated: mine.filter((r) => !r.dueAt).length,
       urgent: mine.filter((r) => r.priority === "urgent").length,
+      inProgress: mine.filter((r) => r.status === "in_progress").length,
+      later: mine.filter((r) => !late(r) && r.dueAt && r.dueAt.getTime() > horizon).length,
+      next: mine.filter((r) => !late(r) && r.dueAt).sort((x, y) => x.dueAt!.getTime() - y.dueAt!.getTime())[0],
     };
   };
 
@@ -77,6 +83,9 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
   const out: Suggestions["tasks"] = [];
   for (const task of tasks.slice(0, 12)) {
     const want = tokens(task.title);
+    const due = task.due && /^\d{4}-\d{2}-\d{2}$/.test(task.due) ? Date.parse(`${task.due}T23:59:59Z`) : NaN;
+    const horizon = Number.isFinite(due) && due > now ? due : now + 7 * DAY;
+    const horizonLabel = Number.isFinite(due) && due > now ? task.due! : "a week from now";
     const mem = await recallForMeeting(userId, `${task.title}${opts.context ? `\n${opts.context}` : ""}`, { budgetTokens: 1_500 });
     usedMemory ||= mem.sources.length > 0;
     const ranked: Candidate[] = named.map((p) => {
@@ -87,21 +96,25 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
       const role = p.title ? coverage(want, tokens(p.title)) > 0 : false;
       const said = mem.sources.filter((s) => mentions(s.text, name)).slice(0, 2);
       const skill = Math.min(1, 0.6 * (best?.s ?? 0) + 0.25 * (said.length ? 1 : 0) + 0.25 * (role ? 1 : 0) + 0.15 * (similar.some((x) => x.h.status === "done") ? 1 : 0));
-      const l = load(p.id);
-      const heavy = l.open + 2 * l.overdue + l.urgent + l.dueSoon;
+      const l = load(p.id, horizon);
+      // Overdue work is the heaviest; work due before the deadline competes for the same time; later work barely does.
+      const heavy = 2 * l.overdue + l.dueBefore + 0.5 * l.undated + l.urgent + 0.5 * l.inProgress + 0.2 * l.later;
       const off = awayNotes(name);
-      const free = Math.max(0, 1 - heavy / 12) * (off.length ? 0.4 : 1);
+      const free = Math.max(0, 1 - heavy / 10) * (off.length ? 0.4 : 1);
       const onCall = roster.has(name.toLowerCase()) || roster.has(name.toLowerCase().split(/\s+/)[0]!);
       const reasons: string[] = [];
       if (best) reasons.push(`${best.h.status === "done" ? "Did" : "Working on"} something similar: “${best.h.text.slice(0, 90)}”${best.h.status === "done" && best.h.completedAt ? ` (${ago(best.h.completedAt, now)})` : ""}`);
       if (role) reasons.push(`Role: ${p.title}`);
       for (const s of said) reasons.push(`In memory: ${cite(s)}`);
-      reasons.push(`${l.open} open · ${l.overdue} overdue · ${l.dueSoon} due within a week${l.urgent ? ` · ${l.urgent} urgent` : ""}`);
+      reasons.push(`${l.open} open · ${l.overdue} overdue · ${l.dueBefore} more due before ${horizonLabel}${l.urgent ? ` · ${l.urgent} urgent` : ""}`);
+      if (l.next?.dueAt) reasons.push(`Next deadline: ${l.next.dueAt.toISOString().slice(0, 10)}, “${l.next.text.slice(0, 70)}”`);
+      else if (!l.open) reasons.push("Nothing assigned right now");
       for (const s of off.slice(0, 1)) reasons.push(`Possible time off: ${cite(s)}`);
       if (onCall) reasons.push("On this call now");
       return {
-        userId: p.id, name, title: p.title ?? null, skill: Math.round(skill * 100) / 100, onCall, possibleTimeOff: off.length > 0, load: l,
-        availability: heavy <= 2 ? "light" as const : heavy <= 6 ? "busy" as const : "overloaded" as const,
+        userId: p.id, name, title: p.title ?? null, skill: Math.round(skill * 100) / 100, onCall, possibleTimeOff: off.length > 0,
+        load: { open: l.open, overdue: l.overdue, dueBefore: l.dueBefore, undated: l.undated, urgent: l.urgent },
+        availability: heavy <= 2 ? "light" as const : heavy <= 5 ? "busy" as const : "overloaded" as const,
         score: Math.round((0.6 * skill + 0.4 * free + (onCall ? 0.03 : 0)) * 100) / 100, reasons,
       };
     }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
@@ -111,7 +124,7 @@ export async function suggestAssignees(userId: string, tasks: SuggestTask[], opt
     tasks: out,
     basis: {
       people: named.length, tasksSeen: rows.length, usedMemory,
-      note: "Availability is estimated from open, overdue and due-soon tasks you can see, who is on this call, and time off mentioned in memory. Slack presence and calendars are not connected.",
+      note: "Availability is what each person already has to finish before the task's deadline, from assigned tasks and their due dates you can see, plus who is on this call and time off mentioned in memory. It does not see calendars.",
     },
   };
 }

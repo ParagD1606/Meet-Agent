@@ -50,7 +50,28 @@ describe("assignee suggestions", () => {
     expect(bob!.reasons.join(" ")).toContain("Possible time off");
     expect(bob!.onCall).toBe(true);
     expect(t1!.candidates.every((c) => c.score >= 0 && c.score <= 1)).toBe(true);
-    expect(out.basis.note).toContain("Slack presence and calendars are not connected");
+    expect(out.basis.note).toContain("before the task's deadline");
+  });
+
+  test("availability is judged against the new task's own deadline", async () => {
+    await db.insert(users).values([{ id: "U_DEE", name: "Dee Park" }, { id: "U_EEL", name: "Eel Moss" }]);
+    const iso = (days: number) => new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
+    await db.insert(commitments).values([
+      ...Array.from({ length: 4 }, (_, i) => task("U_DEE", `Dee later job ${i}`, { dueAt: new Date(Date.now() + 20 * DAY) })), // same count as Eel, but far away
+      ...Array.from({ length: 4 }, (_, i) => task("U_EEL", `Eel urgent job ${i}`, { dueAt: new Date(Date.now() + 1 * DAY) })), // all due before a 3-day deadline
+    ]);
+    const rank = async (due: string) => {
+      const c = (await suggestAssignees("U_ME", [{ id: "t", title: "Zzyzx quarterly frobnication", due }], { limit: 10 })).tasks[0]!.candidates;
+      return { dee: c.find((x) => x.userId === "U_DEE")!, eel: c.find((x) => x.userId === "U_EEL")! };
+    };
+    const soon = await rank(iso(3));
+    expect(soon.eel.load.dueBefore).toBe(4);
+    expect(soon.dee.load.dueBefore).toBe(0);
+    expect(soon.dee.score).toBeGreaterThan(soon.eel.score);                  // Dee's work is due after this deadline, Eel's before it
+    expect(soon.eel.reasons.join(" ")).toContain(`more due before ${iso(3)}`);
+    const far = await rank(iso(40));                                          // with a distant deadline both must clear everything first
+    expect(far.dee.load.dueBefore).toBe(4);
+    expect(far.dee.score).toBe(far.eel.score);
   });
 
   test("generic words like 'handle' are not skill evidence", async () => {
