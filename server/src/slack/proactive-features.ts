@@ -13,8 +13,9 @@ import { sanitizeForSlack } from "./sanitize";
  * Per-channel proactive features, all OPT-IN (admin settings): one `settings` row per feature holding the channel ids.
  *  digest    weekly summary post          nudge      private "this relates to a past decision"
  *  deadlines reminders before valid_until autoreply  confidence gate on public auto-replies (suggest first)
+ *  standup   daily/weekly status summaries   risks      daily risk note (overdue, conflicts, stale, duplicated work)
  */
-export const FEATURES = ["digest", "nudge", "deadlines", "autoreply"] as const;
+export const FEATURES = ["digest", "nudge", "deadlines", "autoreply", "standup", "risks"] as const;
 export type Feature = (typeof FEATURES)[number];
 export type ChannelFeatures = Record<Feature, boolean>;
 

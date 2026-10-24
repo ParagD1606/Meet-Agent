@@ -75,7 +75,7 @@ async function proactiveFeatures() {
 settingsRoutes.get("/settings/proactive-features", requireAuth("admin"), async (c) => c.json(await proactiveFeatures()));
 settingsRoutes.put("/settings/proactive-features", requireAuth("admin"), async (c) => {
   const ids = z.array(z.string().min(1).max(40)).max(2000).optional();
-  const body = await readBody(c, z.object({ digest: ids, nudge: ids, deadlines: ids, autoreply: ids }));
+  const body = await readBody(c, z.object({ digest: ids, nudge: ids, deadlines: ids, autoreply: ids, standup: ids, risks: ids }));
   for (const f of FEATURES) if (body[f]) await setFeatureChannels(f, body[f]!);
   return c.json(await proactiveFeatures());
 });

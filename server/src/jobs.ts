@@ -134,6 +134,7 @@ export async function startJobs(): Promise<void> {
   await b.schedule(Q.membersResync, "7 */6 * * *");
 
   await registerProactiveJobs(b);
+  await (await import("./manager")).registerManagerJobs(b);
 
   const journeyTick = await optionalExport<() => Promise<unknown>>(["./slack/journey", "./slack/onboarding"], "journeyTick");
   if (journeyTick) {

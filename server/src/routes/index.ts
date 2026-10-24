@@ -15,6 +15,7 @@ import { behavior } from "./behavior";
 import { core } from "./core";
 import { memory } from "./memory";
 import { meetingRoutes } from "./meetings";
+import { managerRoutes } from "../manager/routes";
 import { settingsRoutes } from "./settings";
 import { syncRoutes } from "./sync";
 
@@ -33,6 +34,7 @@ export function buildApi(): Hono<AppEnv> {
   api.route("/", behavior);
   api.route("/", syncRoutes);
   api.route("/", limitsRoutes);
+  api.route("/", managerRoutes);
   api.notFound((c) => c.json({ error: "not_found" }, 404));
   api.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();

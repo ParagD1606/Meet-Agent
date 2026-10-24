@@ -14,10 +14,10 @@ describe("proactive features + cost admin routes", () => {
 
   test("per-feature channel lists round-trip and a partial PUT leaves the other features alone", async () => {
     const admin = await login("UA", "admin");
-    expect(await body(await call("GET", "/api/settings/proactive-features", { cookie: admin }))).toEqual({ digest: [], nudge: [], deadlines: [], autoreply: [] });
+    expect(await body(await call("GET", "/api/settings/proactive-features", { cookie: admin }))).toEqual({ digest: [], nudge: [], deadlines: [], autoreply: [], standup: [], risks: [] });
     await call("PUT", "/api/settings/proactive-features", { cookie: admin, body: { digest: ["C1", "C1", "C2"], nudge: ["C1"] } });
     const r = await body(await call("PUT", "/api/settings/proactive-features", { cookie: admin, body: { nudge: [] } }));
-    expect(r).toEqual({ digest: ["C1", "C2"], nudge: [], deadlines: [], autoreply: [] });
+    expect(r).toEqual({ digest: ["C1", "C2"], nudge: [], deadlines: [], autoreply: [], standup: [], risks: [] });
     expect((await call("PUT", "/api/settings/proactive-features", { cookie: admin, body: { digest: [""] } })).status).toBe(400);
   });
 

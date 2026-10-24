@@ -50,6 +50,13 @@
       "when": 1792867205000,
       "tag": "0006_memory_reminders",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792867206000,
+      "tag": "0007_commitments",
+      "breakpoints": true
     }
   ]
 }

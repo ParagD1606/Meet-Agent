@@ -279,6 +279,7 @@ export * from "./extra-slack";
 export * from "./extra-turn";
 export * from "./extra-platform";
 export * from "./extra-api";
+export * from "./manager";
 
 // ---------- memory tiers (agent B) ----------
 export const coreBlocks = pgTable("core_blocks", {
