@@ -1,20 +1,27 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { channels, turns } from "../db/schema";
+import { channels, meetings, turns } from "../db/schema";
+import { checkRate } from "../limits/rate";
 import { log } from "../log";
 import { claimEvent } from "./dedupe";
 import { handleChannelMessage } from "./chime";
 import { botUserId, getWorkspace, postMessage, slackClient } from "./client";
 import { deps } from "./deps";
+import { bootstrapIfEmpty } from "../memory/bootstrap";
 import { introduceInChannel, onAppHome, onUserJoined } from "./onboarding";
 import { ratingFor, recordFeedback, ack, done } from "./reactions";
 import { readSlackFiles } from "./attachments";
 import { resolvePrivacy, routeMessage, stripMention, type SlackMessageEvent } from "./routing";
 import { onAssistantThreadStarted, noteAssistantMessage, isAssistantThread } from "./assistant";
-import { begin, drain, end, gateKey, mergeInbox, offer } from "./active-turn-gate";
+import { begin, drain, end, gateKey, mergeInbox, setActiveText, signalOf } from "./active-turn-gate";
+import { steerActive } from "../turn/steering";
 import { handleWorkspaceGone } from "./lifecycle";
 import { dropChannel, ensureChannel, ensureUser, setMembership, upsertChannel, upsertSlackUser } from "./sync";
 import { ingestHuddleFile } from "../meetings";
+import { captureOwnerReply } from "./teammate";
+import { ambientHook } from "./ambient-hook";
+import { announceAmbient } from "../memory/ambient";
+import { requestBackfill } from "../memory/backfill";
 
 export { claimEvent, pruneEvents } from "./dedupe";
 export type EventCallback = { event_id?: string; team_id?: string; type?: string; event?: Record<string, any> };
@@ -50,6 +57,9 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
       ...(route.kind === "ignore" ? { reason: route.reason } : {}),
     });
   }
+  if (ev.type === "message") await ambientHook(ev, me, route.kind, privacyOf).catch((e) => log.warn("ambient hook failed", { error: String(e) }));
+  // an owner answering a question Pixel routed to them is consumed here (stored + relayed), not run as a turn
+  if (ev.type === "message" && !ev.bot_id && ev.user !== me && await captureOwnerReply(ev).catch((e) => { log.warn("owner reply capture failed", { error: String(e) }); return false; })) return;
   if (route.kind === "ignore") return;
   // The same human message can arrive as both `message` and `app_mention`; process it once.
   if (!(await claimEvent(`m:${ev.channel}:${ev.ts}`))) return;
@@ -60,6 +70,7 @@ async function handleMessage(ev: SlackMessageEvent): Promise<void> {
   else await ensureChannel({ id: ev.channel, isIm, isPrivate });
   if (ev.user) await ensureUser(ev.user);
   const [ch] = await db.select().from(channels).where(eq(channels.id, ev.channel));
+  if (ev.user && route.kind === "turn") void bootstrapIfEmpty(`user:${ev.user}`); // first DM/mention: build the user block if empty
 
   if (route.kind === "triage") {
     await handleChannelMessage(ev, { context: route.context, botUserId: me, channelName: ch?.name ?? undefined, isPrivate: Boolean(ch?.isPrivate) || isPrivate });
@@ -73,6 +84,9 @@ async function ingestHuddleAttachments(ev: SlackMessageEvent): Promise<void> {
   for (const file of ev.files ?? []) {
     if (!file.id) continue;
     try {
+      const [seen] = await db.select({ s: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, file.id));
+      if (seen && seen.s !== "failed") continue; // already imported (or being imported): a repost never re-runs it
+      if (ev.user && !(await checkRate({ userId: ev.user, channelId: ev.channel, kind: "huddle" })).ok) continue;
       const imported = await ingestHuddleFile(file.id, ev.channel);
       if (imported) log.info("huddle imported from message attachment", { fileId: file.id, channelId: ev.channel });
     } catch (err) {
@@ -89,10 +103,11 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
   const assistant = isIm && isAssistantThread(ev.channel, threadTs);
   if (assistant) void noteAssistantMessage(ev.channel, threadTs, text);
 
-  // A turn is already running in this thread: queue this message for one merged follow-up instead of racing it.
-  if (!begin(key)) {
-    const q = offer(key, { userId: ev.user ?? null, ts: ev.ts, text, files });
-    if (q.notice) {
+  // A turn is already running in this thread: steer it (stop / replace / ignore) or queue this message for one merged follow-up.
+  while (!begin(key, { userId: ev.user ?? null, text })) {
+    const s = await steerActive(key, { userId: ev.user ?? null, ts: ev.ts, text, files });
+    if (!s.handled) continue; // the turn ended while we were deciding: try to start ours
+    if (s.action === "APPEND" && s.notice) {
       await postMessage({ channel: ev.channel, thread_ts: threadTs ?? ev.thread_ts, text: "_Got your message. I'll pick it up as soon as I finish this one._" })
         .catch((e) => log.warn("queue notice failed", { error: (e as Error).message }));
     }
@@ -100,10 +115,11 @@ async function runUserTurn(ev: SlackMessageEvent, trigger: "mention" | "dm", me:
   }
   try {
     await ack(ev.channel, ev.ts);
-    let ok = await runOne({ trigger, channelId: ev.channel, threadTs, ts: ev.ts, userId: ev.user ?? null, text, isPrivate, isIm, assistant, ...(files.length ? { files } : {}) });
+    let ok = await runOne({ trigger, channelId: ev.channel, threadTs, ts: ev.ts, userId: ev.user ?? null, text, isPrivate, isIm, assistant, actionToken: ev.action_token, abortSignal: signalOf(key), ...(files.length ? { files } : {}) });
     for (let batch = drain(key); batch.length; batch = drain(key)) {
       const m = mergeInbox(batch);
-      ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, ...(m.files.length ? { files: m.files } : {}) })) && ok;
+      setActiveText(key, { userId: m.userId, text: m.text });
+      ok = (await runOne({ trigger, channelId: ev.channel, threadTs, ts: m.ts, userId: m.userId, text: m.text, isPrivate, isIm, assistant, abortSignal: signalOf(key), ...(m.files.length ? { files: m.files } : {}) })) && ok;
     }
     await done(ev.channel, ev.ts, ok);
   } finally { end(key); }
@@ -118,7 +134,10 @@ async function handleReaction(ev: Record<string, any>): Promise<void> {
   const rating = ratingFor(String(ev.reaction ?? ""));
   if (!rating || ev.item?.type !== "message" || !ev.user) return;
   if (ev.user === (await botUserId()) || ev.item_user !== (await botUserId())) return; // only humans rating bot messages
-  await recordFeedback({ channelId: ev.item.channel, messageTs: ev.item.ts, userId: ev.user, rating });
+  // the reaction event does not say which thread the message is in; ask Slack (best effort, falls back to a time window)
+  const threadTs = await slackClient().then((c) => c.reactions.get({ channel: ev.item.channel, timestamp: ev.item.ts }))
+    .then((r) => (r.message as { thread_ts?: string } | undefined)?.thread_ts ?? null).catch(() => null);
+  await recordFeedback({ channelId: ev.item.channel, messageTs: ev.item.ts, userId: ev.user, rating, threadTs });
 }
 
 async function handleMemberJoined(ev: Record<string, any>): Promise<void> {
@@ -130,6 +149,9 @@ async function handleMemberJoined(ev: Record<string, any>): Promise<void> {
     const { syncChannelMembers } = await import("./sync");
     await syncChannelMembers(await slackClient(), ev.channel).catch((e) => log.warn("member sync failed", { error: (e as Error).message }));
     await introduceInChannel(ev.channel);
+    void bootstrapIfEmpty(`channel:${ev.channel}`);
+    await announceAmbient(ev.channel).catch(() => {});
+    void requestBackfill(ev.channel).catch((e) => log.warn("backfill request failed", { error: String(e) })); // read the channel's recent history
     return;
   }
   await ensureUser(ev.user);

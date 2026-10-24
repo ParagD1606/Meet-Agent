@@ -27,7 +27,70 @@
       "idx": 3,
       "version": "7",
       "when": 1793040000000,
-      "tag": "0003_meeting_decisions",
+      "tag": "0003_meeting_task_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793040001000,
+      "tag": "0002_recall_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793040002000,
+      "tag": "0003_memory_temporal_typed",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793040003000,
+      "tag": "0004_entities_capture",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793040004000,
+      "tag": "0005_consolidation_v2",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793040005000,
+      "tag": "0006_memory_reminders",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793040006000,
+      "tag": "0007_commitments",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793040007000,
+      "tag": "0008_ambient_capture",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793040008000,
+      "tag": "0009_follow_ups",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793040009000,
+      "tag": "0010_meeting_decisions",
       "breakpoints": true
     }
   ]

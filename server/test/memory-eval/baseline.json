@@ -1,0 +1,15 @@
+{
+  "k": 5,
+  "recall": {
+    "single-hop": 1,
+    "multi-session": 1,
+    "temporal": 1,
+    "knowledge-update": 1,
+    "abstention": 0.9,
+    "scope-leak": 1,
+    "follow-up": 1,
+    "lookup": 1,
+    "multi-hop": 1,
+    "alias": 1
+  }
+}

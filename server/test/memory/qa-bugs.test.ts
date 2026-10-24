@@ -105,7 +105,7 @@ describe("BUG-4 recall cache keeps serving a forgotten fact (src/memory/recall.t
     const a = { scope: pub, query: "vendor portal password hint dog", threadKey: "T1" };
     expect((await buildRecall(a)).text).toContain("dog name Rex");
     await forgetMemories({ tags: ["shared"], query: "vendor portal password hint dog", dryRun: false });
-    expect(await db.select().from(memories)).toHaveLength(0);
+    expect((await db.select().from(memories))[0]).toMatchObject({ status: "deleted" }); // soft delete: history kept
     expect((await buildRecall(a)).text).not.toContain("dog name Rex"); // cached for 60s
   });
 });

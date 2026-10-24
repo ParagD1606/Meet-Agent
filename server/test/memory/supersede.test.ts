@@ -42,7 +42,7 @@ describe("addFact", () => {
     const [u] = await db.select().from(memories).where(eq(memories.id, unrelated.id));
     expect(u!.status).toBe("active");
     const edges = await db.select().from(memoryEdges);
-    expect(edges).toEqual([{ fromId: neu.id, toId: old.id, weight: expect.any(Number) }]);
+    expect(edges).toEqual([{ fromId: neu.id, toId: old.id, weight: expect.any(Number), relation: "supersedes" }]);
     expect(edges[0]!.weight).toBeGreaterThan(0.4);
   });
 

@@ -6,8 +6,9 @@ import { requireAuth, userFromRequest, hasRole, type AppEnv } from "../auth/sess
 import { config, modelConfigured } from "../config";
 import { id, sha256 } from "../crypto";
 import { db } from "../db";
-import { apiTokens, automations, mcpConnections, memories, turns, users, workspace } from "../db/schema";
+import { apiTokens, automations, channelMembers, channels, mcpConnections, memories, turns, users, workspace } from "../db/schema";
 import { ownerExists } from "../auth/setup-token";
+import { bootstrapScope, resetBootstrapSchedule } from "../memory/bootstrap";
 import { jobsStarted } from "../jobs";
 import { probeModel } from "../llm";
 import { postDm } from "../slack/client";
@@ -169,4 +170,34 @@ core.delete("/tokens/:id", requireAuth("admin"), async (c) => {
   const rows = await db.delete(apiTokens).where(eq(apiTokens.id, c.req.param("id"))).returning({ id: apiTokens.id });
   if (!rows.length) throw httpError(404, "not_found");
   return c.json({ ok: true });
+});
+
+// ---------- core block bootstrap (About:/Profile: lines) ----------
+/**
+ * Body {scope:"channel:<id>"|"user:<id>"|"user:me"|"all"}. Admins: anything ("all" re-queues every channel and user for the
+ * background job, 409 without a model). Members: only their own user block. Text is echoed only where the caller could read it anyway.
+ */
+core.post("/core-blocks/bootstrap", requireAuth(), async (c) => {
+  const me = c.get("user");
+  const admin = hasRole(me.role, "admin");
+  const { scope } = await readBody(c, z.object({ scope: z.string().max(80) }));
+  if (scope === "all") {
+    if (!admin) throw httpError(403, "forbidden");
+    if (!modelConfigured()) throw httpError(409, "no_model");
+    await resetBootstrapSchedule();
+    return c.json({ queued: true, results: [] });
+  }
+  const m = /^(channel|user):([A-Za-z0-9_]+)$/.exec(scope);
+  if (!m) throw httpError(400, "invalid_scope");
+  const target = m[1] === "user" && m[2] === "me" ? me.id : m[2]!;
+  if (m[1] === "user" ? target !== me.id && !admin : !admin) throw httpError(403, "forbidden");
+  let canRead = m[1] === "user" && target === me.id;
+  if (m[1] === "channel") {
+    const [ch] = await db.select({ isPrivate: channels.isPrivate }).from(channels).where(eq(channels.id, target));
+    if (!ch) throw httpError(404, "not_found");
+    canRead = !ch.isPrivate || Boolean((await db.select().from(channelMembers).where(and(eq(channelMembers.channelId, target), eq(channelMembers.userId, me.id))))[0]);
+    if (!canRead) throw httpError(404, "not_found"); // same non-enumerability as GET /core-blocks
+  }
+  const { line, ...r } = await bootstrapScope(`${m[1]}:${target}`);
+  return c.json({ queued: false, results: [canRead ? { ...r, line } : r] });
 });

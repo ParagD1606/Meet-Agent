@@ -32,6 +32,6 @@ export async function seedMemory(scopeTag: string, text: string, extra: Partial<
 }
 
 export async function seedChannel(id: string, opts: { isPrivate?: boolean; isIm?: boolean; members?: string[] }) {
-  await db.insert(channels).values({ id, isPrivate: opts.isPrivate ?? false, isIm: opts.isIm ?? false });
+  await db.insert(channels).values({ id, isPrivate: opts.isPrivate ?? false, isIm: opts.isIm ?? false, botIsMember: true });
   if (opts.members?.length) await db.insert(channelMembers).values(opts.members.map((userId) => ({ channelId: id, userId })));
 }

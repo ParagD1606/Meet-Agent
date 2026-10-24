@@ -1,7 +1,12 @@
 import { log } from "../log";
+import { handleCommitmentAction } from "../manager/chase";
+import { handleFollowUpAction } from "../manager/followups";
+import { handleBrainAction } from "./commands";
 import { deps } from "./deps";
 import { setJourneyQuiet } from "./journey/engine";
 import { slackClient } from "./client";
+import { handleResolveAction } from "./resolve";
+import { handleAskAction } from "./teammate";
 
 type Action = { action_id?: string; value?: string };
 type BlockActions = {
@@ -15,14 +20,18 @@ type BlockActions = {
 
 /**
  * Slack interactivity payload. Brain-owned buttons (`journey_*`, link buttons `brain_*`) are handled here;
- * everything else goes to the turn module's approval handler.
+ * `brain_forget_*`, `brain_review_*` and `brain_home_forget` go to commands.ts; everything else goes to the turn module's approval handler.
  */
 export async function handleInteraction(payload: BlockActions): Promise<void> {
   try {
     if (payload.type !== "block_actions") return;
     const actions = payload.actions ?? [];
+    if (await (await import("../meetings")).handleMeetingTaskAction(payload)) return;
     const own = actions.filter((a) => a.action_id?.startsWith("journey_") || a.action_id?.startsWith("brain_"));
     for (const a of own) {
+      if (await handleCommitmentAction(payload, a) || await handleFollowUpAction(payload, a)) continue;
+      if (await handleBrainAction(payload as never, a)) continue;
+      if (await handleResolveAction(payload, a) || await handleAskAction(payload, a)) continue;
       if (a.action_id === "journey_quiet" && payload.user?.id) {
         await setJourneyQuiet(payload.user.id);
         const channel = payload.container?.channel_id ?? payload.channel?.id;

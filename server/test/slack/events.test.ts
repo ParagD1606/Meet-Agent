@@ -160,7 +160,7 @@ describe("membership + users + reactions + onboarding", () => {
     const [c] = await db.select().from(channels).where(eq(channels.id, "C9"));
     expect(c).toMatchObject({ name: "launch", botIsMember: true });
     expect((await db.select().from(channelMembers).where(eq(channelMembers.channelId, "C9"))).length).toBe(3);
-    expect(ctx.fake.count("chat.postMessage")).toBe(1);
+    expect(ctx.fake.count("chat.postMessage")).toBe(2); // intro card + the one-time ambient-learning notice
   });
   test("human joins/leaves tracked; bot leaving clears membership", async () => {
     await addChannel("C1", { proactivity: "proactive" });

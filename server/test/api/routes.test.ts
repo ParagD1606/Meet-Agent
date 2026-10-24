@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { config } from "../../src/config";
-import { memories, channels } from "../../src/db/schema";
+import { memories, channels, meetings, meetingTaskNotifications } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
 import { setMemoryLlm } from "../../src/memory/llm";
+import { setSlackClientForTest } from "../../src/slack/client";
 import { app, call, db, login, mkUser, resetDb } from "./helpers";
 
 let admin: string, member: string;
@@ -48,6 +49,13 @@ describe("settings", () => {
   test("workspace prompt roundtrip", async () => {
     expect((await json(await call("PUT", "/api/settings/workspace-prompt", { cookie: admin, body: { prompt: " be brief " } }))).prompt).toBe("be brief");
     expect((await json(await call("GET", "/api/settings/workspace-prompt", { cookie: member }))).prompt).toBe("be brief");
+  });
+
+  test("approval cards: default off per class, admin can switch a class on", async () => {
+    expect((await json(await call("GET", "/api/settings/approvals", { cookie: admin }))).cards).toEqual({ ticket: false, slack_post: false, doc_edit: false, email_calendar: false });
+    const res = await json(await call("PUT", "/api/settings/approvals", { cookie: admin, body: { cards: { email_calendar: true } } }));
+    expect(res.cards).toEqual({ ticket: false, slack_post: false, doc_edit: false, email_calendar: true });
+    expect((await call("PUT", "/api/settings/approvals", { cookie: admin, body: { cards: { ticket: "yes" } } })).status).toBe(400);
   });
 
   test("proactivity default + per-channel overrides", async () => {
@@ -244,5 +252,28 @@ describe("extension upload", () => {
     const m = await json(await call("GET", `/api/meetings/${id}`, { cookie: admin }));
     expect(m.tasks[0]).toMatchObject({ title: "Send the deck", assigneeName: "Bob", dueDate: "Thu" });
     expect(m.decisions).toContain("Launch on Friday");
+  });
+});
+
+describe("meeting task DMs", () => {
+  test("a meeting viewer can send a task DM once and correct an assignee", async () => {
+    await mkUser("U2", "member", { name: "Max Member" });
+    await db.insert(channels).values({ id: "C1", name: "general", isPrivate: false });
+    await db.insert(meetings).values({
+      id: "mt_dm", sourceFileId: "F_dm", channelId: "C1", title: "Planning", transcript: "Max owns this.", status: "ready",
+      tasks: [{ id: "mtask_1", title: "Draft plan", description: "Write it up", assigneeName: "Max Member", assigneeId: "U2", dueDate: null }], participantIds: [],
+    });
+    let posted = 0;
+    setSlackClientForTest({ conversations: { open: async () => ({ channel: { id: "D2" } }) }, chat: { postMessage: async () => { posted += 1; return { ts: "1.2" }; } } });
+    try {
+      const first = await json(await call("POST", "/api/meetings/mt_dm/task-dms", { cookie: member }));
+      expect(first).toMatchObject({ sent: 1, failed: 0 });
+      expect(posted).toBe(1);
+      const again = await json(await call("POST", "/api/meetings/mt_dm/task-dms", { cookie: member }));
+      expect(again).toMatchObject({ sent: 0, skipped: 1 });
+      expect(await db.select().from(meetingTaskNotifications)).toHaveLength(1);
+      const changed = await json(await call("PATCH", "/api/meetings/mt_dm/tasks/mtask_1", { cookie: member, body: { assigneeId: "M1" } }));
+      expect(changed.tasks[0]).toMatchObject({ assigneeId: "M1", assigneeName: "User M1" });
+    } finally { setSlackClientForTest(null); }
   });
 });

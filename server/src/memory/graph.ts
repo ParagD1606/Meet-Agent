@@ -4,11 +4,11 @@ import { memories, memoryEdges } from "../db/schema";
 import { clearRecallCache } from "./recall";
 
 export type GraphNode = { id: number; label: string; scope: string; kind: string; source: string };
-export type GraphEdge = { source: number; target: number; weight: number };
+export type GraphEdge = { source: number; target: number; weight: number; relation: string | null };
 
 export type MemoryRow = {
   id: number; text: string; scopeTag: string; source: string; sourceRef: string | null;
-  kind: "fact" | "chunk"; status: "active" | "superseded"; createdAt: Date;
+  kind: "fact" | "chunk"; status: "active" | "superseded" | "archived" | "deleted"; createdAt: Date;
   supersededBy: number | null; validAt: Date; invalidAt: Date | null; learnedAt: Date;
   createdBy: string | null; permalink: string | null; confidence: number; importance: number;
   reviewState: "ok" | "pending" | "rejected";
@@ -54,21 +54,21 @@ export async function getGraph(a: { tags: string[]; limit: number; kind?: "fact"
     nodes: rows.map((r) => ({
       id: r.id, label: r.text.length > 80 ? `${r.text.slice(0, 77)}...` : r.text, scope: r.scopeTag, kind: r.kind, source: r.source,
     })),
-    edges: edges.map((e) => ({ source: e.fromId, target: e.toId, weight: e.weight })),
+    edges: edges.map((e) => ({ source: e.fromId, target: e.toId, weight: e.weight, relation: e.relation })),
     total,
     truncated: total > rows.length,
   };
 }
 
 /** Paged memories in `tags` (status default "active"), optionally filtered by a case-insensitive substring. */
-export async function listMemories(a: { tags: string[]; q?: string; limit: number; offset: number; status?: "active" | "superseded" | "all"; includeHeld?: boolean }): Promise<{ items: MemoryRow[]; total: number }> {
+export async function listMemories(a: { tags: string[]; q?: string; limit: number; offset: number; status?: "active" | "superseded" | "archived" | "deleted" | "all"; includeHeld?: boolean }): Promise<{ items: MemoryRow[]; total: number }> {
   if (!a.tags.length) return { items: [], total: 0 };
   const q = a.q?.trim();
   const status = a.status ?? "active";
   const where = and(
     inArray(memories.scopeTag, a.tags),
     a.includeHeld ? undefined : eq(memories.reviewState, "ok"),
-    status === "all" ? undefined : eq(memories.status, status),
+    status === "all" ? sql`${memories.status} <> 'deleted'` : eq(memories.status, status),
     q ? like(q) : undefined,
   );
   const [items, [count]] = await Promise.all([
@@ -79,13 +79,17 @@ export async function listMemories(a: { tags: string[]; q?: string; limit: numbe
   return { items, total: count?.n ?? 0 };
 }
 
-/** Hard-deletes a memory and its edges; rows it superseded are restored (if reviewed ok) or at least un-pointed. Returns whether it existed. */
+/**
+ * Forgets a memory: soft delete (status 'deleted', invalid_at set, row + edges + history kept, invisible to recall, graph and
+ * lists). Rows it superseded are restored (if reviewed ok) or at least un-pointed. Returns whether a live row was deleted.
+ */
 export async function deleteMemory(id: number): Promise<boolean> {
   const existed = await db.transaction(async (tx) => {
-    const del = await tx.delete(memories).where(eq(memories.id, id)).returning({ id: memories.id });
+    const del = await tx.update(memories).set({ status: "deleted", invalidAt: new Date() })
+      .where(and(eq(memories.id, id), sql`${memories.status} <> 'deleted'`)).returning({ id: memories.id });
     if (!del.length) return false;
-    await tx.delete(memoryEdges).where(sql`${memoryEdges.fromId} = ${id} or ${memoryEdges.toId} = ${id}`);
-    await tx.update(memories).set({ status: "active", invalidAt: null, supersededBy: null }).where(and(eq(memories.supersededBy, id), eq(memories.reviewState, "ok")));
+    await tx.update(memories).set({ status: "active", invalidAt: null, supersededBy: null })
+      .where(and(eq(memories.supersededBy, id), eq(memories.status, "superseded"), eq(memories.reviewState, "ok")));
     await tx.update(memories).set({ supersededBy: null }).where(eq(memories.supersededBy, id));
     return true;
   });

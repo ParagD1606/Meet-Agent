@@ -13,6 +13,8 @@ export type SlackMessageEvent = {
   channel: string;
   channel_type?: "channel" | "group" | "im" | "mpim";
   files?: SlackFileRef[];
+  /** Short-lived Real-time Search token Slack attaches to the asker's event (user-scoped search). */
+  action_token?: string;
 };
 
 export type Route =

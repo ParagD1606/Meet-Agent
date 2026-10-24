@@ -19,7 +19,7 @@ describe("graph / list / delete", () => {
     const g = await getGraph({ tags: ["shared"], limit: 10 });
     expect(g.nodes.map((n) => n.id).sort()).toEqual([a, b]);
     expect(g.nodes.find((n) => n.id === a)!.label.length).toBeLessThanOrEqual(80);
-    expect(g.edges).toEqual([{ source: a, target: b, weight: 0.7 }]);
+    expect(g.edges).toEqual([{ source: a, target: b, weight: 0.7, relation: null }]);
     expect((await getGraph({ tags: ["shared"], limit: 1 })).nodes.length).toBe(1);
   });
 
@@ -35,14 +35,20 @@ describe("graph / list / delete", () => {
     expect((await listMemories({ tags: ["shared"], q: "ITEM", limit: 10, offset: 0 })).total).toBe(5);
   });
 
-  test("deleteMemory removes row and edges, unlinks superseded_by, reports missing ids", async () => {
+  test("deleteMemory soft-deletes (row + edges kept, hidden everywhere), restores what it superseded, reports missing/already-deleted ids", async () => {
     const newer = await seedMemory("shared", "new");
     const older = await seedMemory("shared", "old", { status: "superseded", supersededBy: newer });
     await db.insert(memoryEdges).values({ fromId: newer, toId: older });
     expect(await deleteMemory(newer)).toBe(true);
-    expect((await db.select().from(memoryEdges)).length).toBe(0);
+    const [n] = await db.select().from(memories).where(eq(memories.id, newer));
+    expect(n).toMatchObject({ status: "deleted" });
+    expect(n!.invalidAt).not.toBeNull();
+    expect((await db.select().from(memoryEdges)).length).toBe(1); // history kept
     const [o] = await db.select().from(memories).where(eq(memories.id, older));
-    expect(o!.supersededBy).toBeNull();
+    expect(o).toMatchObject({ status: "active", supersededBy: null });
+    expect((await listMemories({ tags: ["shared"], limit: 10, offset: 0, status: "all" })).items.map((i) => i.id)).toEqual([older]);
+    expect((await getGraph({ tags: ["shared"], limit: 10 })).nodes.map((x) => x.id)).toEqual([older]);
     expect(await deleteMemory(newer)).toBe(false);
+    expect(await deleteMemory(999_999)).toBe(false);
   });
 });

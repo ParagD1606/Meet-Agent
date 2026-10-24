@@ -1,14 +1,19 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { id as newId } from "../crypto";
+import { id as newId, sha256 } from "../crypto";
 import { db } from "../db";
-import { channelMembers, channels, meetings } from "../db/schema";
+import { channelMembers, channels, meetings, meetingTaskNotifications, users } from "../db/schema";
 import { log } from "../log";
 import { completeJson, completeText } from "../memory/llm";
-import { slackClient } from "../slack/client";
+import { config } from "../config";
+import { htmlToText } from "../memory/ingest";
+import { recordEpisode } from "../memory/episodes";
+import { captureTurn } from "../memory/writeback";
+import { openDm, postMessage, slackClient } from "../slack/client";
 import { makeSource, quoteSupported, verifiedOwner } from "./verify";
 
 export type MeetingTask = {
+  id: string;
   title: string;
   description: string;
   assigneeName: string | null;
@@ -16,7 +21,11 @@ export type MeetingTask = {
   dueDate: string | null;
   jiraKey?: string | null;
   jiraUrl?: string | null;
+  notification?: { status: "needs_assignee" | "pending" | "sent" | "acknowledged" | "declined" | "failed"; error?: string | null };
 };
+
+type NewMeetingTask = Omit<MeetingTask, "id" | "notification">;
+type SendResult = { sent: number; skipped: number; failed: number };
 
 type Actor = { userId: string; role: "owner" | "admin" | "member" };
 type HuddleFile = Record<string, any>;
@@ -41,7 +50,7 @@ const analysisSchema = z.object({
 /** The whole meeting is read, not a tail: 400k characters is roughly a three-hour call. */
 const MAX_SOURCE_CHARS = 400_000;
 
-const SUMMARY_SYSTEM = `You turn a finished meeting (a transcript, or Slack AI Huddle notes) into meeting notes. Work from the WHOLE text, start to end.
+const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes. Work from the WHOLE text, start to end.
 Use only the supplied text. Never use outside knowledge, the company's projects, or what a meeting like this "usually" covers. If something is not written in the text, it does not exist.
 - "summary": concise Markdown with headings for Discussion and Open questions when applicable.
 - "decisions": every decision actually made. Each is {"text": short sentence, "quote": words copied exactly from the text that show the decision}.
@@ -50,7 +59,17 @@ Use only the supplied text. Never use outside knowledge, the company's projects,
 Return JSON only: {"summary":"...","decisions":[{"text":"...","quote":"..."}],"tasks":[{"title":"...","description":"","assigneeName":null,"assigneeId":null,"dueDate":null,"quote":"..."}]}.`;
 
 const admin = (a: Actor) => a.role === "owner" || a.role === "admin";
-const asTasks = (value: unknown): MeetingTask[] => Array.isArray(value) ? value as MeetingTask[] : [];
+const asTasks = (meetingId: string, value: unknown): MeetingTask[] => !Array.isArray(value) ? [] : value.map((value, index) => {
+  const task = value as Partial<NewMeetingTask & { id: string }>;
+  // Old rows predate task ids. The deterministic fallback lets them participate in delivery safely.
+  const fallback = `mtask_${sha256(`${meetingId}:${index}:${task.title ?? ""}`).slice(0, 24)}`;
+  return {
+    id: typeof task.id === "string" && task.id ? task.id : fallback,
+    title: task.title ?? "Untitled task", description: task.description ?? "",
+    assigneeName: task.assigneeName ?? null, assigneeId: task.assigneeId ?? null, dueDate: task.dueDate ?? null,
+    jiraKey: task.jiraKey ?? null, jiraUrl: task.jiraUrl ?? null,
+  };
+});
 const asStrings = (value: unknown): string[] => Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -75,10 +94,51 @@ export function cleanTitle(raw: string, channelName?: string | null, fallbackDat
   return ["Huddle" + (channel ? ` in #${channel}` : ""), date].filter(Boolean).join(" · ");
 }
 
-/** Public channels are visible to every member; private-channel records require membership. */
+const taskSignature = (task: Pick<NewMeetingTask, "title" | "description">) => `${task.title.trim().toLowerCase()}\u0000${task.description.trim().toLowerCase()}`;
+const slackText = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function assignTaskIds(meetingId: string, fresh: NewMeetingTask[], previous: unknown): MeetingTask[] {
+  const old = new Map(asTasks(meetingId, previous).map((task) => [taskSignature(task), task.id]));
+  return fresh.map((task) => ({ ...task, id: old.get(taskSignature(task)) ?? newId("mtask_") }));
+}
+
+const cleanName = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const similarity = (a: string, b: string) => {
+  if (!a || !b) return 0;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]!; row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const saved = row[j]!;
+      row[j] = Math.min(row[j]! + 1, row[j - 1]! + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = saved;
+    }
+  }
+  return 1 - row[b.length]! / Math.max(a.length, b.length);
+};
+
+async function resolveAssignee(task: MeetingTask) {
+  if (task.assigneeId) {
+    const [user] = await db.select({ id: users.id, name: users.name }).from(users)
+      .where(and(eq(users.id, task.assigneeId), eq(users.deactivated, false), eq(users.isBot, false))).limit(1);
+    if (user) return user;
+  }
+  if (!task.assigneeName?.trim()) return null;
+  const candidates = await db.select({ id: users.id, name: users.name }).from(users)
+    .where(and(eq(users.deactivated, false), eq(users.isBot, false)));
+  const needle = cleanName(task.assigneeName);
+  const exact = candidates.filter((u) => cleanName(u.name ?? "") === needle);
+  if (exact.length === 1) return exact[0]!;
+  const ranked = candidates.map((u) => ({ user: u, score: similarity(needle, cleanName(u.name ?? "")) }))
+    .sort((a, b) => b.score - a.score);
+  // Never pick a close misspelling if another teammate is almost as likely.
+  return ranked[0] && ranked[0].score >= 0.9 && ranked[0].score - (ranked[1]?.score ?? 0) >= 0.08 ? ranked[0].user : null;
+}
+
+/** Public channels are visible to every member; private-channel and DM records require membership; extension uploads belong to their uploader. */
 const readable = (actor: Actor) => admin(actor)
-  ? undefined
-  : or(eq(meetings.ownerId, actor.userId), eq(channels.isPrivate, false), eq(channelMembers.userId, actor.userId));
+  ? sql`${channels.isIm} is not true` // admins see public + private channel meetings and extension uploads, never a DM huddle
+  : or(eq(meetings.ownerId, actor.userId), and(eq(channels.isPrivate, false), eq(channels.isIm, false)), eq(channelMembers.userId, actor.userId));
 
 async function rowsFor(actor: Actor) {
   const q = db.select({ meeting: meetings, channelName: channels.name })
@@ -92,14 +152,28 @@ async function rowsFor(actor: Actor) {
 /** Meeting list intentionally omits the raw transcript. */
 export async function listMeetings(actor: Actor) {
   const rows = await rowsFor(actor);
-  return rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => ({ ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), decisions: asStrings(meeting.decisions), tasks: asTasks(meeting.tasks), participantIds: asStrings(meeting.participantIds) }));
+  return Promise.all(rows.map(({ meeting: { transcript: _transcript, ...meeting }, channelName }) => presentMeeting(meeting, channelName)));
 }
 
 export async function getMeeting(id: string, actor: Actor) {
   const rows = await rowsFor(actor);
   const found = rows.find((r) => r.meeting.id === id);
   const row = found?.meeting;
-  return row ? { ...row, title: cleanTitle(row.title, found!.channelName, row.endedAt), decisions: asStrings(row.decisions), tasks: asTasks(row.tasks), participantIds: asStrings(row.participantIds) } : null;
+  return row ? presentMeeting(row, found!.channelName) : null;
+}
+
+async function presentMeeting(meeting: Omit<typeof meetings.$inferSelect, "transcript">, channelName?: string | null) {
+  const tasks = asTasks(meeting.id, meeting.tasks);
+  const notificationRows = tasks.length ? await db.select().from(meetingTaskNotifications)
+    .where(and(eq(meetingTaskNotifications.meetingId, meeting.id), inArray(meetingTaskNotifications.taskId, tasks.map((t) => t.id)))) : [];
+  const delivery = new Map(notificationRows.map((r) => [`${r.taskId}:${r.recipientUserId}`, r]));
+  const lastByTask = new Map(notificationRows.map((r) => [r.taskId, r]));
+  const withDelivery = tasks.map((task) => {
+    const row = task.assigneeId ? delivery.get(`${task.id}:${task.assigneeId}`) : lastByTask.get(task.id);
+    const status = row?.status === "declined" && !task.assigneeId ? "declined" : row?.status ?? (task.assigneeId ? "pending" : "needs_assignee");
+    return { ...task, notification: { status: status as NonNullable<MeetingTask["notification"]>["status"], ...(row?.error ? { error: row.error } : {}) } };
+  });
+  return { ...meeting, title: cleanTitle(meeting.title, channelName, meeting.endedAt), decisions: asStrings(meeting.decisions), tasks: withDelivery, participantIds: asStrings(meeting.participantIds) };
 }
 
 const lineText = (v: unknown): string => {
@@ -155,6 +229,183 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
   };
 }
 
+/**
+ * Feeds a finished meeting into memory via the public captureTurn (facts) + recordEpisode in the channel's write scope: public -> shared,
+ * private -> channel_X. An unknown channel is treated as private (never widens). Best effort: memory failure never fails the meeting.
+ */
+export async function rememberMeeting(a: { channelId: string; fileId: string; title: string; summary: string; tasks: { title: string; assigneeName?: string | null; dueDate?: string | null }[] }): Promise<void> {
+  try {
+    const [ch] = await db.select({ isPrivate: channels.isPrivate, isIm: channels.isIm }).from(channels).where(eq(channels.id, a.channelId));
+    const scope = { channelId: a.channelId, isPrivate: ch ? ch.isPrivate : true, isIm: ch?.isIm ?? false, userId: null };
+    const tasks = a.tasks.map((t) => `- ${t.title}${t.assigneeName ? ` (owner: ${t.assigneeName})` : ""}${t.dueDate ? ` (due ${t.dueDate})` : ""}`).join("\n");
+    // tasks are commitments made in the meeting; their live status is not stored here
+    const transcript = `Slack Huddle "${a.title}"\n\n${a.summary}${tasks ? `\n\nAction items agreed:\n${tasks}` : ""}`;
+    await captureTurn({ scope, transcript, sourceRef: `meeting:${a.fileId}`, createdBy: "bot" });
+    await recordEpisode({ scope, channelId: a.channelId, threadTs: `huddle_${a.fileId}`, transcript });
+  } catch (err) {
+    log.warn("meeting memory write failed", { fileId: a.fileId, error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
+const MAX_CANVAS_BYTES = 2 * 1024 * 1024;
+export const MAX_HUDDLE_IMPORTS = 20;
+let syncing: Promise<HuddleSyncResult> | null = null;
+const SLACK_HOST = /(^|\.)(slack\.com|slack-files\.com|slack-edge\.com)$/i;
+
+/** files.info that reports a missing OAuth scope clearly (which scope is needed) instead of a generic failure. */
+async function fileInfo(client: Awaited<ReturnType<typeof slackClient>>, file: string): Promise<HuddleFile | undefined> {
+  try {
+    return (await client.files.info({ file })).file as HuddleFile | undefined;
+  } catch (err) {
+    const data = (err as { data?: { error?: string; needed?: string; provided?: string } }).data;
+    if (data?.error === "missing_scope") {
+      log.error("slack files.info missing scope: add the needed scope to the app and reinstall", { fileId: file, needed: data.needed ?? "files:read", provided: data.provided });
+      throw new Error(`Slack app is missing the "${data.needed ?? "files:read"}" scope (needed to read Huddle notes); add it and reinstall`);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Huddle notes/transcripts are Slack canvases (quip files) with no inline lines: their content is only reachable through
+ * url_private(_download) with the bot token. Only Slack hosts are contacted; redirects are followed manually so the token
+ * never leaves Slack. Returns plain text (speakers/timestamps stay as the canvas lays them out), or null.
+ */
+async function downloadedText(client: Awaited<ReturnType<typeof slackClient>>, file: HuddleFile): Promise<{ text: string } | null> {
+  let url: string | undefined = typeof file.url_private_download === "string" ? file.url_private_download : typeof file.url_private === "string" ? file.url_private : undefined;
+  const token = (client as unknown as { token?: string }).token;
+  if (!url || !token) return null;
+  for (let hop = 0; hop < 5; hop++) {
+    const u: URL = new URL(url);
+    if (u.protocol !== "https:" || !SLACK_HOST.test(u.hostname)) throw new Error(`refusing to fetch canvas from non-Slack host ${u.hostname}`);
+    const res: Response = await fetch(u, { headers: { authorization: `Bearer ${token}` }, redirect: "manual", signal: AbortSignal.timeout(30_000) });
+    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) { url = new URL(res.headers.get("location")!, u).toString(); continue; }
+    if (!res.ok) throw new Error(`canvas download ${res.status}`);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_CANVAS_BYTES) throw new Error("canvas too large");
+    const body = new TextDecoder().decode(buf);
+    const text = (/html|xml/i.test(res.headers.get("content-type") ?? "") || /^\s*</.test(body) ? htmlToText(body) : body).replace(/\n{3,}/g, "\n\n").trim();
+    return text ? { text } : null;
+  }
+  throw new Error("too many redirects fetching canvas");
+}
+
+
+const meetingUrl = (id: string) => `${config.PUBLIC_URL.replace(/\/$/, "")}/meetings?meeting=${encodeURIComponent(id)}`;
+
+const dmBlocks = (meeting: typeof meetings.$inferSelect, task: MeetingTask, notificationId: string) => ([
+  { type: "section", text: { type: "mrkdwn", text: `*Meeting task assigned to you*\n*${slackText(task.title)}*` } },
+  ...(task.description ? [{ type: "section", text: { type: "mrkdwn", text: slackText(task.description) } }] : []),
+  { type: "context", elements: [{ type: "mrkdwn", text: `From <${meetingUrl(meeting.id)}|${slackText(meeting.title)}>${task.dueDate ? ` · Due: ${slackText(task.dueDate)}` : ""}` }] },
+  { type: "actions", elements: [
+    { type: "button", style: "primary", text: { type: "plain_text", text: "Acknowledge" }, action_id: "meeting_task_ack", value: notificationId },
+    { type: "button", text: { type: "plain_text", text: "Not mine" }, action_id: "meeting_task_decline", value: notificationId },
+  ] },
+]);
+
+/** Sends only unsent or failed task notifications. Already delivered tasks are never duplicated. */
+export async function sendMeetingTaskDms(meetingId: string, taskIds?: string[]): Promise<SendResult> {
+  const [meeting] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+  if (!meeting) throw new Error("meeting not found");
+  const selected = asTasks(meeting.id, meeting.tasks).filter((task) => !taskIds || taskIds.includes(task.id));
+  let tasks = selected;
+  let sent = 0; let skipped = 0; let failed = 0; let changed = false;
+  for (let i = 0; i < tasks.length; i++) {
+    let task = tasks[i]!;
+    const assignee = await resolveAssignee(task);
+    if (!assignee) { skipped += 1; continue; }
+    if (task.assigneeId !== assignee.id || task.assigneeName !== assignee.name) {
+      task = { ...task, assigneeId: assignee.id, assigneeName: assignee.name ?? task.assigneeName };
+      tasks[i] = task; changed = true;
+    }
+    const [existing] = await db.select().from(meetingTaskNotifications)
+      .where(and(eq(meetingTaskNotifications.meetingId, meeting.id), eq(meetingTaskNotifications.taskId, task.id), eq(meetingTaskNotifications.recipientUserId, assignee.id))).limit(1);
+    if (existing?.status === "sent" || existing?.status === "acknowledged") { skipped += 1; continue; }
+    const notificationId = existing?.id ?? newId("mtn_");
+    if (!existing) {
+      const [claimed] = await db.insert(meetingTaskNotifications).values({ id: notificationId, meetingId: meeting.id, taskId: task.id, recipientUserId: assignee.id, status: "failed", error: "Preparing Slack DM" })
+        .onConflictDoNothing().returning({ id: meetingTaskNotifications.id });
+      // Automatic delivery and a viewer's manual retry can race; the winner owns this one DM.
+      if (!claimed) { skipped += 1; continue; }
+    }
+    try {
+      const channel = await openDm(assignee.id);
+      if (!channel) throw new Error("Could not open a Slack DM with the assignee");
+      const message = await postMessage({ channel, text: `Meeting task: ${task.title}`, blocks: dmBlocks(meeting, task, notificationId) });
+      if (!message.ts) throw new Error("Slack did not return a message timestamp");
+      await db.update(meetingTaskNotifications).set({ status: "sent", dmChannelId: channel, messageTs: message.ts, error: null, sentAt: new Date(), updatedAt: new Date() })
+        .where(eq(meetingTaskNotifications.id, notificationId));
+      sent += 1;
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      await db.update(meetingTaskNotifications).set({ status: "failed", error, updatedAt: new Date() }).where(eq(meetingTaskNotifications.id, notificationId));
+      log.warn("meeting task DM failed", { meetingId: meeting.id, taskId: task.id, userId: assignee.id, error });
+      failed += 1;
+    }
+  }
+  if (changed) {
+    const updated = asTasks(meeting.id, meeting.tasks).map((task) => tasks.find((next) => next.id === task.id) ?? task);
+    await db.update(meetings).set({ tasks: updated, updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+  }
+  return { sent, skipped, failed };
+}
+
+/** Called after task extraction. It is intentionally detached from ingestion so Slack event ACKs stay fast. */
+function queueMeetingTaskDms(meetingId: string) {
+  void sendMeetingTaskDms(meetingId).catch((err) => log.warn("automatic meeting task DMs failed", { meetingId, error: err instanceof Error ? err.message : String(err) }));
+}
+
+export async function updateMeetingTaskAssignee(meetingId: string, taskId: string, assigneeId: string | null): Promise<void> {
+  const [meeting] = await db.select().from(meetings).where(eq(meetings.id, meetingId)).limit(1);
+  if (!meeting) throw new Error("meeting not found");
+  let assignee: { id: string; name: string | null } | null = null;
+  if (assigneeId) {
+    [assignee] = await db.select({ id: users.id, name: users.name }).from(users)
+      .where(and(eq(users.id, assigneeId), eq(users.deactivated, false), eq(users.isBot, false))).limit(1);
+    if (!assignee) throw new Error("assignee not found");
+  }
+  let found = false;
+  const tasks = asTasks(meeting.id, meeting.tasks).map((task) => {
+    if (task.id !== taskId) return task;
+    found = true;
+    return { ...task, assigneeId: assignee?.id ?? null, assigneeName: assignee?.name ?? null };
+  });
+  if (!found) throw new Error("task not found");
+  await db.update(meetings).set({ tasks, updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+}
+
+export async function meetingAssigneeCandidates(q: string) {
+  const needle = q.trim().toLowerCase();
+  const rows = await db.select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl }).from(users)
+    .where(and(eq(users.deactivated, false), eq(users.isBot, false))).orderBy(users.name);
+  return rows.filter((u) => !needle || (u.name ?? "").toLowerCase().includes(needle)).slice(0, 20);
+}
+
+export async function handleMeetingTaskAction(payload: { user?: { id?: string }; actions?: { action_id?: string; value?: string }[] }): Promise<boolean> {
+  const action = payload.actions?.find((a) => a.action_id === "meeting_task_ack" || a.action_id === "meeting_task_decline");
+  if (!action?.value || !payload.user?.id) return false;
+  const [notification] = await db.select().from(meetingTaskNotifications).where(eq(meetingTaskNotifications.id, action.value)).limit(1);
+  if (!notification || notification.recipientUserId !== payload.user.id) return true;
+  if (notification.status !== "sent") return true;
+  const decline = action.action_id === "meeting_task_decline";
+  const now = new Date();
+  await db.update(meetingTaskNotifications).set({ status: decline ? "declined" : "acknowledged", updatedAt: now, ...(decline ? { declinedAt: now } : { acknowledgedAt: now }) })
+    .where(and(eq(meetingTaskNotifications.id, notification.id), eq(meetingTaskNotifications.status, "sent")));
+  if (decline) {
+    const [meeting] = await db.select().from(meetings).where(eq(meetings.id, notification.meetingId)).limit(1);
+    if (meeting) {
+      const tasks = asTasks(meeting.id, meeting.tasks).map((task) => task.id === notification.taskId && task.assigneeId === notification.recipientUserId
+        ? { ...task, assigneeId: null, assigneeName: null } : task);
+      await db.update(meetings).set({ tasks, updatedAt: now }).where(eq(meetings.id, meeting.id));
+    }
+  }
+  if (notification.dmChannelId && notification.messageTs) {
+    await (await slackClient()).chat.update({ channel: notification.dmChannelId, ts: notification.messageTs,
+      text: decline ? "Task declined — it needs reassignment." : "Task acknowledged.", blocks: [] }).catch((err) => log.warn("meeting task DM update failed", { notificationId: notification.id, error: String(err) }));
+  }
+  return true;
+}
+
 async function analyze(sourceFileId: string, text: string, participants: string[] = []): Promise<void> {
   try {
     const header = participants.length ? `Participants: ${participants.join(", ")}\n\n` : "";
@@ -163,13 +414,18 @@ async function analyze(sourceFileId: string, text: string, participants: string[
     const src = makeSource(text);
     const firstOfEach = <T,>(items: T[], title: (t: T) => string) => items.filter((it, i) => !items.slice(0, i).some((o) => similar(title(o), title(it))));
     const decisions = firstOfEach(raw.decisions.filter((d) => quoteSupported(src, d.quote)), (d) => d.text).map((d) => d.text);
-    const tasks = firstOfEach(raw.tasks.filter((k) => quoteSupported(src, k.quote)), (k) => k.title).map(({ quote, ...k }) => ({
+    const found: NewMeetingTask[] = firstOfEach(raw.tasks.filter((k) => quoteSupported(src, k.quote)), (k) => k.title).map(({ quote, ...k }) => ({
       ...k, assigneeName: verifiedOwner(src, participants, k.assigneeName),
       description: [k.description, `Said: “${quote}”`].filter(Boolean).join("\n"),
     }));
-    const dropped = raw.decisions.length + raw.tasks.length - decisions.length - tasks.length; // unsupported or repeated
+    const dropped = raw.decisions.length + raw.tasks.length - decisions.length - found.length; // unsupported or repeated
     if (dropped) log.warn("meeting items dropped: quote not found in the source", { fileId: sourceFileId, dropped });
-    await db.update(meetings).set({ summary: raw.summary, decisions, tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
+    const [meeting] = await db.select({ id: meetings.id, tasks: meetings.tasks }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId)).limit(1);
+    if (!meeting) return;
+    const tasks = assignTaskIds(meeting.id, found, meeting.tasks);
+    await db.update(meetings).set({ summary: raw.summary, decisions, tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
+    const [saved] = await db.select({ channelId: meetings.channelId, title: meetings.title }).from(meetings).where(eq(meetings.id, meeting.id)).limit(1);
+    if (saved && !saved.channelId.startsWith("ext_")) await rememberMeeting({ channelId: saved.channelId, fileId: sourceFileId, title: saved.title, summary: raw.summary, tasks: found });
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
@@ -186,13 +442,15 @@ function similar(a: string, b: string): boolean {
 
 /** Adds what the user approved in the side panel to the AI's final pass; the user's wording wins over near-duplicates. */
 async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
-  const [row] = await db.select({ summary: meetings.summary, tasks: meetings.tasks, decisions: meetings.decisions, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
+  const [row] = await db.select({ id: meetings.id, summary: meetings.summary, tasks: meetings.tasks, decisions: meetings.decisions, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
   if (!row) return;
-  const mine: MeetingTask[] = (t.tasks ?? []).map((k) => ({
+  const mine: NewMeetingTask[] = (t.tasks ?? []).map((k) => ({
     title: k.title, description: k.done ? "Marked done during the call." : "",
     assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
   }));
-  const tasks = [...mine, ...asTasks(row.tasks).filter((k) => !mine.some((m) => similar(m.title, k.title)))];
+  const existing = asTasks(row.id, row.tasks);
+  const fresh: NewMeetingTask[] = [...mine, ...existing.filter((k) => !mine.some((m) => similar(m.title, k.title))).map(({ id: _id, notification: _notification, ...task }) => task)];
+  const tasks = assignTaskIds(row.id, fresh, existing);
   const myDecisions = t.decisions ?? [];
   const decisions = [...myDecisions, ...asStrings(row.decisions).filter((d) => !myDecisions.some((m) => similar(m, d)))];
   await db.update(meetings).set({ tasks, decisions, status: row.summary || decisions.length || tasks.length ? "ready" : row.status, updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
@@ -228,26 +486,36 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
   // The upload is saved; the model reads the whole transcript afterwards so the request returns at once.
   const done = analyze(sourceFileId, text, t.participants ?? [])
     .then(() => (t.decisions?.length || t.tasks?.length ? mergeUserNotes(sourceFileId, t) : undefined))
+    .then(() => queueMeetingTaskDms(row!.id))
     .catch((err) => log.warn("meeting finalize failed", { fileId: sourceFileId, error: String(err) }));
   return { id: row!.id, done };
 }
 
-/** Ingests a Huddle transcript exposed by Slack's files API. Other files are ignored. */
+/** Ingests a Huddle transcript exposed by Slack's files API (inline lines, or the canvas download). Other files are ignored. */
 export async function ingestHuddleFile(fileId: string, hintedChannelId?: string): Promise<boolean> {
   const client = await slackClient();
-  let file = (await client.files.info({ file: fileId })).file as HuddleFile | undefined;
+  let file = await fileInfo(client, fileId);
   if (!file) return false;
-  let parsed = transcriptText(file);
+  const notes = file;
+  let parsed: ReturnType<typeof transcriptText> = transcriptText(file);
   if (!parsed) parsed = await huddleCanvasText(client, file);
   // A Huddle notes canvas may point to a distinct transcript file.
   if (!parsed && typeof file.huddle_transcript_file_id === "string") {
-    file = (await client.files.info({ file: file.huddle_transcript_file_id })).file as HuddleFile | undefined;
+    file = await fileInfo(client, file.huddle_transcript_file_id);
     if (!file) return false;
     parsed = transcriptText(file);
   }
-  if (!parsed) return false;
-  const channelId = parsed.channelId ?? hintedChannelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined);
+  if (!parsed) {
+    const dl = await downloadedText(client, file) ?? (file !== notes ? await downloadedText(client, notes) : null);
+    if (!dl) return false;
+    const date = (n: unknown) => typeof n === "number" ? new Date(n * 1000) : undefined;
+    parsed = { text: dl.text, participantIds: asStrings(notes.huddle_participant_ids), startedAt: date(notes.huddle_date_start), endedAt: date(notes.huddle_date_end) };
+  }
+  // Slack's own record of where the file lives wins over the caller's hint (a hint comes from whoever posted the message)
+  const channelId = parsed.channelId ?? (Array.isArray(file.channels) ? file.channels[0] : undefined) ?? (Array.isArray(notes.channels) ? notes.channels[0] : undefined) ?? hintedChannelId;
   if (!channelId) return false;
+  const [known] = await db.select({ bot: channels.botIsMember }).from(channels).where(eq(channels.id, channelId));
+  if (!known?.bot) { log.warn("huddle skipped: bot is not in the channel", { channelId }); return false; }
   const sourceFileId = String(file.id ?? fileId);
   const title = typeof file.title === "string" && file.title.trim() ? file.title.trim() : "Slack Huddle";
   const base = {
@@ -255,8 +523,10 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
     startedAt: parsed.startedAt ?? null, endedAt: parsed.endedAt ?? new Date(), updatedAt: new Date(),
   };
   await db.insert(meetings).values({ id: newId("mt_"), sourceFileId, threadTs: null, ...base, status: "processing", tasks: [] })
-    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, status: "processing", summary: null, tasks: [] } });
+    .onConflictDoUpdate({ target: meetings.sourceFileId, set: { ...base, channelId: sql`${meetings.channelId}`, status: "processing", summary: null, tasks: [] } }); // a re-import never moves a meeting to another channel
   await analyze(sourceFileId, parsed.text);
+  const [saved] = await db.select({ id: meetings.id }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId)).limit(1);
+  if (saved) queueMeetingTaskDms(saved.id);
   return true;
 }
 
@@ -265,15 +535,28 @@ export async function ingestHuddleFile(fileId: string, hintedChannelId?: string)
  * This is deliberately callable on demand: Slack does not replay file events that happened
  * before an app subscribed, and a Huddle transcript can finish processing after its first event.
  */
-export async function syncRecentHuddles(limit = 100): Promise<HuddleSyncResult> {
+export function syncRecentHuddles(opts: { force?: boolean; maxPages?: number } = {}): Promise<HuddleSyncResult> {
+  // single flight: concurrent callers share one run (each import is an LLM call)
+  syncing ??= syncHuddles(opts).finally(() => { syncing = null; });
+  return syncing;
+}
+
+async function syncHuddles(opts: { force?: boolean; maxPages?: number }): Promise<HuddleSyncResult> {
   const client = await slackClient();
-  const response = await client.files.list({ count: Math.min(Math.max(limit, 1), 100) });
-  const files = (response.files ?? []) as HuddleFile[];
+  const files: HuddleFile[] = [];
+  // files.list is page-numbered, newest first; walk every page (capped) so older huddles are found too
+  for (let page = 1, pages = 1; page <= Math.min(pages, opts.maxPages ?? 50); page++) {
+    const r = await client.files.list({ count: 100, page });
+    files.push(...((r.files ?? []) as HuddleFile[]));
+    pages = r.paging?.pages ?? 1;
+  }
   const candidates = files.filter((file) => Boolean(file.is_huddle_canvas || file.huddle_transcription || file.huddle_transcript_file_id));
+  const done = new Set(opts.force ? [] : (await db.select({ id: meetings.sourceFileId }).from(meetings).where(eq(meetings.status, "ready"))).map((r) => r.id));
   let imported = 0;
   let failed = 0;
   for (const file of candidates) {
-    if (typeof file.id !== "string") continue;
+    if (imported + failed >= MAX_HUDDLE_IMPORTS) break; // the rest is picked up by the next call
+    if (typeof file.id !== "string" || done.has(file.id) || (typeof file.huddle_transcript_file_id === "string" && done.has(file.huddle_transcript_file_id))) continue; // rows are keyed by the transcript file when notes point to one
     try {
       const channelId = Array.isArray(file.channels) && typeof file.channels[0] === "string" ? file.channels[0] : undefined;
       if (await ingestHuddleFile(file.id, channelId)) imported += 1;
@@ -371,5 +654,5 @@ export async function updateLiveNotes(lines: LiveLine[], offset: number, previou
 /** What the extension shows after the final pass: only the uploader's own meeting. */
 export async function getOwnExtensionMeeting(userId: string, id: string) {
   const [row] = await db.select().from(meetings).where(and(eq(meetings.id, id), eq(meetings.ownerId, userId)));
-  return row ? { id: row.id, title: row.title, status: row.status, summary: row.summary, decisions: asStrings(row.decisions), tasks: asTasks(row.tasks) } : null;
+  return row ? { id: row.id, title: row.title, status: row.status, summary: row.summary, decisions: asStrings(row.decisions), tasks: asTasks(row.id, row.tasks) } : null;
 }

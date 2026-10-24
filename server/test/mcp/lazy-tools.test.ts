@@ -1,6 +1,7 @@
 import "../turn/env";
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { resetDb } from "../db";
+import { invalidateApprovalCards } from "../../src/mcp/policy";
 import { createConnection } from "../../src/mcp/connections";
 import { setMcpFactory, type McpToolInfo } from "../../src/mcp/client";
 import { buildMcpTools, minSchema, toolKey, type McpToolCtx } from "../../src/mcp/tools";
@@ -36,7 +37,7 @@ function mcp(tools: McpToolInfo[], over: { callTool?: (n: string, a: any) => Pro
 }
 beforeEach(async () => {
   setResolver(async () => ["93.184.216.34"]);
-  await resetDb(); await seedUsers(); await seedTurn(); fakeSlack(); setSpillForTest(null); text = (n) => `ok:${n}`;
+  await resetDb(); invalidateApprovalCards(); await seedUsers(); await seedTurn(); fakeSlack(); setSpillForTest(null); text = (n) => `ok:${n}`;
 });
 
 describe("lazy tool threshold", () => {
@@ -50,7 +51,7 @@ describe("lazy tool threshold", () => {
     expect(Object.keys(lazy.tools).sort()).toEqual(["call_tool", "search_tools"]);
   });
 
-  test("lazy path: search finds the tool, call_tool runs reads, writes only post approvals, unknown names are structured errors", async () => {
+  test("lazy path: search finds the tool, call_tool runs reads, destructive writes only post approvals, unknown names are structured errors", async () => {
     mcp(BIG);
     await createConnection({ provider: "github", scope: "user", ownerUserId: "UASK", token: "t" });
     const { tools } = await buildMcpTools(ctx());
@@ -60,9 +61,12 @@ describe("lazy tool threshold", () => {
     expect(calls).toEqual([{ connectionId: expect.any(String), name: "list_issues", args: { repo: "a/b" } }]);
     expect((await run(tools, "call_tool", { name: "github__list_issues" })).kind).toBe("invalid_input"); // missing required
     expect((await run(tools, "call_tool", { name: "nope" })).kind).toBe("not_found");
-    const w = await run(tools, "call_tool", { name: "github__create_issue", args: { title: "x" } });
+    // the read above fed app data into this turn (untrusted), so a ticket write on THIS turn is carded; a clean turn is not
+    expect((await run(tools, "call_tool", { name: "github__create_issue", args: { title: "x" } })).status).toBe("awaiting_approval");
+    expect(await run((await buildMcpTools(ctx())).tools, "call_tool", { name: "github__create_issue", args: { title: "x" } })).toBe("ok:create_issue"); // ticket write on a clean turn: no card by default
+    const w = await run(tools, "call_tool", { name: "github__merge_pull_request", args: {} });
     expect(w.status).toBe("awaiting_approval");
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
   });
 
   test("lazy tools respect scope rules: org-only providers hide writes, readOnly turns hide them everywhere", async () => {

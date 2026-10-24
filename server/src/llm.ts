@@ -159,6 +159,11 @@ const COST: [prefix: string, p: [number, number, number, number]][] = [
   ["gpt-4.1", [2, 8, 0.5, 2]],
   ["gpt-4o-mini", [0.15, 0.6, 0.075, 0.15]],
   ["gpt-4o", [2.5, 10, 1.25, 2.5]],
+  // Vertex Gemini: longer prefixes first (flash-lite before flash). Verify against current Vertex pricing.
+  ["gemini-3.5-flash-lite", [0.1, 0.4, 0.025, 0.1]],
+  ["gemini-3.5-flash", [0.5, 3, 0.125, 0.5]],
+  ["gemini-3.8-flash", [0.5, 3, 0.125, 0.5]],
+  ["gemini-2.5-flash-lite", [0.1, 0.4, 0.025, 0.1]],
   ["gemini-2.5-flash", [0.3, 2.5, 0.075, 0.3]],
   ["gemini-2.5-pro", [1.25, 10, 0.31, 1.25]],
   ["grok-3-mini", [0.3, 0.5, 0.075, 0.3]],

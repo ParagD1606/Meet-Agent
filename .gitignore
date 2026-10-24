@@ -5,3 +5,4 @@ application_default_credentials.json
 dist
 pgdata
 graphify-out
+.claude/worktrees

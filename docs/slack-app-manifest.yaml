@@ -13,8 +13,45 @@ features:
     messages_tab_enabled: true
     messages_tab_read_only_enabled: false
   bot_user:
-    display_name: "Company Brain"
+    display_name: "Pixel"
     always_online: true
+  slash_commands:
+    -
+      command: "/remember"
+      description: "Save a fact to memory"
+      usage_hint: "[something worth remembering]"
+      should_escape: true
+    -
+      command: "/forget"
+      description: "Find and delete memories"
+      usage_hint: "[what to forget]"
+      should_escape: true
+    -
+      command: "/whatdoyouknow"
+      description: "See what I remember"
+      usage_hint: "[@person or topic]"
+      should_escape: true
+    -
+      command: "/brain-review"
+      description: "Review pending memory changes (admins)"
+      should_escape: true
+    -
+      command: "/brain-tasks"
+      description: "Your open tasks and the ones you assigned"
+      should_escape: true
+    -
+      command: "/brain-followups"
+      description: "List, cancel and set up follow-up and digest DMs"
+      usage_hint: "[list | cancel <id> | digest on 09:00 | weekly on]"
+      should_escape: true
+    -
+      command: "/brain-pause"
+      description: "Stop learning from this channel (admins, channel creator)"
+      should_escape: true
+    -
+      command: "/brain-resume"
+      description: "Resume learning from this channel (admins, channel creator)"
+      should_escape: true
 oauth_config:
   redirect_urls:
     - "https://slack.derpx06.live/slack/oauth/callback"
@@ -34,6 +71,7 @@ oauth_config:
       - "chat:write"
       - "chat:write.public"
       - "canvases:read"
+      - "commands"
       - "files:read"
       - "groups:history"
       - "groups:read"
@@ -47,6 +85,10 @@ oauth_config:
       - "users:read"
       - "users:read.email"
       - "team:read"
+      - "search:read.public"
+      - "search:read.private"
+      - "search:read.mpim"
+      - "search:read.im"
 settings:
   event_subscriptions:
     bot_events:

@@ -9,6 +9,8 @@ export type LazyEntry = {
   name: string;
   info: McpToolInfo;
   kind: "read" | "write";
+  /** Write that posts an approval card (default true when omitted). */
+  gated?: boolean;
   /** Runs the call (queue, retry, minify, approval card for writes). */
   run: (args: Record<string, unknown>, fields?: string[]) => Promise<unknown>;
 };
@@ -107,7 +109,7 @@ export function lazyToolSet(entries: LazyEntry[], apps: string[]): ToolSet {
       execute: async ({ query, limit }) => {
         const hits = rankTools(query, entries, limit ?? 8);
         if (!hits.length) return "No matching tools. Try other keywords (verbs like list, create, search and nouns like issue, page).";
-        return hits.map((h) => `${signature(h.info, h.name)}${h.kind === "write" ? " [write: needs approval]" : ""} - ${shortDesc(h.info.description)}`).join("\n");
+        return hits.map((h) => `${signature(h.info, h.name)}${h.kind === "write" && h.gated !== false ? " [write: needs approval]" : h.kind === "write" ? " [write: runs immediately]" : ""} - ${shortDesc(h.info.description)}`).join("\n");
       },
     }),
     call_tool: tool({

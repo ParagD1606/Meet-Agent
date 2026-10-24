@@ -226,7 +226,7 @@ describe("e2e: Slack turn -> capture -> recall -> supersede -> isolation -> cons
     expect(live.filter((r) => r.text === "The Acme renewal deadline is 2026-11-15")).toHaveLength(1);
     expect(live.some((r) => r.createdBy === "consolidation")).toBe(true);
     expect(live.some((r) => r.text.startsWith("Vendor"))).toBe(false);
-    expect(await consolidate()).toEqual({ merged: 0, decayed: 0, summarised: 0, purged: 0 });
+    expect(await consolidate()).toMatchObject({ merged: 0, decayed: 0, summarised: 0, purged: 0 });
   });
 
   test("7. admin/API view shows the right active / superseded rows, history, review, export; private data is invisible", async () => {
@@ -242,7 +242,8 @@ describe("e2e: Slack turn -> capture -> recall -> supersede -> isolation -> cons
     const priya = sup.items.find((i: any) => i.text === "The billing owner is Priya Sharma");
     expect(priya).toMatchObject({ status: "superseded", supersededBy: danaId });
     expect(priya.invalidAt).toBeTruthy();
-    expect(sup.items.filter((i: any) => i.text.startsWith("Vendor")).length).toBe(9); // consolidated away, kept as history
+    const all = await json(await call("GET", "/api/memories?status=all&limit=200", { cookie: admin }));
+    expect(all.items.filter((i: any) => i.text.startsWith("Vendor") && i.status === "archived").length).toBe(9); // consolidated away, archived as history
 
     const hist = await json(await call("GET", `/api/memories/${danaId}/history`, { cookie: admin }));
     expect(hist.map((h: any) => h.text)).toEqual(["The billing owner is Priya Sharma", "The billing owner is Dana Lee"]);

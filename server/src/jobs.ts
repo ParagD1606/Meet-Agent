@@ -1,6 +1,6 @@
 import PgBoss from "pg-boss";
 import { config } from "./config";
-import { executeAutomation, findDue } from "./automations";
+import { executeAutomation, findDue, registerProactiveJobs } from "./automations";
 import { log } from "./log";
 import { failStaleResearch, runResearch } from "./research";
 import { seedBuiltinSkills } from "./skills/skills";
@@ -12,6 +12,7 @@ export const Q = {
   journeyTick: "journey-tick",
   purge: "purge-old",
   membersResync: "members-resync",
+  askDeliver: "ask-deliver",
 } as const;
 
 let boss: PgBoss | null = null;
@@ -35,6 +36,11 @@ function ready(): PgBoss {
 
 export async function enqueueAutomation(id: string, fireAt: Date): Promise<void> {
   await ready().sendAfter(Q.automationRun, { id, fireAt: fireAt.toISOString() }, { singletonKey: `${id}:${fireAt.getTime()}` }, fireAt);
+}
+
+/** Re-attempt a quiet-hours-deferred ask_teammate delivery at the next working window. */
+export async function enqueueAskDelivery(id: string, at: Date): Promise<void> {
+  await ready().sendAfter(Q.askDeliver, { id }, { singletonKey: `${id}:${at.getTime()}` }, at);
 }
 
 /** Throws when pg-boss refuses the job (send() returns null for a deduped/throttled job): a silently dropped run would sit `planned` forever. */
@@ -125,6 +131,10 @@ export async function startJobs(): Promise<void> {
     for (const j of jobs) log.info("research run", { id: j.data.id, result: await runResearch(j.data.id) });
   });
   await b.schedule(Q.automationTick, "* * * * *");
+  await b.work<{ id: string }>(Q.askDeliver, async (jobs) => {
+    const { attemptDelivery } = await import("./slack/teammate");
+    for (const j of jobs) log.info("ask delivery", { id: j.data.id, result: await attemptDelivery(j.data.id) });
+  });
   await b.work(Q.purge, async () => { await purgeOld(); });
   await b.schedule(Q.purge, "17 3 * * *");
   await b.work(Q.membersResync, async () => {
@@ -132,6 +142,9 @@ export async function startJobs(): Promise<void> {
     log.info("members resync", await resyncChannelMembers().catch((e) => ({ error: String(e) })));
   });
   await b.schedule(Q.membersResync, "7 */6 * * *");
+
+  await registerProactiveJobs(b);
+  await (await import("./manager")).registerManagerJobs(b);
 
   const journeyTick = await optionalExport<() => Promise<unknown>>(["./slack/journey", "./slack/onboarding"], "journeyTick");
   if (journeyTick) {

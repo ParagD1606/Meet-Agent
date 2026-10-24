@@ -8,10 +8,12 @@ import { decrypt } from "../../src/crypto";
 import { createConnection, deleteConnection, handleOAuthCallback, listConnections } from "../../src/mcp/connections";
 import { DbOAuthProvider, readAuth, writeAuth } from "../../src/mcp/oauth";
 import { buildMcpTools, type McpToolCtx } from "../../src/mcp/tools";
+import { invalidateApprovalCards, setApprovalCards } from "../../src/mcp/policy";
 import { decideLease } from "../../src/turn/lease";
 import { fakeMcp, fakeSlack, seedTurn, seedUsers, type ToolCall } from "../turn/helpers";
 import { users } from "../../src/db/schema";
 
+const fakeToolsBase = [{ name: "list_issues", description: "List issues", inputSchema: { type: "object" as const, properties: {} } }, { name: "create_issue", description: "Create an issue", inputSchema: { type: "object" as const, properties: { title: { type: "string" } } } }];
 let calls: ToolCall[];
 let slack: ReturnType<typeof fakeSlack>;
 const ctx = (over: Partial<McpToolCtx> = {}): McpToolCtx => ({ turnId: "turn1", userId: "UASK", channelId: "C1", threadTs: "1.1", readOnly: false, orgConnectionsOnly: false, ...over });
@@ -19,6 +21,7 @@ const run = async (tools: any, name: string, input: any = {}) => tools[name].exe
 
 beforeEach(async () => {
   await resetDb();
+  invalidateApprovalCards();
   await seedUsers();
   await seedTurn();
   slack = fakeSlack();
@@ -118,8 +121,20 @@ describe("tool exposure", () => {
     expect((await buildMcpTools(ctx())).tools).toEqual({});
   });
 
-  test("a write tool call only posts an approval; nothing runs until approved", async () => {
+  test("ticket writes run without a card by default; destructive ones still need one", async () => {
+    calls = fakeMcp([...fakeToolsBase, { name: "delete_issue", description: "Delete an issue", inputSchema: { type: "object", properties: {} } }]);
+    await createConnection({ provider: "github", scope: "user", ownerUserId: "UASK", token: "t" });
+    const { tools } = await buildMcpTools(ctx());
+    expect(await run(tools, "github__create_issue", { title: "x" })).toBe("ok:create_issue");
+    expect(calls.map((c) => c.name)).toEqual(["create_issue"]);
+    expect(await db.select().from(approvals)).toHaveLength(0);
+    expect((await run(tools, "github__delete_issue", {})).status).toBe("awaiting_approval");
+    expect(calls).toHaveLength(1);
+  });
+
+  test("a write tool call only posts an approval when the admin turned cards on for its class; nothing runs until approved", async () => {
     const own = await createConnection({ provider: "github", scope: "user", ownerUserId: "UASK", token: "t" });
+    await setApprovalCards({ ticket: true });
     const { tools } = await buildMcpTools(ctx());
     const out = await run(tools, "github__create_issue", { title: "x" });
     expect(out.status).toBe("awaiting_approval");

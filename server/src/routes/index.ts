@@ -12,9 +12,12 @@ import { mountMarketplaceRoutes } from "./marketplace";
 import { mountMemoryExtRoutes } from "./memory-ext";
 import { mountSkillsUploadRoutes } from "./skills-upload";
 import { behavior } from "./behavior";
+import { channelRoutes } from "./channels";
 import { core } from "./core";
 import { memory } from "./memory";
+import { memoryRun } from "./memory-run";
 import { extensionRoutes, meetingRoutes } from "./meetings";
+import { managerRoutes } from "../manager/routes";
 import { settingsRoutes } from "./settings";
 import { syncRoutes } from "./sync";
 
@@ -27,12 +30,15 @@ export function buildApi(): Hono<AppEnv> {
   mountExportRoutes(api);
   mountMemoryExtRoutes(api);
   api.route("/", core);
+  api.route("/", channelRoutes);
   api.route("/", memory);
+  api.route("/", memoryRun);
   api.route("/", meetingRoutes);
   api.route("/", settingsRoutes);
   api.route("/", behavior);
   api.route("/", syncRoutes);
   api.route("/", limitsRoutes);
+  api.route("/", managerRoutes);
   api.notFound((c) => c.json({ error: "not_found" }, 404));
   api.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();

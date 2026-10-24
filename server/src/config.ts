@@ -40,6 +40,8 @@ const schema = z.object({
   NOTION_CLIENT_SECRET: z.string().optional(),
   SEARCH_PROVIDER: z.enum(["tavily", "brave", "firecrawl"]).optional(),
   SEARCH_API_KEY: z.string().optional(),
+  /** Post a one-time monthly message to the home channel when estimated model spend crosses this many USD. Alert only, never a cap. */
+  MONTHLY_SPEND_ALERT_USD: z.coerce.number().positive().optional(),
   DB_POOL_MAX: z.coerce.number().int().min(2).default(20),
   /** Connections reserved for session-level advisory locks (one per running turn). Kept separate so locks can never starve queries. */
   DB_LOCK_POOL_MAX: z.coerce.number().int().min(2).default(25),

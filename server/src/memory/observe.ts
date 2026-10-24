@@ -1,13 +1,18 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type PgBoss from "pg-boss";
 import { db } from "../db";
 import { channels, users } from "../db/schema";
 import { log } from "../log";
 import { botUserId, slackClient } from "../slack/client";
+import { registerBootstrapJobs } from "./bootstrap";
+import { alreadySeen, flushIdleAmbient, markPolled } from "./ambient";
+import { applyMemorySchedules, bindBoss, loadFreshness } from "./freshness";
 import { consolidate } from "./consolidate";
+import { backfillAll, backfillChannel } from "./backfill";
+import { backfillContextPrefixes } from "./context-prefix";
 import { isTrivialMessage } from "./budget";
 import { writeTag } from "./scope";
-import { captureTurn, flushIdleCaptures } from "./writeback";
+import { captureTurn, flushIdleCaptures, recoverCaptures } from "./writeback";
 
 const FIRST_RUN_LOOKBACK_S = 24 * 3600;
 const BATCH_CHARS = 12_000;
@@ -17,7 +22,7 @@ const MAX_PAGES = 10;
 type Msg = { user?: string; bot_id?: string; text?: string; ts?: string; subtype?: string; reply_users?: string[]; app_id?: string };
 
 /** Slack markup -> plain text: `<@U1>` stays as a name later, links keep their label, entities decoded. */
-function plain(text: string, names: Map<string, string>): string {
+export function plain(text: string, names: Map<string, string>): string {
   return text
     .replace(/<@([A-Z0-9]+)(?:\|[^>]*)?>/g, (_, id: string) => `@${names.get(id) ?? "someone"}`)
     .replace(/<#[A-Z0-9]+\|([^>]+)>/g, "#$1")
@@ -37,7 +42,7 @@ function plain(text: string, names: Map<string, string>): string {
 export async function observeChannel(channelId: string): Promise<{ messages: number; facts: number }> {
   const none = { messages: 0, facts: 0 };
   const [ch] = await db.select().from(channels).where(eq(channels.id, channelId));
-  if (!ch || !ch.observe || ch.isIm || ch.proactivity === "quiet" || !ch.botIsMember) return none;
+  if (!ch || ch.observe === false || ch.isIm || ch.proactivity === "quiet" || !ch.botIsMember) return none;
   const scope = { channelId, isPrivate: ch.isPrivate, isIm: false, userId: null };
   if (!writeTag(scope)) return none;
 
@@ -65,15 +70,20 @@ export async function observeChannel(channelId: string): Promise<{ messages: num
   const names = new Map(people.map((p) => [p.id, p.name ?? p.id]));
   const bots = new Set(people.filter((p) => p.isBot).map((p) => p.id));
 
+  const seen = await alreadySeen(channelId, msgs.map((m) => m.ts!)); // events already buffered/extracted these
   const lines: string[] = [];
+  const polled: string[] = [];
   for (const m of msgs) {
+    if (seen.has(m.ts!)) continue;
     if (!m.user || m.bot_id || m.app_id || m.user === self || bots.has(m.user)) continue;
     if (m.subtype && m.subtype !== "thread_broadcast") continue;
     if (self && m.reply_users?.includes(self)) continue; // the bot answered here; that turn was captured already
     const text = plain(m.text ?? "", names);
     if (text.length < 20 || isTrivialMessage(text)) continue;
     lines.push(`${names.get(m.user) ?? m.user}: ${text.slice(0, 1500)}`);
+    polled.push(m.ts!);
   }
+  await markPolled(channelId, polled); // a late event for the same message is then a no-op
 
   let facts = 0;
   let batch = "";
@@ -92,30 +102,56 @@ export async function observeChannel(channelId: string): Promise<{ messages: num
   return { messages: lines.length, facts };
 }
 
-export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect" } as const;
+/** Polls every observed channel (everything the bot is in unless an admin opted it out). Used by the cron job and "run now". */
+export async function observeAll(): Promise<{ channels: number; messages: number; facts: number }> {
+  const rows = await db.select({ id: channels.id }).from(channels).where(sql`${channels.observe} is distinct from false and ${channels.botIsMember} and not ${channels.isIm}`);
+  const total = { channels: rows.length, messages: 0, facts: 0 };
+  for (const r of rows) {
+    try {
+      const out = await observeChannel(r.id);
+      total.messages += out.messages;
+      total.facts += out.facts;
+      if (out.messages) log.info("observed channel", { channelId: r.id, ...out });
+    } catch (e) {
+      log.warn("observe failed", { channelId: r.id, err: String(e) });
+    }
+  }
+  return total;
+}
 
-/** Observe every 30 min (opted-in channels), consolidate nightly, flush idle thread captures every 10 min. */
+export const MEMORY_QUEUES = { observe: "memory-observe", consolidate: "memory-consolidate", reflect: "memory-reflect", backfill: "memory-backfill", backfillHistory: "memory-backfill-history" } as const;
+
+/** Observe poll (backstop for ambient events), consolidate nightly, flush idle captures; observe/reflect cadence follows the freshness mode. */
 export async function registerMemoryJobs(boss: PgBoss): Promise<void> {
   for (const name of Object.values(MEMORY_QUEUES)) await boss.createQueue(name, { name, retryLimit: 0, policy: "short" });
-  await boss.work(MEMORY_QUEUES.observe, async () => {
-    const rows = await db.select({ id: channels.id }).from(channels).where(eq(channels.observe, true));
-    for (const r of rows) {
-      try {
-        const out = await observeChannel(r.id);
-        if (out.messages) log.info("observed channel", { channelId: r.id, ...out });
-      } catch (e) {
-        log.warn("observe failed", { channelId: r.id, err: String(e) });
-      }
-    }
-  });
+  // timers died with the previous process: flush transcripts still buffered in capture_buffer
+  void recoverCaptures().then((n) => { if (n) log.info("recovered buffered captures", { stored: n }); }).catch((e) => log.warn("capture recovery failed", { err: String(e) }));
+  bindBoss(boss);
+  await loadFreshness().catch((e) => log.warn("freshness load failed", { err: String(e) }));
+  void flushIdleAmbient(0).catch((e) => log.warn("ambient recovery failed", { err: String(e) }));
+  await boss.work(MEMORY_QUEUES.observe, async () => { await observeAll(); });
   await boss.work(MEMORY_QUEUES.consolidate, async () => {
     log.info("consolidation", { ...(await consolidate()) });
   });
   await boss.work(MEMORY_QUEUES.reflect, async () => {
     const n = await flushIdleCaptures();
-    if (n) log.info("reflection sweep stored facts", { n });
+    const m = await flushIdleAmbient();
+    if (n || m) log.info("reflection sweep stored facts", { n, ambient: m });
   });
-  await boss.schedule(MEMORY_QUEUES.observe, "*/30 * * * *");
+  await boss.work(MEMORY_QUEUES.backfill, async () => {
+    const n = await backfillContextPrefixes();
+    if (n) log.info("context prefixes backfilled", { n });
+  });
+  await boss.work<{ channelId?: string }>(MEMORY_QUEUES.backfillHistory, async (jobs) => {
+    const channelId = jobs[0]?.data?.channelId;
+    const r = channelId ? await backfillChannel(channelId) : await backfillAll();
+    const more = channelId ? !(r as { done: boolean }).done : (r as { remaining: number }).remaining > 0;
+    log.info("history backfill", { channelId, ...r });
+    if (more) await boss.sendAfter(MEMORY_QUEUES.backfillHistory, channelId ? { channelId } : {}, { singletonKey: `${channelId ?? "all"}:${Date.now()}` }, 90); // continue where the budget stopped
+  });
+  await registerBootstrapJobs(boss);
+  await boss.schedule(MEMORY_QUEUES.backfillHistory, "23 * * * *"); // safety net: channels that joined while jobs were down
+  await boss.schedule(MEMORY_QUEUES.backfill, "*/20 * * * *");
   await boss.schedule(MEMORY_QUEUES.consolidate, "17 3 * * *");
-  await boss.schedule(MEMORY_QUEUES.reflect, "*/10 * * * *");
+  await applyMemorySchedules(); // observe + reflect crons follow the freshness mode (30 min / 10 min in normal)
 }

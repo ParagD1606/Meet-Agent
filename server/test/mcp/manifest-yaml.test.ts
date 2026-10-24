@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { SLACK_BOT_EVENTS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../../src/slack/manifest";
+import { SLACK_BOT_NAME } from "../../src/routes/manifest";
+import { SLACK_SLASH_COMMANDS, SLACK_BOT_EVENTS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../../src/slack/manifest";
 
 const yaml = await Bun.file(`${import.meta.dir}/../../../docs/slack-app-manifest.yaml`).text();
 /** List items directly under `<key>:` (quoted scalars). */
@@ -20,4 +21,13 @@ test("docs/slack-app-manifest.yaml scopes and events equal slack/manifest.ts", (
   expect(listUnder("bot")).toEqual([...SLACK_BOT_SCOPES]);
   expect(listUnder("user")).toEqual([...SLACK_USER_SCOPES_SIGNIN]);
   expect(listUnder("bot_events")).toEqual([...SLACK_BOT_EVENTS]);
+});
+
+test("docs/slack-app-manifest.yaml slash commands equal slack/manifest.ts", () => {
+  const cmds = [...yaml.matchAll(/^\s+command: "(.*)"$/gm)].map((m) => m[1]);
+  expect(cmds).toEqual(SLACK_SLASH_COMMANDS.map((c) => c.command));
+});
+
+test("docs/slack-app-manifest.yaml bot display name equals routes/manifest.ts", () => {
+  expect(yaml).toContain(`display_name: "${SLACK_BOT_NAME}"`);
 });

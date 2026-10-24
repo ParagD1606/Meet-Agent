@@ -7,11 +7,12 @@ import { addReaction, slackClient } from "./client";
 import { reserveChime } from "./chime-budget";
 import { deps } from "./deps";
 import { channelIsProactive } from "./proactivity";
+import { AUTOREPLY_MIN_SIMILARITY, bestSimilarity, channelFeatures, consultMemory, nudgeText, sendEphemeral, strongDecision, SUGGESTION_TEXT } from "./proactive-features";
 import { stripMention, type SlackMessageEvent } from "./routing";
 import { triageDetailed, type TriageInput } from "./triage";
 import { sampleTriage, triagePrefilter } from "./triage-prefilter";
 
-export type ChimeOutcome = "quiet" | "pass" | "ack" | "answered" | "investigated" | "budget" | "filtered" | "sampled" | "rate_limited";
+export type ChimeOutcome = "quiet" | "pass" | "ack" | "answered" | "investigated" | "budget" | "filtered" | "sampled" | "rate_limited" | "nudged" | "suggested";
 
 type HistMsg = { user?: string; bot_id?: string; text?: string; ts?: string };
 
@@ -49,7 +50,8 @@ export async function handleChannelMessage(
   ev: SlackMessageEvent,
   o: { context: "thread" | "channel"; botUserId: string; channelName?: string; isPrivate: boolean },
 ): Promise<ChimeOutcome> {
-  if (!(await channelIsProactive(ev.channel))) return "quiet";
+  const [proactive, feats] = await Promise.all([channelIsProactive(ev.channel), channelFeatures(ev.channel)]);
+  if (!proactive && !feats.nudge) return "quiet";
   // free heuristics first: most chatter never reaches a model
   const pre = triagePrefilter({ text: ev.text ?? "", botUserId: o.botUserId, context: o.context });
   if (!pre.pass) return "filtered";
@@ -59,9 +61,15 @@ export async function handleChannelMessage(
   if (!sampleTriage(ev.channel, ev.ts).sampled) return "sampled";
   const rate = await checkRate({ userId: ev.user ?? "unknown", channelId: ev.channel, kind: "triage" });
   if (!rate.ok) return "rate_limited";
+  const text = stripMention(ev.text ?? "", o.botUserId);
+  // memory first, restricted to what THIS channel may read: feeds the nudge, the triage prompt and the auto-reply gate
+  const hits = await consultMemory({ channelId: ev.channel, isPrivate: o.isPrivate, text });
+  const decision = feats.nudge && ev.user ? strongDecision(hits) : undefined;
+  if (decision && await sendEphemeral({ channelId: ev.channel, userId: ev.user!, threadTs: ev.thread_ts ?? ev.ts, text: nudgeText(decision) })) return "nudged";
+  if (!proactive) return "pass";
   const t = await triageDetailed({
-    text: stripMention(ev.text ?? "", o.botUserId), context: o.context, speaker: speaker?.name ?? ev.user,
-    channelName: o.channelName, history,
+    text, context: o.context, speaker: speaker?.name ?? ev.user,
+    channelName: o.channelName, history, memory: hits.slice(0, 3).map((h) => h.text),
   });
   log.info("triage", { channel: ev.channel, decision: t.decision, source: t.source });
 
@@ -71,6 +79,11 @@ export async function handleChannelMessage(
     return "ack";
   }
   const threadTs = ev.thread_ts ?? ev.ts;
+  // confidence gate (opt-in): a public answer needs a close memory match or an explicit summons; otherwise only suggest, privately
+  if (feats.autoreply && t.decision === "ANSWER" && t.priority !== "summons" && bestSimilarity(hits) < AUTOREPLY_MIN_SIMILARITY) {
+    if (ev.user && await sendEphemeral({ channelId: ev.channel, userId: ev.user, threadTs, text: SUGGESTION_TEXT })) return "suggested";
+    return "budget";
+  }
   const budget = await reserveChime(ev.channel, threadTs);
   if (!budget.allowed) {
     log.info("chime suppressed", { channel: ev.channel, reason: budget.reason });

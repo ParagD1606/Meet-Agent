@@ -1,7 +1,9 @@
 import { config } from "../config";
-import { SLACK_BOT_EVENTS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../slack/manifest";
+import { SLACK_BOT_EVENTS, SLACK_SLASH_COMMANDS, SLACK_BOT_SCOPES, SLACK_USER_SCOPES_SIGNIN } from "../slack/manifest";
 
 export const SLACK_APP_NAME = "Company Brain";
+/** Bot display name in Slack (bots cannot call users.profile.set); the avatar is uploaded manually in app settings. */
+export const SLACK_BOT_NAME = "Pixel";
 
 /** Slack app manifest for this deployment. Socket mode needs no public request URLs; HTTP mode points at PUBLIC_URL. */
 export function slackAppManifest(origin: string, mode: "socket" | "http" = config.SLACK_MODE, appName = SLACK_APP_NAME) {
@@ -15,7 +17,8 @@ export function slackAppManifest(origin: string, mode: "socket" | "http" = confi
     },
     features: {
       app_home: { home_tab_enabled: true, messages_tab_enabled: true, messages_tab_read_only_enabled: false },
-      bot_user: { display_name: appName, always_online: true },
+      bot_user: { display_name: SLACK_BOT_NAME, always_online: true },
+      slash_commands: SLACK_SLASH_COMMANDS.map((c) => ({ ...c, ...(socket ? {} : { url: `${base}/slack/commands` }), should_escape: true })),
     },
     oauth_config: {
       redirect_urls: [`${base}/slack/oauth/callback`, `${base}/auth/slack/callback`],

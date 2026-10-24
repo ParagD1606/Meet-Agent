@@ -1,12 +1,17 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireAuth, type AppEnv } from "../auth/session";
 import { config } from "../config";
 import { db } from "../db";
 import { channels, settings } from "../db/schema";
+import { ACTION_CLASSES, getApprovalCards, setApprovalCards } from "../mcp/policy";
 import { detectProvider, MODEL_ROLES, refreshModelSettings, type ModelRole } from "../llm";
+import { FEATURES, featureChannels, setFeatureChannels } from "../slack/proactive-features";
 import { getWorkspacePrompt, setWorkspacePrompt, WORKSPACE_PROMPT_MAX } from "../skills/skills";
+import { DEFAULT_PERSONA, getPersona, PERSONA_LIMITS, setPersona } from "../persona";
+import { getFreshness, saveFreshness, TUNING } from "../memory/freshness";
+import { setObserve } from "../memory/ambient";
 import { httpError, readBody, codedError } from "./util";
 
 export const settingsRoutes = new Hono<AppEnv>();
@@ -22,6 +27,44 @@ settingsRoutes.put("/settings/workspace-prompt", requireAuth("admin"), async (c)
   try {
     return c.json({ prompt: await setWorkspacePrompt(prompt) });
   } catch (e) { throw codedError(e); }
+});
+
+// ---------- persona (voice only; scanned like core memory) ----------
+settingsRoutes.get("/settings/persona", requireAuth("admin"), async (c) => c.json({ persona: await getPersona(), defaults: DEFAULT_PERSONA, limits: PERSONA_LIMITS }));
+settingsRoutes.put("/settings/persona", requireAuth("admin"), async (c) => {
+  const body = await readBody(c, z.object({ name: z.string(), role: z.string().default(""), tone: z.string().default(""), greeting: z.string().default("") }));
+  const r = await setPersona(body);
+  if (!r.ok) throw httpError(400, "invalid_persona", { message: r.error });
+  return c.json({ persona: r.persona });
+});
+
+// ---------- approval cards per action class (default: none; deletes and unclassified actions always get one) ----------
+settingsRoutes.get("/settings/approvals", requireAuth("admin"), async (c) => c.json({ cards: await getApprovalCards(), classes: ACTION_CLASSES }));
+settingsRoutes.put("/settings/approvals", requireAuth("admin"), async (c) => {
+  const body = await readBody(c, z.object({ cards: z.object(Object.fromEntries(ACTION_CLASSES.map((k) => [k, z.boolean().optional()]))) }));
+  return c.json({ cards: await setApprovalCards(body.cards), classes: ACTION_CLASSES });
+});
+
+// ---------- memory freshness: 'normal' (cheap cadence) or 'fast' (demo: learn within seconds) ----------
+const freshness = () => ({ mode: getFreshness(), tuning: TUNING[getFreshness()], options: Object.keys(TUNING) });
+settingsRoutes.get("/settings/memory-freshness", requireAuth("admin"), async (c) => c.json(freshness()));
+settingsRoutes.put("/settings/memory-freshness", requireAuth("admin"), async (c) => {
+  const { mode } = await readBody(c, z.object({ mode: z.enum(["normal", "fast"]) }));
+  await saveFreshness(mode);
+  return c.json(freshness());
+});
+
+// ---------- ambient capture: the bot learns from every channel it is in unless an admin opts the channel out ----------
+settingsRoutes.get("/channels/observe", requireAuth("admin"), async (c) => {
+  const rows = await db.select({ id: channels.id, name: channels.name, isPrivate: channels.isPrivate, observe: channels.observe })
+    .from(channels).where(and(eq(channels.isIm, false), eq(channels.botIsMember, true))).orderBy(channels.name);
+  return c.json({ channels: rows.map((r) => ({ ...r, observe: r.observe !== false })) });
+});
+settingsRoutes.put("/channels/:id/observe", requireAuth("admin"), async (c) => {
+  const { observe } = await readBody(c, z.object({ observe: z.boolean() }));
+  const id = c.req.param("id");
+  if (!(await setObserve(id, observe))) throw httpError(404, "not_found");
+  return c.json({ id, observe });
 });
 
 // ---------- proactivity ----------
@@ -46,6 +89,19 @@ settingsRoutes.put("/settings/proactivity", requireAuth("admin"), async (c) => {
     if (ids.length) await db.update(channels).set({ proactivity: mode }).where(inArray(channels.id, ids));
   }
   return c.json(await proactivity());
+});
+
+// ---------- proactive features (digest / nudge / deadlines / autoreply), opt-in per channel ----------
+async function proactiveFeatures() {
+  const lists = await Promise.all(FEATURES.map(featureChannels));
+  return Object.fromEntries(FEATURES.map((f, i) => [f, lists[i]!]));
+}
+settingsRoutes.get("/settings/proactive-features", requireAuth("admin"), async (c) => c.json(await proactiveFeatures()));
+settingsRoutes.put("/settings/proactive-features", requireAuth("admin"), async (c) => {
+  const ids = z.array(z.string().min(1).max(40)).max(2000).optional();
+  const body = await readBody(c, z.object({ digest: ids, nudge: ids, deadlines: ids, autoreply: ids, standup: ids, risks: ids }));
+  for (const f of FEATURES) if (body[f]) await setFeatureChannels(f, body[f]!);
+  return c.json(await proactiveFeatures());
 });
 
 // ---------- models ----------

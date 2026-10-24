@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
-export type RateKind = "turn" | "triage" | "mcp";
+export type RateKind = "turn" | "triage" | "mcp" | "nudge" | "chase" | "ask" | "huddle" | "followup";
 type Bucket = { key: string; capacity: number; perSec: number };
 
 /** Burst capacity + sustained refill. Per-user and per-channel buckets must both have a token. */
@@ -13,6 +13,16 @@ export const BUCKETS: Record<RateKind, (a: { userId: string; channelId: string }
   // triage runs on every channel message: tiny sustained budget per channel
   triage: ({ channelId }) => [{ key: `channel:${channelId}:triage`, capacity: 6, perSec: 1 / 120 }],
   mcp: ({ userId }) => [{ key: `user:${userId}:mcp`, capacity: 30, perSec: 1 }],
+  // private nudges/suggestions to one person: 2 in a burst, then one per 30 minutes
+  nudge: ({ userId }) => [{ key: `user:${userId}:nudge`, capacity: 2, perSec: 1 / 1800 }],
+  // manager chasing one person about commitments: 3 in a burst, then 3 per day
+  chase: ({ userId }) => [{ key: `user:${userId}:chase`, capacity: 3, perSec: 3 / 86_400 }],
+  // questions Pixel routes TO one teammate (userId = the target): 3 per day. Purged after 2 idle days, fine for a daily window.
+  ask: ({ userId }) => [{ key: `user:${userId}:ask`, capacity: 3, perSec: 3 / 86400 }],
+  // follow-up / digest DMs to one person (userId = the recipient): 5 in a burst, then 20 per day
+  followup: ({ userId }) => [{ key: `user:${userId}:followup`, capacity: 5, perSec: 20 / 86_400 }],
+  // huddle files a user attaches to messages (each import costs an LLM call): 5 in a burst, then one per minute
+  huddle: ({ userId }) => [{ key: `user:${userId}:huddle`, capacity: 5, perSec: 1 / 60 }],
 };
 
 export type RateResult = { ok: true } | { ok: false; message: string; retryAfterSec: number };
@@ -21,6 +31,11 @@ const MESSAGES: Record<RateKind, string> = {
   turn: "You're sending requests faster than I can keep up. Give me about {s} seconds and try again.",
   triage: "rate limited",
   mcp: "Rate limit exceeded. Retry in {s} seconds.",
+  nudge: "rate limited",
+  chase: "rate limited",
+  ask: "rate limited",
+  huddle: "rate limited",
+  followup: "rate limited",
 };
 
 /**

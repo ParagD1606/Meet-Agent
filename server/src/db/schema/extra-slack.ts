@@ -1,4 +1,11 @@
-import { index, pgTable, text, timestamp, bigserial, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, pgTable, text, timestamp, bigserial, uniqueIndex } from "drizzle-orm/pg-core";
+
+/** Deadline reminders already sent (one per fact), so the hourly job never repeats itself. */
+export const memoryReminders = pgTable("memory_reminders", {
+  memoryId: bigint("memory_id", { mode: "number" }).primaryKey(),
+  channelId: text("channel_id").notNull(),
+  remindedAt: timestamp("reminded_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 /** 👍/👎 reactions on messages the bot authored. One row per (message, user); changing your mind updates it. */
 export const messageFeedback = pgTable("message_feedback", {

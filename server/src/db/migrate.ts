@@ -26,14 +26,19 @@ async function reconcileEmbeddingDim() {
 
 /** The embedding cache is disposable, so a dimension change just empties and resizes it. */
 async function reconcileCacheDim() {
-  const { rows } = await pool.query(
-    `select atttypmod as dim from pg_attribute where attrelid = 'embedding_cache'::regclass and attname = 'embedding'`,
-  );
-  const current = rows[0]?.dim as number | undefined;
-  if (!current || current === config.EMBEDDING_DIM) return;
-  log.warn("resizing embedding_cache.embedding", { from: current, to: config.EMBEDDING_DIM });
-  await pool.query("truncate embedding_cache");
-  await pool.query(`alter table embedding_cache alter column embedding type vector(${config.EMBEDDING_DIM})`);
+  // entities embed short names and are rebuilt from facts' mentions, so they are as disposable as the cache
+  for (const table of ["embedding_cache", "entities"]) {
+    const { rows } = await pool.query(
+      `select atttypmod as dim from pg_attribute where attrelid = '${table}'::regclass and attname = 'embedding'`,
+    );
+    const current = rows[0]?.dim as number | undefined;
+    if (!current || current === config.EMBEDDING_DIM) continue;
+    log.warn(`resizing ${table}.embedding`, { from: current, to: config.EMBEDDING_DIM });
+    if (table === "entities") await pool.query("drop index if exists entities_emb_idx; truncate entities, fact_entities, entity_summaries");
+    else await pool.query(`truncate ${table}`);
+    await pool.query(`alter table ${table} alter column embedding type vector(${config.EMBEDDING_DIM})`);
+    if (table === "entities") await pool.query("create index entities_emb_idx on entities using hnsw (embedding vector_cosine_ops)");
+  }
 }
 
 const MIGRATION_LOCK = 7_300_001;

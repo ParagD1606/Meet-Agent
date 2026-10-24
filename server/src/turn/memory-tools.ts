@@ -5,9 +5,11 @@ import { db } from "../db";
 import { users } from "../db/schema";
 import { coreMemoryEdit, type Actor, type AgentContext, type BlockLabel } from "../memory/core-blocks";
 import { forgetMemories, rememberFact } from "../memory/facts";
+import { entityLookup } from "../memory/entities";
 import { searchThreads } from "../memory/episodes";
 import { readTags, writeTag, type SlackScope } from "../memory/scope";
 import { searchMemory } from "../memory/search";
+import { findTasks, formatTasks } from "../manager/find";
 
 type MemoryToolContext = {
   turnId: string;
@@ -47,13 +49,29 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
       },
     }),
     memory_search: tool({
-      description: "Search company memory and past decisions. Results may be outdated.",
-      inputSchema: z.object({ query: z.string().min(1).max(500), limit: z.number().int().min(1).max(20).optional() }),
-      execute: async ({ query, limit }) => {
-        const hits = await searchMemory({ tags: await readTags(ctx.scope), query, limit: limit ?? 8 });
+      description: "Search company memory and past decisions. Results may be outdated. Pass asOf (YYYY-MM-DD) to see what was true on that date instead of now.",
+      inputSchema: z.object({
+        query: z.string().min(1).max(500), limit: z.number().int().min(1).max(20).optional(),
+        asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}/, "asOf must be YYYY-MM-DD").optional(),
+      }),
+      execute: async ({ query, limit, asOf }) => {
+        const at = asOf ? new Date(`${asOf.slice(0, 10)}T23:59:59.999Z`) : undefined;
+        if (at && Number.isNaN(at.getTime())) return "asOf is not a valid date; use YYYY-MM-DD.";
+        const hits = await searchMemory({ tags: await readTags(ctx.scope), query, limit: limit ?? 8, asOf: at });
         return hits.length
-          ? hits.map((h) => `- [${h.source}; ${h.createdAt.toISOString().slice(0, 10)}; ${h.scopeTag}] ${h.text}`).join("\n")
+          ? hits.map((h) => `- [${h.source}; ${h.createdAt.toISOString().slice(0, 10)}; ${h.scopeTag}${h.factType !== "fact" ? `; ${h.factType}` : ""}${h.validUntil ? `; until ${h.validUntil.toISOString().slice(0, 10)}` : ""}] ${h.text}`).join("\n")
           : "No matching company memory found.";
+      },
+    }),
+    entity_lookup: tool({
+      description: "Everything company memory knows about one person, customer, project, product or channel (name or alias, e.g. 'Dana', 'Zephyr Corp'): a summary, current facts and related entities. Use for 'what do we know about X'.",
+      inputSchema: z.object({ name: z.string().min(1).max(200), limit: z.number().int().min(1).max(30).optional() }),
+      execute: async ({ name, limit }) => {
+        const info = await entityLookup({ tags: await readTags(ctx.scope), name, limit });
+        if (!info.entities.length && !info.facts.length) return `No accessible memory about "${name}".`;
+        const head = info.entities.map((e) => `${e.name} (${e.type})${e.summary ? `: ${e.summary}` : ""}`).join("\n");
+        const facts = info.facts.map((f) => `- [${f.source}; ${f.validAt.toISOString().slice(0, 10)}; ${f.scopeTag}${f.factType !== "fact" ? `; ${f.factType}` : ""}] ${f.text}`).join("\n");
+        return [head, facts && `Facts:\n${facts}`, info.related.length ? `Related: ${info.related.join(", ")}` : ""].filter(Boolean).join("\n\n");
       },
     }),
     search_threads: tool({
@@ -66,8 +84,21 @@ export function memoryTools(ctx: MemoryToolContext): ToolSet {
           : "No matching past threads found.";
       },
     }),
+    find_tasks: tool({
+      description: "Look up tracked tasks and commitments: who was given a task, who owns X, what is due or overdue, what someone assigned. Filter by text, owner, assigner, channel, status or due range. Read-only; only returns tasks the asker may read. Each row has the owner, assigner, due date, status and a Source link to the original message.",
+      inputSchema: z.object({
+        query: z.string().max(300).optional().describe("What the task is about"),
+        owner: z.string().max(100).optional().describe("Person doing it: Slack id, name, or 'me'"),
+        assigner: z.string().max(100).optional().describe("Person who gave it: Slack id, name, or 'me'"),
+        channel: z.string().max(100).optional().describe("Channel id"),
+        status: z.enum(["open", "overdue", "done", "dropped", "all"]).optional().describe("Default open (open + overdue)"),
+        dueAfter: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(), dueBefore: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional(),
+        limit: z.number().int().min(1).max(25).optional(),
+      }),
+      execute: async (i) => formatTasks(await findTasks({ ...i, scope: ctx.scope, asker: ctx.userId })),
+    }),
     forget_memories: tool({
-      description: "Find facts to forget. Use dryRun=true first; delete only when the user explicitly asks.",
+      description: "Find facts to forget. Use dryRun=true first; forget (soft-delete, history is kept) only when the user explicitly asks.",
       inputSchema: z.object({ query: z.string().min(1).max(500), dryRun: z.boolean().optional().default(true) }),
       execute: async ({ query, dryRun }) => {
         const hits = await forgetMemories({ tags: await readTags(ctx.scope), query, dryRun });

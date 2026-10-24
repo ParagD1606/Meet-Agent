@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Link } from "wouter"
-import { api, fieldErr, type Limits, type Usage, type UsageRange } from "@/lib/api"
+import { api, fieldErr, type CostReport, type Limits, type Usage, type UsageRange } from "@/lib/api"
 import { useAction } from "@/lib/action"
 import { useUserNames } from "@/lib/auth"
 import { ago, compact, num, pct, usd } from "@/lib/format"
@@ -10,7 +10,7 @@ import { BarChart, HBars, Legend, SERIES, StackedBar } from "@/ui/charts"
 import { Button } from "@/ui/button"
 import { EmptyState } from "@/ui/empty"
 import { FormField, Input } from "@/ui/fields"
-import { Async, PageHeader, Panel, Section, Stat } from "@/ui/page"
+import { Async, Meter, PageHeader, Panel, Section, Stat } from "@/ui/page"
 import { Segmented } from "@/ui/tabs"
 import { Table } from "@/ui/table"
 import { breakdownParts } from "./turns"
@@ -97,14 +97,53 @@ function Report({ u, range }: { u: Usage; range: UsageRange }) {
   )
 }
 
+const DAYS: Record<UsageRange, number> = { "1d": 1, "7d": 7, "30d": 30, "90d": 90 }
+const dollars = (n: number) => usd(n * 1e6)
+
+function Cost({ c }: { c: CostReport }) {
+  const top = c.byModel.slice(0, 3).map((m) => m.model)
+  const series = c.byModel.length > 3 ? [...top, "Other"] : top
+  const m = c.month
+  return (
+    <>
+      <Panel className="mb-4"><div className="grid grid-cols-2 md:grid-cols-3 md:divide-x md:divide-line">
+        <Stat label={`Spend, last ${c.days} ${c.days === 1 ? "day" : "days"}`} value={dollars(c.totalUsd)} sub={`${num(c.byDay.reduce((a, d) => a + d.turns, 0))} turns`} />
+        {m && <Stat label="This month (UTC)" value={dollars(m.spentUsd)} sub={m.alertUsd ? `Alert threshold ${dollars(m.alertUsd)}` : "No spend alert configured"} />}
+        {m?.alertUsd ? <div className="col-span-2 px-4 py-3 md:col-span-1"><div className="eyebrow">Against alert</div><div className="mt-3"><Meter value={m.spentUsd} max={m.alertUsd} label="Month spend against alert threshold" /></div><div className="mt-1.5 text-xs text-muted">{pct(m.spentUsd / m.alertUsd)} used. Alert only, nothing is paused.</div></div> : null}
+      </div></Panel>
+      {c.byDay.length === 0 ? <Panel><EmptyState icon="usage" title="No spend in this period">Cost appears here after the bot has answered something.</EmptyState></Panel> : (
+        <>
+          <Panel className="mb-4 p-4"><BarChart label={`Spend per day by model, last ${c.days} days`} series={series} fmt={dollars}
+            bars={c.byDay.map((d) => ({ key: d.day, label: d.day.slice(5), segs: series.map((s) => s === "Other" && c.byModel.length > 3 ? Object.entries(d.models).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0) : d.models[s] ?? 0) }))} /></Panel>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Panel><Table caption="Spend by model" rows={c.byModel} rowKey={(r) => r.model} initialSort={{ key: "usd", dir: -1 }} columns={[
+              { key: "model", header: "Model", primary: true, cell: (r) => r.model },
+              { key: "turns", header: "Turns", num: true, sort: (r) => r.turns, cell: (r) => num(r.turns) },
+              { key: "tok", header: "Tokens", num: true, hideSm: true, sort: tok, cell: (r) => compact(tok(r)) },
+              { key: "usd", header: "Cost", num: true, end: true, sort: (r) => r.usd, cell: (r) => dollars(r.usd) },
+            ]} /></Panel>
+            <Panel><Table caption="Spend by day" rows={c.byDay} rowKey={(r) => r.day} initialSort={{ key: "day", dir: -1 }} columns={[
+              { key: "day", header: "Day", primary: true, sort: (r) => r.day, cell: (r) => r.day },
+              { key: "turns", header: "Turns", num: true, hideSm: true, sort: (r) => r.turns, cell: (r) => num(r.turns) },
+              { key: "usd", header: "Cost", num: true, end: true, sort: (r) => r.usd, cell: (r) => dollars(r.usd) },
+            ]} /></Panel>
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
 export default function UsagePage() {
   const [range, setRange] = useState<UsageRange>("7d")
   const q = useQuery({ queryKey: ["usage", range], queryFn: () => api.usage(range), placeholderData: (p) => p })
+  const cost = useQuery({ queryKey: ["cost", DAYS[range]], queryFn: () => api.costReport(DAYS[range]), placeholderData: (p) => p })
   return (
     <>
       <PageHeader title="Usage & limits" desc="Token spend and caps across the workspace. Costs are estimates from the model's published prices."
         actions={<Segmented label="Period" value={range} onChange={setRange} items={RANGES} />} />
       <Async q={q} rows={6}>{(u) => <Report u={u} range={range} />}</Async>
+      <Section title="Cost" desc="Estimated model spend by day and model, from the per-turn ledger." className="mt-8"><Async q={cost} rows={3}>{(c) => <Cost c={c} />}</Async></Section>
       <Section title="Limits" desc="Enforced before and during a turn. Zero means unlimited." className="mt-8"><LimitsForm /></Section>
     </>
   )

@@ -1,11 +1,13 @@
+import { tuning } from "../memory/freshness";
 import type { ModelMessage } from "ai";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
-import { threadState, users } from "../db/schema";
+import { recallLog, threadState, users } from "../db/schema";
 import { log } from "../log";
 import { breakdown, estimateTokens, type Breakdown } from "../memory/budget";
 import { getCoreBlocks } from "../memory/core-blocks";
-import { buildRecall } from "../memory/recall";
+import { buildRecall, recallBudget, type Recall } from "../memory/recall";
+import { isExternalSource } from "../sync/types";
 import { getWorkspacePrompt, skillsPromptSection } from "../skills/skills";
 import { botUserId } from "../slack/client";
 import type { TurnInput } from "./index";
@@ -16,7 +18,6 @@ import type { ToolContext } from "./tools";
 const FETCH_LIMIT = 60;
 export const HISTORY_WINDOW_TOKENS = 3000;
 export const MESSAGE_CHAR_CAP = 1200;
-const SNAPSHOT_TTL_MS = 6 * 3600_000;
 type SlackMsg = { user?: string; bot_id?: string; text?: string; ts?: string; subtype?: string };
 
 /** Slack mrkdwn noise -> compact plain text: links keep their label, entities decoded, quoted lines dropped, blobs capped. */
@@ -95,7 +96,7 @@ async function frozenBlocks(i: TurnInput, ctx: ToolContext): Promise<{ shared: s
     const [r] = await db.select({ s: threadState.coreSnapshot }).from(threadState)
       .where(sql`${threadState.channelId} = ${i.channelId} and ${threadState.threadTs} = ${threadKey}`);
     const f = (r?.s as { prefix?: Frozen } | null)?.prefix;
-    if (f && Date.now() - f.at < SNAPSHOT_TTL_MS) snap = f;
+    if (f && Date.now() - f.at < tuning().snapshotTtlMs) snap = f;
   }
   const uid = i.userId ?? "";
   if (snap && (snap.users[uid] !== undefined || !i.userId)) {
@@ -130,12 +131,23 @@ function userBlock(p: UserPart | undefined): string {
   return [p.skills ? `Your personal skills:\n${p.skills}` : "", block("User memory", p.mem)].filter(Boolean).join("\n\n");
 }
 
+/** Best-effort: records which memory ids a turn recalled. Never throws; a failed insert is only logged. */
+export async function logRecall(i: TurnInput, threadKey: string, hitIds: number[]): Promise<void> {
+  try {
+    await db.insert(recallLog).values({ channelId: i.channelId, threadKey, messageTs: i.ts, query: i.text.slice(0, 500), hitIds });
+  } catch (e) {
+    log.warn("recall log failed", { error: String(e) });
+  }
+}
+
 export type BuiltContext = {
   /** Frozen prefix blocks, most-shared first: workspace, skills, company, channel, then the asker's own block last. No timestamps. */
   frozenPrefixBlocks: string[];
   /** How many leading blocks are identical for every user of this thread (the cross-user cacheable part). */
   sharedBlockCount: number;
   recallText: string;
+  /** Recall included text from an external system (mail, calendar, tickets, docs): attacker-writable, so writes need a card. */
+  recallExternal: boolean;
   /** Rolling summary (REFERENCE ONLY) + recent window, sized by tokens. */
   history: ModelMessage[];
   /** Cleaned, not-yet-summarised messages: feed to maybeCompact. */
@@ -147,10 +159,17 @@ export type BuiltContext = {
 export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall?: boolean; historyTokens?: number }): Promise<BuiltContext> {
   const selfId = await botUserId().catch(() => null);
   const threadKey = i.threadTs ?? i.ts;
+  const historyP = threadHistory(i, selfId);
   const [rawHistory, prefix, recall] = await Promise.all([
-    threadHistory(i, selfId),
+    historyP,
     frozenBlocks(i, ctx),
-    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : buildRecall({ scope: ctx.scope, query: i.text.slice(0, 500), threadKey }).catch((e) => {
+    ctx.skipRecall ? Promise.resolve({ text: "", tokens: 0 }) : historyP.then((h) => buildRecall({
+      scope: ctx.scope, query: i.text.slice(0, 500), threadKey, budgetTokens: recallBudget(ctx.depth),
+      threadTail: h.slice(-6).map((m) => `${m.role}: ${m.text}`),
+    })).then(async (r) => {
+      if (r.hits.length) await logRecall(i, threadKey, r.hits.map((h) => h.id));
+      return r;
+    }).catch((e) => {
       log.warn("memory unavailable for turn", { error: String(e) });
       return { text: "", tokens: 0 };
     }),
@@ -171,5 +190,6 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
   const bd = breakdown({
     coreBlocks: frozenPrefixBlocks.join("\n\n"), history: historyText, recall: recall.text, user: i.text,
   });
-  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd };
+  const recallExternal = "hits" in recall && (recall as Recall).hits.some((h) => isExternalSource(h.source));
+  return { frozenPrefixBlocks, sharedBlockCount: prefix.shared.length, recallText: recall.text, recallExternal, history: messages, compactHistory: uncovered, tokens: bd.total, breakdown: bd };
 }

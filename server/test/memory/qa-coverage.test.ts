@@ -172,7 +172,8 @@ describe("memory tools exposed to the model", () => {
     expect(await db.select().from(memories)).toHaveLength(2);
     expect(await run(t, "forget_memories", { query: "wifi password rotation", dryRun: false })).toContain("Forgot 1");
     const left = await db.select().from(memories);
-    expect(left.map((m) => m.scopeTag)).toEqual(["channel_CPRIV"]);
+    expect(left.filter((m) => m.status === "active").map((m) => m.scopeTag)).toEqual(["channel_CPRIV"]);
+    expect(left.filter((m) => m.status === "deleted").map((m) => m.scopeTag)).toEqual(["shared"]); // soft delete keeps the row
     expect(await run(t, "forget_memories", { query: "nothing like this exists" })).toBe("No matching facts were found.");
   });
 
@@ -245,7 +246,7 @@ describe("addFact thresholds, asOf, rankScore", () => {
     const now = Date.parse("2026-06-01T00:00:00Z");
     const h = (o: Partial<MemoryHit>): MemoryHit => ({
       id: 1, text: "t", scopeTag: "shared", source: "s", sourceRef: null, score: 1, createdAt: new Date(now), kind: "fact", importance: 0.5,
-      confidence: 1, accessCount: 0, validAt: new Date(now), lastAccessedAt: null, createdBy: null, permalink: null, ...o,
+      confidence: 1, accessCount: 0, validAt: new Date(now), validUntil: null, factType: "fact", lastAccessedAt: null, createdBy: null, permalink: null, ...o,
     });
     expect(rankScore(h({ importance: 1 }), now)).toBeGreaterThan(rankScore(h({ importance: 0 }), now));
     expect(rankScore(h({ importance: 1 }), now)).toBeCloseTo(1.5, 5);

@@ -1,3 +1,4 @@
+import { getPersona, personaGreeting } from "../persona";
 import { log } from "../log";
 import { slackClient } from "./client";
 
@@ -23,7 +24,7 @@ export async function onAssistantThreadStarted(ev: AssistantThreadEvent): Promis
   if (known.size > 2000) known.delete(known.keys().next().value!);
   try {
     await (await slackClient()).assistant.threads.setSuggestedPrompts({
-      channel_id: t.channel_id, thread_ts: t.thread_ts, title: "Ask me anything", prompts: SUGGESTED_PROMPTS.map((p) => ({ ...p })),
+      channel_id: t.channel_id, thread_ts: t.thread_ts, title: personaGreeting(await getPersona()), prompts: SUGGESTED_PROMPTS.map((p) => ({ ...p })),
     });
   } catch (e) { log.warn("setSuggestedPrompts failed", { error: (e as Error).message }); }
 }

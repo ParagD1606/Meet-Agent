@@ -3,21 +3,26 @@ import { eq } from "drizzle-orm";
 import { id as newId } from "../crypto";
 import { db } from "../db";
 import { channels, turns, users } from "../db/schema";
+import { checkSpendAlert } from "../cost";
 import { acquireTurnSlot, BUSY_MESSAGE, checkRate, CEILING_MESSAGE, dailyCapStatus, getLimits, recordUsage, releaseTurnSlot } from "../limits";
 import { log } from "../log";
 import type { AgentContext } from "../memory/core-blocks";
 import { breakdown } from "../memory/budget";
 import { scheduleCapture } from "../memory/writeback";
 import { botUserId, getWorkspace } from "../slack/client";
+import { resolveActions } from "../slack/cards";
 import { prepareReply, createReplySink } from "../slack/stream";
 import { buildContext } from "./context";
 import { maybeCompact } from "./compact";
 import { DEPTH_CONFIG, routeDepth, type Depth } from "./depth";
+import { memoryTools } from "./memory-tools";
 import { setFollowUp } from "./followup";
 import { runLoop } from "./loop";
+import { getPersona } from "../persona";
 import { buildDynamicContext, buildSystemMessages, type Trigger } from "./prompt";
 import { serialize } from "./queue";
 import { getSlack } from "./slack";
+import { askTeammateTool } from "./ask-teammate";
 import { assembleTools, type ToolContext } from "./tools";
 
 export { handleBlockAction, resumePending, expireStale } from "./approval";
@@ -39,6 +44,10 @@ export type TurnInput = {
   agentContext?: AgentContext;
   /** Slack assistant-pane thread: progress goes through assistant.threads.setStatus. */
   assistant?: boolean;
+  /** Slack Real-time Search action token from the triggering event (live user-scoped search). */
+  actionToken?: string;
+  /** Aborted when the user steers the running turn ("stop" or a replacing message); reason says which. */
+  abortSignal?: AbortSignal;
 };
 
 const NO_REPLY = /^\s*NO_REPLY\s*$/;
@@ -100,6 +109,7 @@ async function execute(input: TurnInput): Promise<void> {
       native: interactive && input.isIm && (depth === "direct" || depth === "memory"),
       assistant: !!input.assistant && input.isIm,
       placeholder: interactive && depth !== "direct",
+      idemKey: interactive ? input.ts : undefined,
     });
     stage = "reply_begin";
     if (interactive) await sink.begin();
@@ -107,15 +117,20 @@ async function execute(input: TurnInput): Promise<void> {
     const ctx: ToolContext = {
       turnId, userId: input.userId, channelId: input.channelId, threadTs: replyThread ?? input.threadTs, scope,
       readOnly, orgConnectionsOnly: !!input.orgConnectionsOnly, agentContext, trigger: input.trigger, depth, userText: input.text,
+      actionToken: input.actionToken,
     };
     const narrate = interactive ? sink.narrate : undefined;
     stage = "tools";
     const assembled = plan.tools ? await assembleTools(ctx, { depth, text: input.text, narrate }) : undefined;
-    const tools = assembled?.tools ?? {};
+    // memory depth: no live tools, but the read-only memory_search + find_tasks so the model can dig past the auto-recalled block
+    const tools = assembled?.tools ?? (plan.memorySearch
+      ? { ...(({ memory_search, find_tasks }) => ({ memory_search: memory_search!, find_tasks: find_tasks! }))(memoryTools(ctx as never)), ...(interactive && !readOnly && input.userId ? { ask_teammate: askTeammateTool(ctx) } : {}) }
+      : {});
 
     // ---- context: frozen prefix (static prompt + core blocks) / dynamic suffix (time, recall, history, message) ----
     stage = "context";
     const bc = await buildContext(input, { ...ctx, skipRecall: !plan.recall });
+    if (bc.recallExternal) ctx.untrustedContext = true;
     const [self, asker, chan] = await Promise.all([
       botUserId().catch(() => null),
       input.userId ? db.select({ id: users.id, name: users.name }).from(users).where(eq(users.id, input.userId)).then((r) => r[0] ?? { id: input.userId!, name: null }) : Promise.resolve(null),
@@ -131,12 +146,12 @@ async function execute(input: TurnInput): Promise<void> {
     const userContent = `${dynamic}\n${recall ? `${recall}\n` : ""}${speaker}${input.text}${files}`;
     const history: ModelMessage[] = depth === "direct" ? bc.history.slice(-4) : bc.history;
     const messages: ModelMessage[] = [...history, { role: "user", content: userContent }];
-    const system = buildSystemMessages(bc.frozenPrefixBlocks);
+    const system = buildSystemMessages(bc.frozenPrefixBlocks, await getPersona());
 
     stage = "model";
     const result = await runLoop({
       system, messages, tools, turnId, role: plan.role, depth, maxSteps, maxOutputTokens: plan.maxOutputTokens,
-      activeTools: assembled?.active,
+      activeTools: assembled?.active, abortSignal: input.abortSignal,
       onStatus: (name) => { if (interactive) sink!.status(`Working: ${name.replace(/_+/g, " ")}...`); },
       onText: (t) => { if (interactive && (depth === "direct" || depth === "memory")) sink!.text(t); },
     });
@@ -145,13 +160,17 @@ async function execute(input: TurnInput): Promise<void> {
     let reply = result.text;
     const silent = !reply || NO_REPLY.test(reply);
     let out = reply;
-    if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
+    if (result.stopped === "cancelled") out = input.abortSignal?.reason === "replace" ? "_Dropped that; picking up your newer message._" : "_Stopped._";
+    else if (result.stopped === "ceiling") out = reply && !silent ? `${reply}\n\n${CEILING_MESSAGE}` : CEILING_MESSAGE;
     else if (result.stopped === "timeout") out = reply && !silent ? reply : TIMEOUT_MSG;
     else if (result.stopped === "step_cap" && !silent) out = reply + STEP_CAP_HINT;
     else if (silent) out = "I couldn't generate a reply just now. Please try again in a moment.";
+    const cancelled = result.stopped === "cancelled";
     const quiet = silent && !result.stopped && input.trigger === "chime"; // nothing worth saying: leave no trace
     stage = "reply_finish";
-    if (!quiet) await sink.finish(out);
+    // "Resolved / Not quite" under a real answer (not small talk, errors, cut-off or approval-pending runs)
+    const answered = interactive && !!input.userId && !silent && !result.stopped && !result.waitingApproval && depth !== "direct";
+    if (!quiet) await sink.finish(out, answered ? { actions: resolveActions({ u: input.userId!, q: input.text, t: replyThread }) } : undefined);
     reply = silent ? "" : reply;
 
     await finishRow({
@@ -165,10 +184,11 @@ async function execute(input: TurnInput): Promise<void> {
       }),
       ...(result.waitingApproval ? { finishedAt: null } : {}),
     });
+    void checkSpendAlert().catch((e) => log.warn("spend alert failed", { error: String(e) }));
     if (input.userId) await recordUsage({ userId: input.userId, inputTokens: result.inputTokens, outputTokens: result.outputTokens }).catch((e) => log.warn("recordUsage failed", { error: String(e) }));
 
     // ---- learn: only primary turns on shared-safe data; never from personal/leased tool use ----
-    const canLearn = agentContext === "primary" && !readOnly && !silent && !ctx.touchedPrivateData && depth !== "direct";
+    const canLearn = agentContext === "primary" && !readOnly && !silent && !cancelled && !ctx.touchedPrivateData && depth !== "direct";
     const threadKey = replyThread ?? input.ts;
     if (canLearn) {
       const transcript = `${input.text}\n\nAssistant: ${reply}`;

@@ -14,6 +14,18 @@ export async function listReviews(status?: "pending" | "approved" | "rejected", 
     .orderBy(desc(memoryReviews.createdAt)).limit(limit);
 }
 
+/** Reviews an admin surface may show: shared-scope ones only (private channel / DM text never reaches the review UIs). */
+export async function sharedReviews(rows: Review[]): Promise<Review[]> {
+  const out: Review[] = [];
+  for (const r of rows) {
+    if (r.kind === "core_block") { if ((r.payload as Record<string, unknown>).tag === "shared") out.push(r); continue; }
+    if (r.memoryId == null) continue;
+    const [m] = await db.select({ tag: memories.scopeTag }).from(memories).where(eq(memories.id, r.memoryId));
+    if (m?.tag === "shared") out.push(r);
+  }
+  return out;
+}
+
 export type DecideResult = { ok: boolean; status?: "approved" | "rejected"; error?: string };
 
 /**
