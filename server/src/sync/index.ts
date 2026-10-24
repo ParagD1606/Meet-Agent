@@ -10,7 +10,7 @@ import { settings, syncSources } from "../db/schema";
 import { log, redactError } from "../log";
 import { ingestDocument } from "../memory/ingest";
 import { gdrive } from "./providers/gdrive";
-import { github } from "./providers/github";
+import { github, githubInstallationAuth, verifyGithubInstallation } from "./providers/github";
 import { gcal, gmail } from "./providers/google-personal";
 import { jira } from "./providers/jira";
 import { linear } from "./providers/linear";
@@ -121,8 +121,9 @@ export function mountSyncOAuth(app: Hono<any>): void {
     deleteCookie(c, STATE_COOKIE, { path: "/" });
     const [state, sourceId] = (cookie ?? "").split(".");
     const code = c.req.query("code");
+    const installationId = c.req.query("installation_id");
     if (c.req.query("error")) return c.redirect("/configure/sync?error=denied");
-    if (!isProviderId(provider) || !code || !state || !sourceId || c.req.query("state") !== state) {
+    if (!isProviderId(provider) || !state || !sourceId || c.req.query("state") !== state) {
       return c.json({ error: "invalid_state" }, 400);
     }
     const [src] = await db.select().from(syncSources).where(eq(syncSources.id, sourceId));
@@ -130,7 +131,17 @@ export function mountSyncOAuth(app: Hono<any>): void {
     const owner = (src.selection as SyncSelection | null)?.scopeTag;
     if (isPersonal(src.provider) ? owner !== `user_${user.id}` : user.role === "member") return c.json({ error: "forbidden" }, 403);
     try {
-      const auth = await PROVIDERS[provider].exchange(code);
+      // GitHub returns an installation id to the app setup URL. Verify it with the app JWT before storing it;
+      // no browser-provided access token is ever accepted or persisted.
+      let auth: SyncAuth;
+      if (provider === "github") {
+        if (!installationId) return c.json({ error: "invalid_state" }, 400);
+        await verifyGithubInstallation(installationId);
+        auth = await githubInstallationAuth(installationId);
+      } else {
+        if (!code) return c.json({ error: "invalid_state" }, 400);
+        auth = await PROVIDERS[provider].exchange(code);
+      }
       await db.update(syncSources).set({ authEnc: encrypt(JSON.stringify(auth)), cursor: null }).where(eq(syncSources.id, sourceId));
     } catch (e) {
       log.error("sync oauth exchange failed", { provider, err: String(e) });
@@ -158,7 +169,7 @@ export async function assertJiraBase(raw: string): Promise<void> {
   if (!allowed.includes(host)) throw new Error("baseUrl must be on atlassian.net (or an allow-listed host)");
 }
 
-/** Connects a token-based source (GitHub PAT, Linear API key, Jira email + API token). Nothing syncs until a selection is set. */
+/** Connects a token-based source (Linear API key, Jira email + API token). Nothing syncs until a selection is set. */
 export async function connectWithToken(a: { provider: SyncProviderId; token: string; baseUrl?: string; email?: string }): Promise<string> {
   if (!(TOKEN_PROVIDER_IDS as readonly string[]).includes(a.provider)) throw new Error("invalid_provider");
   if (a.provider === "jira" && (!a.baseUrl || !a.email)) throw new Error("jira needs baseUrl and email");

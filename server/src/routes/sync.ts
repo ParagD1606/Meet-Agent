@@ -28,7 +28,7 @@ syncRoutes.post("/sync/sources", requireAuth("admin"), async (c) => {
   return c.json(await startConnect(c, provider), 201);
 });
 
-/** Token providers (github, linear, jira): admin pastes a PAT / API key; jira also needs baseUrl + email. */
+/** Token providers (Linear, Jira): admin pastes an API key; Jira also needs baseUrl + email. GitHub uses its App install flow. */
 syncRoutes.post("/sync/sources/token", requireAuth("admin"), async (c) => {
   const b = await readBody(c, z.object({
     provider: z.enum(TOKEN_PROVIDER_IDS as [string, ...string[]]), token: z.string().trim().min(8).max(500),

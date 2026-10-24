@@ -9,6 +9,9 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
   - Banners for similar items (Merge / Keep both / Dismiss) and deadline conflicts.
   - Workload chip when someone already has 4+ open approved tasks across your saved meetings, suggesting the lightest teammate.
   - Relative dates ("next Friday") are resolved against the meeting's start time.
+- **Suggest**: for each task, the three people best placed to take it, with the evidence ("Why"), an availability tag and a skill-match bar. **Assign** sets the owner (and approves the task); the person's real Slack identity travels with it, so it shows a proper owner in Meeting notes and can be sent a task DM from the page.
+  - *Skills* come from tasks they completed or are working on that resemble this one, their job title, and team-memory notes that mention them.
+  - *Availability* is what each person already has to finish **before this task's deadline**, from their assigned tasks and due dates (overdue work weighs most, work due after the deadline barely counts), plus who is on this call and time off mentioned in memory in the last 30 days. Set a deadline on the card (one tap) and the ranking updates. It does not see calendars or Slack presence, and it only counts tasks and memory you are allowed to see, so treat it as a guide.
 - **Ask**: chat about the meeting ("Who is free to take this?", "What did we decide?").
 - **Settings**: server URL, token (saved automatically), auto-update (notes and items, every 2 minutes), auto-send.
 
@@ -18,6 +21,13 @@ A side panel that sits next to your call (Google Meet, Microsoft Teams, Zoom web
 1. In Company Brain open **Meeting notes** and press **Get my token** (anyone signed in can; no admin needed). Meetings uploaded with it appear under your account.
 2. `chrome://extensions` > Developer mode > Load unpacked > this folder. Reload it after updates.
 3. Click the extension icon to open the panel, paste the token in Settings (once).
+
+## Team memory
+Ask also searches the team's memory (Slack conversations and what is in the Brain site) and shows which items it used, with a link back to the Slack thread when there is one. It reads memory as **you**: shared knowledge, your own DMs, and private channels you belong to, never anyone else's.
+
+When decisions and tasks are written at the end, memory is given to the model only as background, to understand names, projects and references; every task and decision must still be quoted from the meeting itself, so memory can never create one. A relevant earlier item is mentioned in the summary as "Related earlier context".
+
+Finished extension meetings are remembered too, **privately for the person who held them**, so you can later ask "what did we decide last time?".
 
 ## Names
 Meet labels your own speech "You". The panel replaces it with your real name (from the participant list when it is open, otherwise the owner of your API token, or the name you type under Settings > You), so owners and the final notes use real names.

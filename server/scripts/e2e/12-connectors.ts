@@ -1,5 +1,6 @@
 // (12) connectors (GitHub / Linear / Jira / Gmail / Calendar) against fake HTTP, huddle import from a canvas-like HTML, then real answers over the synced text.
 import { eq } from "drizzle-orm";
+import { config } from "../../src/config";
 import { encrypt } from "../../src/crypto";
 import { channelMembers, meetings, syncSources, users } from "../../src/db/schema";
 import { connectWithToken, runSync, assertJiraBase } from "../../src/sync";
@@ -57,7 +58,9 @@ for (const bad of ["http://acme.atlassian.net", "https://127.0.0.1", "https://lo
 }
 
 // ---- org connectors ----
-const gh = await connectWithToken({ provider: "github", token: "ghp_fake" });
+Object.assign(config, { GITHUB_APP_ID: "123", GITHUB_APP_SLUG: "company-brain", GITHUB_APP_PRIVATE_KEY: "unused-in-this-mock" });
+const gh = "sync_github_app";
+await db.insert(syncSources).values({ id: gh, provider: "github", authEnc: encrypt(JSON.stringify({ accessToken: "ghs_fake", expiresAt: Date.now() + 3_600_000, extra: { installationId: "42" } })) });
 const ln = await connectWithToken({ provider: "linear", token: "lin_api_fake" });
 const jr = await connectWithToken({ provider: "jira", token: "jira_fake", baseUrl: "https://acme.atlassian.net", email: "admin@acme.io" });
 await db.update(syncSources).set({ selection: { ids: ["acme/web"] } }).where(eq(syncSources.id, gh));

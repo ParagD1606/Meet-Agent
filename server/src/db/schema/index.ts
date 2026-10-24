@@ -275,7 +275,7 @@ export const apiTokens = pgTable("api_tokens", {
 
 export const syncSources = pgTable("sync_sources", {
   id: text("id").primaryKey(),
-  provider: text("provider", { enum: ["gdrive", "onedrive", "notion"] }).notNull(),
+  provider: text("provider", { enum: ["gdrive", "onedrive", "notion", "github", "linear", "jira", "gmail", "gcal"] }).notNull(),
   authEnc: text("auth_enc"),
   cursor: text("cursor"),
   selection: jsonb("selection"), // admin-chosen folders/workspaces; null = nothing selected = nothing synced

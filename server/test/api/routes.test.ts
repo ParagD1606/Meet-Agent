@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { config } from "../../src/config";
 import { memories, channels, meetings, meetingTaskNotifications } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
@@ -166,12 +166,17 @@ describe("static web", () => {
 });
 
 describe("extension upload", () => {
+  // Uploads run memory recall, which embeds text; keep these tests offline.
+  beforeEach(() => setEmbedder(async (t) => t.map(() => vec())));
+  afterEach(() => setEmbedder(null));
   test("rejects bad tokens and bodies", async () => {
     expect((await app.request("/ext/meetings", { method: "POST", body: "{}" })).status).toBe(401);
     expect((await app.request("/ext/ping", { headers: { authorization: "Bearer nope" } })).status).toBe(401);
   });
 
   test("live ask/analyze need a token and a valid body", async () => {
+    setEmbedder(async (t) => t.map(() => vec())); setMemoryLlm(async () => '{"items":[]}'); // no network: memory recall embeds, the model answers
+    try {
     const post = (path: string, headers: Record<string, string>, b: unknown) => app.request(path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(b) });
     expect((await post("/ext/ask", {}, { lines: [], question: "x" })).status).toBe(401);
     expect((await post("/ext/analyze", {}, { lines: [] })).status).toBe(401);
@@ -182,6 +187,7 @@ describe("extension upload", () => {
     expect((await post("/ext/notes", auth, { lines: [] })).status).toBe(400);
     expect((await post("/ext/notes", auth, { lines: [{ speaker: "A", text: "hi" }], offset: 3, previous: "- x" })).status).not.toBe(401);
     expect((await post("/ext/analyze", auth, { lines: [{ speaker: "A", text: "hi" }], context: { roster: ["A"] }, known: [] })).status).not.toBe(401);
+    } finally { setEmbedder(null); setMemoryLlm(null); }
   });
 
   test("stores an upload privately for its owner", async () => {

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { generateKeyPairSync } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { config } from "../../src/config";
-import { encrypt } from "../../src/crypto";
+import { decrypt, encrypt } from "../../src/crypto";
 import { memories, syncSources } from "../../src/db/schema";
 import { setEmbedder } from "../../src/memory/embed";
 import { runSync } from "../../src/sync";
@@ -13,6 +14,7 @@ import { http } from "../../src/sync/types";
 import { app, call, db, login, resetDb } from "../api/helpers";
 
 const realFetch = globalThis.fetch;
+const githubKey = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
 type Handler = (url: URL, init?: RequestInit) => unknown;
 let calls: string[];
 function mockFetch(h: Handler) {
@@ -29,7 +31,7 @@ function mockFetch(h: Handler) {
 beforeEach(async () => {
   await resetDb();
   setEmbedder(async (t) => t.map(() => Array.from({ length: config.EMBEDDING_DIM }, (_, k) => (k === 0 ? 1 : 0))));
-  Object.assign(config, { GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsec", PUBLIC_URL: "http://localhost:3000" });
+  Object.assign(config, { GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsec", PUBLIC_URL: "http://localhost:3000", GITHUB_APP_ID: "123", GITHUB_APP_SLUG: "company-brain", GITHUB_APP_PRIVATE_KEY: githubKey });
 });
 afterEach(() => { globalThis.fetch = realFetch; setEmbedder(null); });
 
@@ -202,12 +204,27 @@ describe("personal gmail + calendar", () => {
     expect((await call("POST", "/api/sync/personal", { cookie: ck, body: { provider: "github" } })).status).toBe(400);
   });
 
-  test("token connect route stores an encrypted PAT; selection edit on shared source keeps no scope", async () => {
+  test("GitHub App installation creates a shared source without accepting a browser token", async () => {
     const adm = await login("A1", "admin");
-    const r = await call("POST", "/api/sync/sources/token", { cookie: adm, body: { provider: "github", token: "ghp_abcdefgh" } });
+    const r = await call("POST", "/api/sync/sources", { cookie: adm, body: { provider: "github" } });
     expect(r.status).toBe(201);
-    const { id } = (await r.json()) as { id: string };
-    expect((await db.select().from(syncSources).where(and(eq(syncSources.id, id))))[0]!.authEnc).not.toContain("ghp_");
+    const { id, authUrl } = (await r.json()) as { id: string; authUrl: string };
+    const state = new URL(authUrl).searchParams.get("state")!;
+    expect(new URL(authUrl).origin + new URL(authUrl).pathname).toBe("https://github.com/apps/company-brain/installations/new");
+    const stateCookie = r.headers.getSetCookie().find((c) => c.startsWith("brain_sync_state="))!.split(";")[0]!;
+    mockFetch((u) => {
+      if (u.pathname === "/app/installations/42") return { id: 42 };
+      if (u.pathname === "/app/installations/42/access_tokens") return { token: "ghs_short_lived", expires_at: new Date(Date.now() + 3_600_000).toISOString() };
+      throw new Error(`unexpected ${u}`);
+    });
+    const done = await app.request(`/sync/oauth/github/callback?installation_id=42&state=${state}`, { headers: { cookie: `${adm}; ${stateCookie}` } });
+    expect(done.status).toBe(302);
+    expect(JSON.parse(decrypt((await db.select().from(syncSources).where(and(eq(syncSources.id, id))))[0]!.authEnc!))).toMatchObject({ accessToken: "ghs_short_lived", extra: { installationId: "42" } });
+    expect((await call("POST", "/api/sync/sources/token", { cookie: adm, body: { provider: "github", token: "ghp_abcdefgh" } })).status).toBe(400);
+    const linear = await call("POST", "/api/sync/sources/token", { cookie: adm, body: { provider: "linear", token: "lin_abcdefgh" } });
+    expect(linear.status).toBe(201);
+    const { id: linearId } = (await linear.json()) as { id: string };
+    expect((await db.select().from(syncSources).where(and(eq(syncSources.id, linearId))))[0]!.authEnc).not.toContain("lin_abcdefgh");
     expect((await call("POST", "/api/sync/sources/token", { cookie: adm, body: { provider: "jira", token: "abcdefgh12" } })).status).toBe(400);
     expect((await call("PUT", `/api/sync/sources/${id}`, { cookie: adm, body: { selection: { ids: ["acme/app"] } } })).status).toBe(200);
   });

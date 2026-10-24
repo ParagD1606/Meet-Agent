@@ -16,6 +16,7 @@ const state = {
   load: {},         // open approved tasks per person, across meetings
   chat: [], connected: null, editing: new Set(),
   analyzing: false, lastRun: 0, lastCount: {},
+  suggest: { sig: "", data: null, loading: false },
 };
 const src = () => state.manual ?? state.snap;
 const me = () => state.cfg.myName || state.snap?.self || state.pingName || "";
@@ -27,6 +28,7 @@ const storeKey = () => `meeting:${src()?.key ?? "none"}`;
 
 // ---------- tabs ----------
 function show(tab) {
+  if (tab === "suggest") setTimeout(() => fetchSuggest(false), 0);
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   document.querySelectorAll(".tab").forEach((s) => s.classList.toggle("on", s.id === tab));
   try { sessionStorage.setItem("tab", tab); } catch {}
@@ -137,14 +139,16 @@ $("recap").onclick = async () => {
 };
 
 // ---------- ask ----------
-const SUGGESTIONS = ["Summarize so far", "What did we decide?", "Who is free to take this?", "What's still unresolved?"];
+const SUGGESTIONS = ["Summarize so far", "What did we decide?", "What did we decide about this before?", "Who is free to take this?"];
 $("chips").innerHTML = SUGGESTIONS.map((q) => `<button type="button" class="sm">${esc(q)}</button>`).join("");
 $("chips").onclick = (e) => { const q = e.target.closest("button")?.textContent; if (q) sendQuestion(q); };
 $("askForm").onsubmit = (e) => { e.preventDefault(); const q = $("q").value.trim(); if (q) { $("q").value = ""; sendQuestion(q); } };
 
+// What the answer drew on from the team's memory (Slack and Brain), so it can be checked.
+const sourcesHtml = (src) => !src?.length ? "" : `<details class="src"><summary>From team memory · ${src.length}</summary><ul>${src.map((x) => `<li>${esc(x.text)} <span class="muted">${esc(x.source)}, ${esc(x.date)}</span>${x.url && /^https?:\/\//.test(x.url) ? ` <a href="${esc(x.url)}" target="_blank" rel="noreferrer">open</a>` : ""}</li>`).join("")}</ul></details>`;
 function renderChat() {
   const c = $("chat");
-  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}</div>`).join("") : `<div class="empty"><b>Ask about the call</b>Try “What did we decide?” or “Who is free to take this?”</div>`;
+  c.innerHTML = state.chat.length ? state.chat.map((m) => `<div class="msg ${m.role}${m.err ? " err" : ""}">${m.role === "assistant" && !m.err ? renderNotes(m.text) : esc(m.text)}${sourcesHtml(m.sources)}</div>`).join("") : `<div class="empty"><b>Ask about the call or the past</b>I also search the team's Slack and Brain memory, so you can ask “What did we decide about this before?”</div>`;
   c.scrollTop = c.scrollHeight;
 }
 function needReady() {
@@ -159,7 +163,7 @@ const workloadNote = () => Object.entries(state.load).map(([n, c]) => `${n}: ${c
 
 async function callAsk(question, history = []) {
   const r = await ask({ type: "api", path: "/ext/ask", body: { lines: lines(), question, history, context: { ...context(), notes: [notes(), workloadNote() && `Workload: ${workloadNote()}`].filter(Boolean).join("\n") } } });
-  return r?.ok ? { ok: true, text: r.data.answer } : { ok: false, text: failText(r) };
+  return r?.ok ? { ok: true, text: r.data.answer, sources: r.data.sources ?? [] } : { ok: false, text: failText(r) };
 }
 async function sendQuestion(q) {
   const block = needReady();
@@ -168,7 +172,7 @@ async function sendQuestion(q) {
   state.chat.push({ role: "assistant", text: "Thinking…" }); renderChat();
   const history = state.chat.slice(0, -2).map((m) => ({ role: m.role, text: m.text }));
   const r = await callAsk(q, history);
-  state.chat.pop(); state.chat.push({ role: "assistant", text: r.text, err: !r.ok }); renderChat();
+  state.chat.pop(); state.chat.push({ role: "assistant", text: r.text, err: !r.ok, sources: r.sources ?? [] }); renderChat();
 }
 
 // ---------- detected items ----------
@@ -229,6 +233,7 @@ $("approveAll").onclick = async () => {
 };
 
 function renderItems() {
+  if ($("suggest").classList.contains("on")) fetchSuggest(false);
   const items = state.store.items;
   const pending = items.filter((i) => i.status === "pending").length;
   $("pendingCount").hidden = !pending; $("pendingCount").textContent = pending;
@@ -268,7 +273,7 @@ $("itemList").addEventListener("click", async (e) => {
   else if (act === "undo") item.status = "pending";
   else if (act === "done") item.done = btn.checked;
   else if (act === "edit") { state.editing.has(item.id) ? state.editing.delete(item.id) : state.editing.add(item.id); return renderItems(); }
-  else if (act === "owner") item.assignee = btn.dataset.v;
+  else if (act === "owner") { item.assignee = btn.dataset.v; delete item.assigneeId; }
   else if (act === "due") item.due = btn.dataset.v;
   else if (act === "keep") item.dismissed = true;
   else if (act === "merge") {
@@ -281,8 +286,62 @@ $("itemList").addEventListener("change", async (e) => {
   const f = e.target.dataset.f; const item = state.store.items.find((i) => i.id === e.target.closest(".item")?.dataset.id);
   if (!f || !item) return;
   item[f] = e.target.value.trim();
+  if (f === "assignee") delete item.assigneeId; // typed by hand: not linked to a Slack person
   if (f === "kind") state.editing.delete(item.id);
   await persist();
+});
+
+// ---------- who should do what ----------
+const isoDue = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? "") ? v : undefined);
+// A task's deadline decides who is free: availability is what each person must clear before it.
+const suggestTasks = () => state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected").slice(0, 12).map((i) => ({ id: i.id, title: i.title, due: isoDue(i.due) }));
+async function fetchSuggest(force) {
+  const tasks = suggestTasks(), sig = JSON.stringify(tasks);
+  if (!tasks.length) { state.suggest = { sig, data: null, loading: false }; return renderSuggest(); }
+  if (state.suggest.loading || (!force && sig === state.suggest.sig && state.suggest.data)) return renderSuggest();
+  if (!state.connected) { $("suggestMsg").textContent = "Connect to your Brain server in Settings first."; return renderSuggest(); }
+  state.suggest.loading = true; $("suggestMsg").textContent = "Looking at skills and workload…"; $("suggestNow").disabled = true;
+  const r = await ask({ type: "api", path: "/ext/suggest", body: { tasks, roster: roster(), context: src()?.title } });
+  state.suggest.loading = false; $("suggestNow").disabled = false;
+  if (!r?.ok) { $("suggestMsg").textContent = failText(r); return renderSuggest(); }
+  state.suggest = { sig, data: r.data, loading: false };
+  $("suggestMsg").textContent = "";
+  renderSuggest();
+}
+$("suggestNow").onclick = () => fetchSuggest(true);
+
+const AVAIL = { light: "Light load", busy: "Busy", overloaded: "Overloaded" };
+function renderSuggest() {
+  const items = state.store.items.filter((i) => i.kind === "task" && i.status !== "rejected");
+  const data = state.suggest.data, byTask = Object.fromEntries((data?.tasks ?? []).map((t) => [t.id, t]));
+  $("suggestBasis").textContent = data?.basis ? `${data.basis.note} Based on ${data.basis.people} people and ${data.basis.tasksSeen} tasks you can see${data.basis.usedMemory ? ", plus team memory" : ""}.` : "";
+  if (!items.length) { $("suggestList").innerHTML = `<div class="empty"><b>No tasks yet</b>Generate decisions and tasks first (Items tab), then come back to see who is best placed to take each one.</div>`; return; }
+  $("suggestList").innerHTML = items.map((i) => {
+    const t = byTask[i.id];
+    const cur = i.assignee ? `<span class="muted">Assigned to <b>${esc(i.assignee)}</b></span>` : `<span class="muted">Unassigned</span>`;
+    const cands = !t ? `<p class="muted">${state.suggest.loading ? "Looking…" : "No suggestions yet. Press Refresh."}</p>` : t.candidates.map((c) => {
+      const mine = i.assigneeId === c.userId;
+      return `<div class="cand" data-task="${esc(i.id)}" data-uid="${esc(c.userId)}" data-name="${esc(c.name)}">
+        <div><div class="nm">${esc(c.name)}</div>${c.title ? `<div class="tt">${esc(c.title)}</div>` : ""}</div>
+        <button class="sm go ${mine ? "" : "primary"}" data-act="assign" ${mine ? "disabled" : ""}>${mine ? "Assigned ✓" : "Assign"}</button>
+        <div class="match" title="Skill match"><i style="width:${Math.round(c.skill * 100)}%"></i></div>
+        <div class="pills"><span class="pill ${c.availability}">${AVAIL[c.availability]}</span>${c.onCall ? `<span class="pill call">On this call</span>` : ""}${c.possibleTimeOff ? `<span class="pill off">Possible time off</span>` : ""}<span class="pill">${c.skill > 0 ? `Skill match ${Math.round(c.skill * 100)}%` : "No skill signal"}</span></div>
+        <details><summary>Why</summary><ul>${c.reasons.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details></div>`;
+    }).join("") + (t?.noSkillSignal ? `<p class="muted">Nobody has a clear track record for this, so these are ranked by availability.</p>` : "");
+    const iso = isoDue(i.due);
+    const when = iso ? `<span class="muted">Due <b>${esc(iso)}</b></span>` : `<span class="chipsrow"><span class="q">${i.due ? `Due “${esc(i.due)}” is not a date. ` : ""}Due when? Availability depends on it.</span>${dueChips(src()?.startedAt ? new Date(src().startedAt) : new Date()).map(([l, v]) => `<button class="sm" data-act="setdue" data-task="${esc(i.id)}" data-v="${v}">${l}</button>`).join("")}</span>`;
+    return `<div class="sug"><div class="t">${esc(i.title)}</div><div class="cur">${cur} · ${when}</div>${cands}</div>`;
+  }).join("");
+}
+$("suggestList").addEventListener("click", async (e) => {
+  const due = e.target.closest('[data-act="setdue"]');
+  if (due) { const it = state.store.items.find((x) => x.id === due.dataset.task); if (it) { it.due = due.dataset.v; await persist(); } return; }
+  const btn = e.target.closest('[data-act="assign"]'); if (!btn) return;
+  const card = btn.closest(".cand"); const item = state.store.items.find((x) => x.id === card.dataset.task);
+  if (!item) return;
+  // Picking an owner is a decision about the task, so it counts as approving it; otherwise the choice would not be sent.
+  item.assignee = card.dataset.name; item.assigneeId = card.dataset.uid; if (item.status === "pending") item.status = "approved";
+  await persist(); renderSuggest();
 });
 
 // ---------- finish & send ----------
@@ -343,4 +402,5 @@ $("modalYes").onclick = async () => { const keepOpen = (await modalYes?.()) === 
   await testConn();
   await poll();
   renderItems();
+  renderSuggest();
 })();

@@ -9,6 +9,8 @@ import { config } from "../config";
 import { htmlToText } from "../memory/ingest";
 import { recordEpisode } from "../memory/episodes";
 import { captureTurn } from "../memory/writeback";
+import { buildRecall } from "../memory/recall";
+import type { SlackScope } from "../memory/scope";
 import { openDm, postMessage, slackClient } from "../slack/client";
 import { makeSource, quoteSupported, verifiedOwner } from "./verify";
 
@@ -53,6 +55,7 @@ const MAX_SOURCE_CHARS = 400_000;
 const SUMMARY_SYSTEM = `You turn completed meeting source material (a transcript, or Slack AI Huddle notes) into useful meeting notes. Work from the WHOLE text, start to end.
 Use only the supplied text. Never use outside knowledge, the company's projects, or what a meeting like this "usually" covers. If something is not written in the text, it does not exist.
 The text is usually automatic speech recognition: words can be wrong ("skating" for "scaling"), punctuation is unreliable, sentences are cut at random points, and names may be lowercase or misspelled. Read for meaning across the broken sentences, and write names with normal capitalisation.
+When a "Background" block is given it is earlier team knowledge (Slack and notes). Use it ONLY to understand who people are and what projects, names and references mean. Never create a task or decision from it, and every quote must still come from the meeting text. If something decided or assigned here clearly relates to an earlier item in the Background, say so in one line under a "Related earlier context" heading in the summary, naming that earlier item.
 - "summary": concise Markdown with headings for Discussion and Open questions when applicable.
 - "decisions": only where a choice was made or agreed ("we decided", "let's go with", "the plan is"). A speaker describing hopes, goals or intentions is not a decision. Each is {"text": short sentence, "quote": words copied exactly from the text that show the decision}.
 - "tasks": every commitment or assignment, however small ("X will do Y", "I'll ...", "Y is on Z", "Z to handle ..."). Each is {"title", "description", "assigneeName", "assigneeId", "dueDate", "quote"} where quote is words copied exactly from the text. Do not skip small ones, and do not add any without a quote.
@@ -235,13 +238,13 @@ function transcriptText(file: HuddleFile): { text: string; participantIds: strin
  * Feeds a finished meeting into memory via the public captureTurn (facts) + recordEpisode in the channel's write scope: public -> shared,
  * private -> channel_X. An unknown channel is treated as private (never widens). Best effort: memory failure never fails the meeting.
  */
-export async function rememberMeeting(a: { channelId: string; fileId: string; title: string; summary: string; tasks: { title: string; assigneeName?: string | null; dueDate?: string | null }[] }): Promise<void> {
+export async function rememberMeeting(a: { channelId: string; fileId: string; title: string; summary: string; label?: string; scope?: SlackScope; tasks: { title: string; assigneeName?: string | null; dueDate?: string | null }[] }): Promise<void> {
   try {
-    const [ch] = await db.select({ isPrivate: channels.isPrivate, isIm: channels.isIm }).from(channels).where(eq(channels.id, a.channelId));
-    const scope = { channelId: a.channelId, isPrivate: ch ? ch.isPrivate : true, isIm: ch?.isIm ?? false, userId: null };
+    const [ch] = a.scope ? [] : await db.select({ isPrivate: channels.isPrivate, isIm: channels.isIm }).from(channels).where(eq(channels.id, a.channelId));
+    const scope = a.scope ?? { channelId: a.channelId, isPrivate: ch ? ch.isPrivate : true, isIm: ch?.isIm ?? false, userId: null };
     const tasks = a.tasks.map((t) => `- ${t.title}${t.assigneeName ? ` (owner: ${t.assigneeName})` : ""}${t.dueDate ? ` (due ${t.dueDate})` : ""}`).join("\n");
     // tasks are commitments made in the meeting; their live status is not stored here
-    const transcript = `Slack Huddle "${a.title}"\n\n${a.summary}${tasks ? `\n\nAction items agreed:\n${tasks}` : ""}`;
+    const transcript = `${a.label ?? "Slack Huddle"} "${a.title}"\n\n${a.summary}${tasks ? `\n\nAction items agreed:\n${tasks}` : ""}`;
     await captureTurn({ scope, transcript, sourceRef: `meeting:${a.fileId}`, createdBy: "bot" });
     await recordEpisode({ scope, channelId: a.channelId, threadTs: `huddle_${a.fileId}`, transcript });
   } catch (err) {
@@ -408,9 +411,9 @@ export async function handleMeetingTaskAction(payload: { user?: { id?: string };
   return true;
 }
 
-async function analyze(sourceFileId: string, text: string, participants: string[] = []): Promise<void> {
+async function analyze(sourceFileId: string, text: string, participants: string[] = [], background = ""): Promise<void> {
   try {
-    const header = participants.length ? `Participants: ${participants.join(", ")}\n\n` : "";
+    const header = `${participants.length ? `Participants: ${participants.join(", ")}\n\n` : ""}${background ? `Background (earlier team knowledge; see the rules above):\n${background}\n\n` : ""}`;
     const raw = await completeJson({ system: SUMMARY_SYSTEM, prompt: header + text.slice(-MAX_SOURCE_CHARS), role: "main", maxOutputTokens: 2_400 }, analysisSchema);
     // Keep only what the text itself supports; an unsupported item is dropped, never "fixed".
     const src = makeSource(text);
@@ -428,6 +431,9 @@ async function analyze(sourceFileId: string, text: string, participants: string[
     await db.update(meetings).set({ summary: raw.summary, decisions, tasks, status: "ready", updatedAt: new Date() }).where(eq(meetings.id, meeting.id));
     const [saved] = await db.select({ channelId: meetings.channelId, title: meetings.title }).from(meetings).where(eq(meetings.id, meeting.id)).limit(1);
     if (saved && !saved.channelId.startsWith("ext_")) await rememberMeeting({ channelId: saved.channelId, fileId: sourceFileId, title: saved.title, summary: raw.summary, tasks: found });
+    // Extension meetings are remembered too, but only for the person who held them (their private scope), so they can ask about them later.
+    else if (saved) await rememberMeeting({ channelId: saved.channelId, fileId: sourceFileId, title: saved.title, label: "Meeting", scope: personScope(saved.channelId.slice(4)),
+      summary: decisions.length ? `${raw.summary}\n\nDecisions:\n${decisions.map((d) => `- ${d}`).join("\n")}` : raw.summary, tasks: found });
   } catch (err) {
     await db.update(meetings).set({ status: "failed", updatedAt: new Date() }).where(eq(meetings.sourceFileId, sourceFileId));
     log.warn("meeting summary failed", { fileId: sourceFileId, error: err instanceof Error ? err.message : String(err) });
@@ -446,9 +452,12 @@ function similar(a: string, b: string): boolean {
 async function mergeUserNotes(sourceFileId: string, t: ExtensionTranscript): Promise<void> {
   const [row] = await db.select({ id: meetings.id, summary: meetings.summary, tasks: meetings.tasks, decisions: meetings.decisions, status: meetings.status }).from(meetings).where(eq(meetings.sourceFileId, sourceFileId));
   if (!row) return;
+  // An owner picked in the panel from the suggestions carries a Slack user id; only real, active people are linked.
+  const ids = [...new Set((t.tasks ?? []).map((k) => k.assigneeId).filter((v): v is string => !!v))];
+  const real = new Map((ids.length ? await db.select({ id: users.id, name: users.name }).from(users).where(and(inArray(users.id, ids), eq(users.deactivated, false), eq(users.isBot, false))) : []).map((u) => [u.id, u.name]));
   const mine: NewMeetingTask[] = (t.tasks ?? []).map((k) => ({
     title: k.title, description: k.done ? "Marked done during the call." : "",
-    assigneeName: k.assignee?.trim() || null, assigneeId: null, dueDate: k.due?.trim() || null,
+    assigneeName: (k.assigneeId && real.get(k.assigneeId)) || k.assignee?.trim() || null, assigneeId: k.assigneeId && real.has(k.assigneeId) ? k.assigneeId : null, dueDate: k.due?.trim() || null,
   }));
   const existing = asTasks(row.id, row.tasks);
   const fresh: NewMeetingTask[] = [...mine, ...existing.filter((k) => !mine.some((m) => similar(m.title, k.title))).map(({ id: _id, notification: _notification, ...task }) => task)];
@@ -470,7 +479,7 @@ export type ExtensionTranscript = {
   decisions?: string[];
   /** Display names of everyone seen on the call, so the final pass names owners correctly. */
   participants?: string[];
-  tasks?: { title: string; assignee?: string; due?: string; done?: boolean }[];
+  tasks?: { title: string; assignee?: string; assigneeId?: string; due?: string; done?: boolean }[];
 };
 
 /** Stores a transcript captured by the browser extension and summarizes it. Private to its uploader (and admins). */
@@ -487,7 +496,8 @@ export async function ingestExtensionTranscript(userId: string, t: ExtensionTran
     .returning({ id: meetings.id });
   // The upload is saved; the model reads the whole transcript afterwards so the request returns at once.
   // No task DMs go out from here: a model's guess at an owner must not message a real person. Use "Send task DMs" on the page.
-  const done = analyze(sourceFileId, text, t.participants ?? [])
+  const done = recallForMeeting(userId, `${t.title}\n${(t.participants ?? []).join(", ")}\n${text.slice(0, 300)}`, { budgetTokens: 1_500 })
+    .then((mem) => analyze(sourceFileId, text, t.participants ?? [], mem.text))
     .then(() => (t.decisions?.length || t.tasks?.length ? mergeUserNotes(sourceFileId, t) : undefined))
     .catch((err) => log.warn("meeting finalize failed", { fileId: sourceFileId, error: String(err) }));
   return { id: row!.id, done };
@@ -571,8 +581,27 @@ async function syncHuddles(opts: { force?: boolean; maxPages?: number }): Promis
   return { found: candidates.length, imported, failed };
 }
 
+/** The extension acts for one signed-in person, so it reads memory as a DM with them: shared, their own DMs, and private channels they belong to. */
+export const personScope = (userId: string): SlackScope => ({ channelId: `ext_${userId}`, isPrivate: false, isIm: true, userId });
+
+export type MemorySource = { text: string; source: string; date: string; url?: string };
+/** What the team already knows (Slack and Brain memory) that this person may read, with its sources. Never throws: no memory just means no background. */
+export async function recallForMeeting(userId: string, query: string, opts: { rewrite?: boolean; budgetTokens?: number } = {}): Promise<{ text: string; sources: MemorySource[] }> {
+  try {
+    const r = await buildRecall({ scope: personScope(userId), query, budgetTokens: opts.budgetTokens ?? 1_800, rewrite: opts.rewrite ?? false });
+    return {
+      text: r.text,
+      sources: r.hits.slice(0, 8).map((h) => ({ text: h.text.slice(0, 240), source: h.source, date: (h.validAt ?? h.createdAt).toISOString().slice(0, 10), ...(h.permalink && /^https?:\/\//.test(h.permalink) ? { url: h.permalink } : {}) })),
+    };
+  } catch (err) {
+    log.warn("meeting memory recall failed", { error: err instanceof Error ? err.message : String(err) });
+    return { text: "", sources: [] };
+  }
+}
+
 const LIVE_ASK_SYSTEM = `You are a meeting assistant sitting in on a live call. Answer the user's question using only the transcript and the meeting context provided.
-Be brief and concrete, name people when relevant, and say plainly when the transcript does not cover the question. Never invent facts, owners or dates.`;
+For what is happening in THIS meeting, the transcript is the truth. For questions about earlier conversations, decisions, people or projects, use the team memory block when one is given and say it comes from memory, with its date; if the transcript and memory disagree about this meeting, the transcript wins.
+Be brief and concrete, name people when relevant, and say plainly when neither the transcript nor memory covers the question. Never invent facts, owners or dates.`;
 
 const LIVE_ANALYZE_SYSTEM = `You read the WHOLE transcript of a meeting and flag items for a human to approve. Transcript lines are numbered like [12]. Use only what is written there; never outside knowledge or what such a meeting "usually" covers.
 The transcript is usually automatic speech recognition: words can be wrong, punctuation is unreliable, sentences are cut at random points, names may be lowercase or misspelled. Read for meaning across the broken sentences and write names with normal capitalisation.
@@ -625,16 +654,16 @@ function contextBlock(ctx: LiveContext): string {
 }
 
 /** Answers a question about an in-progress call. Nothing is stored. */
-export async function askLiveMeeting(lines: LiveLine[], question: string, history: { role: "user" | "assistant"; text: string }[] = [], ctx: LiveContext & { notes?: string } = {}): Promise<string> {
+export async function askLiveMeeting(lines: LiveLine[], question: string, history: { role: "user" | "assistant"; text: string }[] = [], ctx: LiveContext & { notes?: string } = {}, memory = ""): Promise<string> {
   const convo = history.slice(-6).map((h) => `${h.role === "user" ? "Q" : "A"}: ${h.text}`).join("\n");
-  const prompt = `${contextBlock(ctx)}\n${ctx.notes ? `Tracked so far:\n${ctx.notes.slice(0, 4_000)}\n` : ""}\nTranscript so far:\n${numbered(lines)}\n\n${convo ? `Earlier in this chat:\n${convo}\n\n` : ""}Question: ${question}`;
+  const prompt = `${contextBlock(ctx)}\n${memory ? `Team memory (earlier than this meeting; each line has its source and date):\n${memory}\n` : ""}${ctx.notes ? `Tracked so far:\n${ctx.notes.slice(0, 4_000)}\n` : ""}\nTranscript so far:\n${numbered(lines)}\n\n${convo ? `Earlier in this chat:\n${convo}\n\n` : ""}Question: ${question}`;
   return (await completeText({ system: LIVE_ASK_SYSTEM, prompt, role: "main", maxOutputTokens: 700 })).trim();
 }
 
 /** Extracts classified, evidenced decisions/tasks/questions from an in-progress call. Nothing is stored. */
-export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, known: string[] = []) {
+export async function analyzeLiveMeeting(lines: LiveLine[], ctx: LiveContext, known: string[] = [], background = "") {
   const tracked = known.length ? `\nAlready tracked:\n${known.slice(0, 100).map((k) => `- ${k}`).join("\n")}\n` : "";
-  const prompt = `${contextBlock(ctx)}\n${tracked}\nTranscript so far:\n${numbered(lines)}`;
+  const prompt = `${contextBlock(ctx)}\n${background ? `Background (earlier team knowledge: use ONLY to understand names, projects and references; never make an item from it):\n${background}\n` : ""}${tracked}\nTranscript so far:\n${numbered(lines)}`;
   const out = await completeJson({ system: LIVE_ANALYZE_SYSTEM, prompt, role: "main", maxOutputTokens: 1_800 }, liveAnalysisSchema);
   // Keep only items whose quote is really in the transcript, evidence that points at a real line, and owners from the roster.
   const src = makeSource(lines.map((l) => `${l.speaker}: ${l.text}`).join("\n"));

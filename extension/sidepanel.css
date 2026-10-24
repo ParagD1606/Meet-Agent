@@ -158,3 +158,19 @@ label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 50
 .msg ul, .recap ul { margin: 4px 0; padding-left: 18px; } .msg h4, .recap h4 { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); } .msg p, .recap p { margin: 4px 0; }
 .msg.user { white-space: pre-wrap; } .msg:not(.user) { white-space: normal; } .recap { white-space: normal; }
 .fields textarea { grid-column: 1 / -1; min-height: 56px; padding: 6px 9px; font-size: 12.5px; resize: vertical; width: 100%; }
+
+.msg .src { margin-top: 8px; font-size: 12px; border-top: 1px solid var(--line); padding-top: 6px; }
+.msg .src summary { cursor: pointer; color: var(--mut); font-weight: 600; }
+.msg .src ul { margin: 6px 0 0; padding-left: 16px; } .msg .src li { margin: 3px 0; } .msg .src a { color: var(--acc); }
+
+/* suggest */
+.sug { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 11px 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.sug .t { font-weight: 650; font-size: 13.5px; } .sug .cur { margin-top: 2px; }
+.cand { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 9px 0; border-top: 1px solid var(--line); margin-top: 8px; }
+.cand .nm { font-weight: 650; } .cand .tt { color: var(--mut); font-size: 12px; }
+.pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; grid-column: 1 / -1; }
+.pill { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; background: var(--soft); color: var(--mut); }
+.pill.light { background: var(--ok-soft); color: var(--ok); } .pill.busy { background: var(--warn-soft); color: var(--warn); } .pill.overloaded, .pill.off { background: var(--bad-soft); color: var(--bad); } .pill.call { background: var(--info-soft); color: var(--info); }
+.match { height: 5px; border-radius: 99px; background: var(--soft); overflow: hidden; grid-column: 1 / -1; } .match i { display: block; height: 100%; background: var(--acc); }
+.cand details { grid-column: 1 / -1; font-size: 12px; } .cand summary { cursor: pointer; color: var(--mut); font-weight: 600; } .cand ul { margin: 4px 0 0; padding-left: 16px; } .cand li { margin: 2px 0; }
+.cand .go { align-self: start; }
