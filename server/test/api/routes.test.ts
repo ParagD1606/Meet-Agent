@@ -158,6 +158,7 @@ describe("static web", () => {
     try {
       expect(await (await app.request("/assets/app.js")).text()).toBe("console.log(1)");
       expect(await (await app.request("/graph")).text()).toBe("<html>spa</html>");
+      expect(await (await app.request("/sync")).text()).toBe("<html>spa</html>");
       expect((await app.request("/..%2f..%2fetc/passwd")).status).not.toBe(200);
       expect((await app.request("/api/unknown")).status).toBe(404);
       expect((await app.request("/slack/unknown")).headers.get("content-type")).toContain("json");
