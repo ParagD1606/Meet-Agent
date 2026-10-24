@@ -29,6 +29,7 @@ const CORRECTION_RE = /^(actually|correction)\b|\bthat'?s (wrong|incorrect|not (
 
 /** An imperative about another person or an action: needs tools (a model with none can only pretend). */
 const DO_RE = /\b(tell(?! me\b)|inform|notify|message|dm|ping|ask|remind|assign|reassign|say (hi|hello|hey)|let \S+ know|follow[- ]?up|done|completed?|schedule|send|forward|create|make|add)\b/i;
+const STATUS_Q = /^(is|are|was|were|has|have|did|does)\b[^?]*\b(done|completed?)\b[^?]*\?$/i;
 /** A short reply that continues an action thread ("ok", "yes", "do it", "tell him ..."). */
 const REPLY_RE = /^(ok(ay)?|yes|yep|yeah|sure|please( do)?|do it|go ahead|yes please|tell (him|her|them)\b.*|continue|keep going|go on)[\s!.,]*$|^(ok(ay)?|yes|sure)[,. ]+\S/i;
 const MENTION_RE = /<@[A-Z0-9]+>/g;
@@ -57,7 +58,9 @@ export function heuristicDepth(i: DepthInput): Depth | null {
   if (p && (p.usedTools || p.openAsk) && t.length <= 80 && REPLY_RE.test(t)) return p.depth === "deep" ? "deep" : "tools";
   if (i.hasHistory && CONTINUE.test(t)) return "deep";
   const others = (i.text.match(MENTION_RE)?.length ?? 0) - (i.trigger === "mention" ? 1 : 0);
-  if (!i.hasFiles && (DO_RE.test(t) || others > 0) && !DEEP_RE.test(t) && t.length <= 700 && (t.match(/\?/g) ?? []).length < 3) return "tools";
+  // "is the X feature done?" asks about a task's status (a read); only "done"/"completed" as a statement or order is an action
+  const doText = STATUS_Q.test(t) ? t.replace(/\b(done|completed?)\b/gi, "") : t;
+  if (!i.hasFiles && (DO_RE.test(doText) || others > 0) && !DEEP_RE.test(t) && t.length <= 700 && (t.match(/\?/g) ?? []).length < 3) return "tools";
   if (!i.hasFiles && t.length <= 60 && SMALL_TALK.test(t)) return "direct";
   if (!t && !i.hasFiles) return "direct";
   const questions = (t.match(/\?/g) ?? []).length;

@@ -60,7 +60,7 @@ export function nudgeCard(rung: JourneyRung): Card {
 }
 
 export function homeView(o: { botName?: string; name?: string | null; connections: number; facts?: { id: number; text: string }[]; admin?: boolean }): unknown {
-  const facts = (o.facts ?? []).slice(0, 40); // a Home tab allows 100 blocks
+  const facts = (o.facts ?? []).filter((f) => f.text.trim()).slice(0, 40); // a Home tab allows 100 blocks; a blank section text makes Slack reject the whole view
   const confirm = { title: { type: "plain_text", text: "Delete this memory?" }, text: { type: "plain_text", text: "I will forget it for good." }, confirm: { type: "plain_text", text: "Delete" }, deny: { type: "plain_text", text: "Keep" } };
   return {
     type: "home",

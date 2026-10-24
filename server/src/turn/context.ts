@@ -222,7 +222,8 @@ export async function buildContext(i: TurnInput, ctx: ToolContext & { skipRecall
   const selfId = await botUserId().catch(() => null);
   const threadKey = i.threadTs ?? i.ts;
   const historyP = threadHistory(i, selfId);
-  const recentLines = ctx.skipRecall || i.threadTs ? [] : await recentChannel(i, selfId).catch((e) => {
+  // a top-level channel mention arrives with threadTs === ts (the reply thread it starts): that is not "inside a thread"
+  const recentLines = ctx.skipRecall || (i.threadTs && i.threadTs !== i.ts) ? [] : await recentChannel(i, selfId).catch((e) => {
     log.warn("recent channel unavailable", { error: String(e) });
     return [] as string[];
   });
